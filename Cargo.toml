@@ -1,0 +1,15 @@
+# Copyright @ 2024 - present, R3E Network
+# All Rights Reserved
+
+[workspace]
+resolver = "2"
+
+members = [
+    "neo-contract",
+    "neo-contract-proc-macros",
+]
+
+[profile.release]
+lto           = "fat"
+opt-level     = 3
+codegen-units = 1
