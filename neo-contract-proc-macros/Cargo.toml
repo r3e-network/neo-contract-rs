@@ -1,0 +1,12 @@
+# Copyright @ 2024 - present, R3E Network
+# All Rights Reserved
+
+[package]
+name = "neo-contract-proc-macros"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]

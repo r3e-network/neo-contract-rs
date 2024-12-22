@@ -1,0 +1,29 @@
+[package]
+name = "nep17"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+neo-contract = { path = "../../neo-contract" }
+
+[profile.dev]
+opt-level        = "s"
+debug            = false
+debug-assertions = false
+overflow-checks  = false
+lto              = true
+panic            = "abort"
+codegen-units    = 1
+strip            = "debuginfo"
+
+[profile.release]
+opt-level        = "s"
+debug            = false
+debug-assertions = false
+overflow-checks  = false
+lto              = true
+panic            = "abort"
+codegen-units    = 1
+strip            = "debuginfo"
