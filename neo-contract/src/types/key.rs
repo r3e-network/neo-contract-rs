@@ -4,7 +4,7 @@
 use crate::types::*;
 
 #[repr(C)]
-pub struct PublicKey(ByteString);
+pub struct PublicKey(pub ByteString);
 
 impl PublicKey {
     #[inline(always)]
