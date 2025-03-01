@@ -1,6 +1,9 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+// Storage keys
+pub const DEFAULT_BALANCE_KEY: u8 = 0x01;
+
 #[repr(u32)]
 pub enum TriggerType {
     /// OnPersist indicates that the contract is triggered by the system

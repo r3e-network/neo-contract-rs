@@ -9,7 +9,7 @@ pub mod policy;
 
 pub use {gas::*, legder::*, neo::*, oracle::*, policy::*};
 
-use crate::{env, types::*};
+use crate::types::*;
 
 pub struct ContractManagement;
 

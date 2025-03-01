@@ -31,6 +31,7 @@ impl H256 {
     }
 
     #[cfg(not(target_family = "wasm"))]
+    #[allow(dead_code)]
     pub(crate) fn hex_decode(hex: &str) -> Self {
         let hex = if hex.starts_with("0x") || hex.starts_with("0X") { &hex[2..] } else { hex };
 
