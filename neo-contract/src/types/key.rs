@@ -4,12 +4,35 @@
 use crate::types::*;
 
 #[repr(C)]
-pub struct PublicKey(ByteString);
+pub struct PublicKey(pub ByteString);
 
 impl PublicKey {
     #[inline(always)]
     pub fn is_valid(&self) -> bool {
         true // TODO: implement
+    }
+    
+    #[cfg(not(target_family = "wasm"))]
+    pub fn from_bytes(bytes: [u8; 33]) -> Self {
+        let mut hex = String::with_capacity(2 + bytes.len() * 2);
+        hex.push_str("0x");
+        for byte in bytes.iter() {
+            hex.push_str(&format!("{:02x}", byte));
+        }
+        Self(ByteString::new(hex))
+    }
+    
+    #[cfg(target_family = "wasm")]
+    pub fn from_bytes(bytes: [u8; 33]) -> Self {
+        unsafe { crate::env::extension::public_key_from_bytes(bytes) }
+    }
+    
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+    
+    pub fn to_string(&self) -> String {
+        self.0.clone().to_string()
     }
 }
 

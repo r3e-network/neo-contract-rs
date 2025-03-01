@@ -42,6 +42,39 @@ impl H256 {
         buf.reverse();
         H256(buf)
     }
+    
+    #[cfg(not(target_family = "wasm"))]
+    pub fn from_bytes(bytes: [u8; 32]) -> Self {
+        H256(bytes)
+    }
+    
+    #[cfg(not(target_family = "wasm"))]
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+    
+    #[cfg(target_family = "wasm")]
+    pub fn as_bytes(&self) -> &[u8] {
+        unsafe { crate::env::extension::h256_as_bytes(self) }
+    }
+    
+    pub fn to_string(&self) -> String {
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let bytes = self.as_bytes();
+            let mut hex = String::with_capacity(2 + bytes.len() * 2);
+            hex.push_str("0x");
+            for byte in bytes {
+                hex.push_str(&format!("{:02x}", byte));
+            }
+            hex
+        }
+        
+        #[cfg(target_family = "wasm")]
+        {
+            self.hex_encode().to_string()
+        }
+    }
 }
 
 impl PartialEq for H256 {

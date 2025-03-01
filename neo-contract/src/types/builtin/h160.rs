@@ -50,6 +50,20 @@ impl H160 {
     pub fn from_bytes(bytes: [u8; 20]) -> Self {
         H160(bytes)
     }
+    
+    pub fn to_string(&self) -> String {
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let mut b = self.0.clone();
+            b.reverse();
+            format!("0x{}", hex::encode(b))
+        }
+        
+        #[cfg(target_family = "wasm")]
+        {
+            self.hex_encode().clone().to_string()
+        }
+    }
 }
 
 impl PartialEq for H160 {
