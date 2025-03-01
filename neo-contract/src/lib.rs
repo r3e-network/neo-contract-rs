@@ -9,3 +9,9 @@ pub mod serialize;
 pub mod storage;
 pub mod types;
 pub mod utils;
+pub mod macros;
+pub mod static_values;
+pub mod attributes;
+
+// Re-export proc macros
+pub use neo_contract_proc_macros::contract;

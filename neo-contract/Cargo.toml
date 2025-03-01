@@ -7,7 +7,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-
+neo-contract-proc-macros = { path = "../neo-contract-proc-macros" }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 num256 = { version = "0.6" }
