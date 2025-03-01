@@ -14,4 +14,15 @@ pub mod static_values;
 pub mod attributes;
 
 // Re-export proc macros
-pub use neo_contract_proc_macros::contract;
+pub use neo_contract_proc_macros::{
+    contract,
+    manifest_extra,
+    contract_author,
+    contract_email,
+    contract_description,
+    contract_version,
+    contract_source_code,
+    contract_permission,
+    contract_trust,
+    supported_standards,
+};
