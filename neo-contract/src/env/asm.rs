@@ -1,12 +1,22 @@
+use alloc::string::String;
 // Copyright @ 2024 - present, R3E Network
+use alloc::string::String;
 // All Rights Reserved.
+use alloc::string::String;
 
+use alloc::string::String;
 #![allow(unused)]
+use alloc::string::String;
 
+use alloc::string::String;
 #[cfg(target_family = "wasm")]
+use alloc::string::String;
 use crate::types::*;
+use alloc::string::String;
 
+use alloc::string::String;
 #[link(wasm_import_module = "neo.asm")]
+use alloc::string::String;
 #[allow(improper_ctypes)]
 #[cfg(target_family = "wasm")]
 extern "C" {

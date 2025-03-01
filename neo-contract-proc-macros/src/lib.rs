@@ -154,6 +154,12 @@ pub fn stored(attr: TokenStream, item: TokenStream) -> TokenStream {
     structure::stored::generate(attr, item)
 }
 
+/// Alias for stored attribute macro
+#[proc_macro_attribute]
+pub fn storage(attr: TokenStream, item: TokenStream) -> TokenStream {
+    structure::stored::generate(attr, item)
+}
+
 /// Attribute macro for creating a function modifier
 #[proc_macro_attribute]
 pub fn modifier(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -182,4 +188,18 @@ pub fn syscall(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn contract(attr: TokenStream, item: TokenStream) -> TokenStream {
     contract::generate(attr, item)
+}
+
+/// Attribute macro for marking a function as a constructor
+#[proc_macro_attribute]
+pub fn constructor(attr: TokenStream, item: TokenStream) -> TokenStream {
+    // For now, just return the item as is
+    item
+}
+
+/// Attribute macro for marking a function as a message
+#[proc_macro_attribute]
+pub fn message(attr: TokenStream, item: TokenStream) -> TokenStream {
+    // For now, just return the item as is
+    item
 }

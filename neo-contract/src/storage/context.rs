@@ -1,55 +1,68 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-/// StorageContext represents a storage context
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StorageContext {
-    /// The ID of the storage context
-    pub id: u32,
+use core::fmt;
+use crate::types::context::StorageContext;
+
+/// Storage context wrapper
+#[derive(Debug, Clone)]
+pub struct Context {
+    /// Inner storage context
+    pub inner: StorageContext,
 }
 
-/// ReadOnlyStorageContext represents a read-only storage context
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ReadOnlyStorageContext {
-    /// The ID of the read-only storage context
-    pub id: u32,
-}
-
-impl StorageContext {
+impl Context {
     /// Create a new storage context
     pub fn new() -> Self {
-        Self { id: 0 }
-    }
-
-    /// Get the current storage context
-    pub fn current() -> Self {
-        Self::get_context()
-    }
-
-    /// Get the storage context
-    pub fn get_context() -> Self {
-        unsafe { crate::env::syscall::system_storage_get_context() }
+        Self {
+            inner: unsafe { crate::env::syscall_non_wasm::system_storage_get_context() },
+        }
     }
 
     /// Convert to a read-only storage context
-    pub fn as_read_only(&self) -> ReadOnlyStorageContext {
-        unsafe { crate::env::syscall::system_storage_as_readonly(self.clone()) }
+    pub fn as_readonly(&self) -> Self {
+        Self {
+            inner: unsafe { crate::env::syscall_non_wasm::system_storage_as_readonly(self.inner.clone()) },
+        }
     }
 }
 
-impl ReadOnlyStorageContext {
+impl Default for Context {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Read-only storage context wrapper
+#[derive(Debug, Clone)]
+pub struct ReadOnlyContext {
+    /// Inner storage context
+    pub inner: StorageContext,
+}
+
+impl ReadOnlyContext {
     /// Create a new read-only storage context
     pub fn new() -> Self {
-        Self { id: 0 }
+        Self {
+            inner: unsafe { crate::env::syscall_non_wasm::system_storage_get_read_only_context() },
+        }
     }
+}
 
-    /// Get the current read-only storage context
-    pub fn current() -> Self {
-        Self::get_context()
+impl Default for ReadOnlyContext {
+    fn default() -> Self {
+        Self::new()
     }
+}
 
-    /// Get the read-only storage context
-    pub fn get_context() -> Self {
-        unsafe { crate::env::syscall::system_storage_get_read_only_context() }
+impl fmt::Display for Context {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Context({})", self.inner)
+    }
+}
+
+impl fmt::Display for ReadOnlyContext {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ReadOnlyContext({})", self.inner)
     }
 }

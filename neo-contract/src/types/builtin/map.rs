@@ -3,146 +3,63 @@
 
 use alloc::vec::Vec;
 use core::fmt;
-use alloc::collections::BTreeMap;
-use core::ops::{Deref, DerefMut};
-use crate::types::builtin::any::Any;
+use crate::types::builtin::string::ByteString;
 
-/// Map represents a map
-#[derive(Debug, Clone, PartialEq)]
+/// Map represents a map of key-value pairs
+#[derive(Debug, Clone)]
 pub struct Map<K, V> {
-    items: BTreeMap<K, V>,
+    /// Keys
+    pub keys: Vec<K>,
+    /// Values
+    pub values: Vec<V>,
 }
 
-impl<K, V> Map<K, V>
-where
-    K: Ord,
-{
-    /// Create a new empty map
+impl<K, V> Map<K, V> {
+    /// Create a new map
     pub fn new() -> Self {
-        Map {
-            items: BTreeMap::new(),
+        Self {
+            keys: Vec::new(),
+            values: Vec::new(),
         }
     }
 
-    /// Get the length of the map
+    /// Get the number of key-value pairs
     pub fn len(&self) -> usize {
-        self.items.len()
+        self.keys.len()
     }
 
     /// Check if the map is empty
     pub fn is_empty(&self) -> bool {
-        self.items.is_empty()
+        self.keys.is_empty()
     }
 
-    /// Get a reference to the value for the given key
-    pub fn get(&self, key: &K) -> Option<&V> {
-        self.items.get(key)
-    }
-
-    /// Get a mutable reference to the value for the given key
-    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
-        self.items.get_mut(key)
-    }
-
-    /// Insert a key-value pair into the map
-    pub fn insert(&mut self, key: K, value: V) -> Option<V> {
-        self.items.insert(key, value)
-    }
-
-    /// Remove a key-value pair from the map
-    pub fn remove(&mut self, key: &K) -> Option<V> {
-        self.items.remove(key)
-    }
-
-    /// Clear the map
-    pub fn clear(&mut self) {
-        self.items.clear();
-    }
-
-    /// Get the keys of the map
-    pub fn keys(&self) -> Vec<&K> {
-        self.items.keys().collect()
-    }
-
-    /// Get the values of the map
-    pub fn values(&self) -> Vec<&V> {
-        self.items.values().collect()
-    }
-}
-
-impl<K, V> Deref for Map<K, V>
-where
-    K: Ord,
-{
-    type Target = BTreeMap<K, V>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.items
-    }
-}
-
-impl<K, V> DerefMut for Map<K, V>
-where
-    K: Ord,
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.items
-    }
-}
-
-impl<K, V> From<BTreeMap<K, V>> for Map<K, V>
-where
-    K: Ord,
-{
-    fn from(items: BTreeMap<K, V>) -> Self {
-        Map { items }
-    }
-}
-
-impl<K, V> From<Map<K, V>> for BTreeMap<K, V>
-where
-    K: Ord,
-{
-    fn from(map: Map<K, V>) -> Self {
-        map.items
-    }
-}
-
-impl<K, V> Default for Map<K, V>
-where
-    K: Ord,
-{
-    fn default() -> Self {
-        Map::new()
-    }
-}
-
-impl<K, V> fmt::Display for Map<K, V>
-where
-    K: fmt::Display,
-    V: fmt::Display,
-    K: Ord,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{")?;
-        for (i, (key, value)) in self.items.iter().enumerate() {
-            if i > 0 {
-                write!(f, ", ")?;
-            }
-            write!(f, "{}: {}", key, value)?;
-        }
-        write!(f, "}}")
-    }
-}
-
-impl<K: Clone + Ord + 'static, V: Clone + 'static> TryFrom<Any> for Map<K, V> {
-    type Error = ();
-
-    fn try_from(any: Any) -> Result<Self, Self::Error> {
-        if let Some(map) = any.cast::<Self>() {
-            Ok(map.clone())
+    /// Put a key-value pair in the map
+    pub fn put(&mut self, key: K, value: V) where K: PartialEq {
+        if let Some(index) = self.keys.iter().position(|k| k == &key) {
+            self.values[index] = value;
         } else {
-            Err(())
+            self.keys.push(key);
+            self.values.push(value);
         }
+    }
+
+    /// Delete a key-value pair from the map
+    pub fn delete(&mut self, key: &K) where K: PartialEq {
+        if let Some(index) = self.keys.iter().position(|k| k == key) {
+            self.keys.remove(index);
+            self.values.remove(index);
+        }
+    }
+}
+
+impl<K, V> Default for Map<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<K: fmt::Display, V: fmt::Display> fmt::Display for Map<K, V> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Map({} items)", self.len())
     }
 }

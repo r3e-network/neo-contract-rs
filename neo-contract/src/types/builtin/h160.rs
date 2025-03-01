@@ -2,14 +2,14 @@
 // All Rights Reserved
 
 use alloc::string::String;
-use alloc::format;
 use alloc::vec::Vec;
+use alloc::format;
 use core::fmt;
-use core::ops::{Deref, DerefMut};
+use core::cmp::Ordering;
 use crate::utils::hex;
 
 /// H160 represents a 160-bit hash
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct H160(pub [u8; 20]);
 
 impl H160 {
@@ -23,85 +23,69 @@ impl H160 {
         H160([0; 20])
     }
 
-    /// Get the bytes
+    /// Get the bytes of the H160
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
-    /// Convert to a hex string
-    pub fn to_hex(&self) -> String {
-        let mut hex = String::with_capacity(40);
-        for byte in self.0.iter() {
-            hex.push_str(&format!("{:02x}", byte));
+    /// Decode a hex string into a H160
+    pub fn hex_decode(hex: &str) -> Option<Self> {
+        let hex = if hex.starts_with("0x") {
+            &hex[2..]
+        } else {
+            hex
+        };
+
+        if hex.len() != 40 {
+            return None;
         }
-        hex
+
+        match hex::decode(hex) {
+            Ok(bytes) => {
+                let mut result = [0u8; 20];
+                result.copy_from_slice(&bytes);
+                Some(H160(result))
+            },
+            Err(_) => None
+        }
     }
     
-    /// Convert to a string
-    pub fn to_string(&self) -> String {
-        #[cfg(not(target_family = "wasm"))]
-        {
-            let mut b = self.0.clone();
-            b.reverse();
-            format!("0x{}", hex::encode(&b))
-        }
-        
-        #[cfg(target_family = "wasm")]
-        {
-            self.to_hex_string()
-        }
+    /// Convert to a hex string
+    pub fn to_hex(&self) -> String {
+        hex::encode(&self.0)
     }
     
     /// Convert to a hex string with 0x prefix
     pub fn to_hex_string(&self) -> String {
-        let mut hex = String::with_capacity(42);
-        hex.push_str("0x");
-        for byte in self.0.iter() {
-            hex.push_str(&format!("{:02x}", byte));
-        }
-        hex
+        format!("0x{}", self.to_hex())
     }
-
-    /// Decode a hex string to an H160
-    pub fn hex_decode(hex: &str) -> Option<Self> {
-        let bytes = hex::decode(hex)?;
-        if bytes.len() != 20 {
-            return None;
-        }
-        let mut result = [0; 20];
-        result.copy_from_slice(&bytes);
-        Some(H160(result))
+    
+    /// Alias for hex_decode for compatibility
+    pub fn from_hex_string(hex: &str) -> Self {
+        Self::hex_decode(hex).unwrap_or_else(Self::zero)
     }
 }
 
-impl Deref for H160 {
-    type Target = [u8; 20];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl Default for H160 {
+    fn default() -> Self {
+        Self::zero()
     }
 }
 
-impl DerefMut for H160 {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+impl PartialOrd for H160 {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
-impl From<[u8; 20]> for H160 {
-    fn from(bytes: [u8; 20]) -> Self {
-        H160(bytes)
-    }
-}
-
-impl From<H160> for [u8; 20] {
-    fn from(h160: H160) -> Self {
-        h160.0
+impl Ord for H160 {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
     }
 }
 
 impl fmt::Display for H160 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "0x{}", self.to_hex())
+        write!(f, "0x{}", hex::encode(&self.0))
     }
 }

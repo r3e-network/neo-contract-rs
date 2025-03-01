@@ -8,6 +8,7 @@ use crate::types::builtin::h160::H160;
 use crate::types::builtin::h256::H256;
 use crate::types::builtin::int256::Int256;
 use crate::types::builtin::string::ByteString;
+use crate::types::builtin::any::Any;
 use crate::types::bytes::Bytes;
 use crate::types::contract::NeoCandidate;
 use crate::types::notification::Notification;
@@ -15,14 +16,14 @@ use crate::types::placeholder::Placeholder;
 use crate::types::context::StorageContext;
 
 /// Get the executing script hash
-pub unsafe fn system_runtime_executing() -> H160 {
-    // In a real implementation, this would call the runtime executing syscall
+pub unsafe fn system_runtime_executing_script_hash() -> H160 {
+    // In a real implementation, this would call the runtime executing script hash syscall
     H160::zero()
 }
 
 /// Get the calling script hash
-pub unsafe fn system_runtime_calling() -> H160 {
-    // In a real implementation, this would call the runtime calling syscall
+pub unsafe fn system_runtime_calling_script_hash() -> H160 {
+    // In a real implementation, this would call the runtime calling script hash syscall
     H160::zero()
 }
 
@@ -33,7 +34,7 @@ pub unsafe fn system_runtime_entry_script_hash() -> H160 {
 }
 
 /// Check if the witness is valid
-pub unsafe fn system_runtime_check_witness(_hash: H160) -> bool {
+pub unsafe fn system_runtime_check_witness(hash: H160) -> bool {
     // In a real implementation, this would call the runtime check witness syscall
     false
 }
@@ -62,15 +63,25 @@ pub unsafe fn system_runtime_time() -> u64 {
     0
 }
 
+/// Notify an event
+pub unsafe fn system_runtime_notify(event_name: ByteString, args: Array<Any>) {
+    // In a real implementation, this would call the runtime notify syscall
+}
+
+/// Log a message
+pub unsafe fn system_runtime_log(message: ByteString) {
+    // In a real implementation, this would call the runtime log syscall
+}
+
 /// Call a contract
 pub unsafe fn system_contract_call(
-    _hash: H160,
-    _method: ByteString,
-    _call_flags: CallFlags,
-    _args: Array<ByteString>,
-) -> Placeholder {
+    hash: H160,
+    method: ByteString,
+    call_flags: CallFlags,
+    args: Array<Any>,
+) -> Any {
     // In a real implementation, this would call the contract call syscall
-    Placeholder::new()
+    Any::default()
 }
 
 /// Create a contract
@@ -78,9 +89,9 @@ pub unsafe fn system_contract_create(
     _nef: ByteString,
     _manifest: ByteString,
     _call_flags: CallFlags,
-) -> Placeholder {
+) -> Any {
     // In a real implementation, this would call the contract create syscall
-    Placeholder::new()
+    Any::default()
 }
 
 /// Get the call flags
@@ -132,7 +143,7 @@ pub unsafe fn system_storage_put(context: StorageContext, key: ByteString, value
 /// Get a value from storage
 pub unsafe fn system_storage_get(context: StorageContext, key: ByteString) -> ByteString {
     // In a real implementation, this would call the storage get syscall
-    ByteString::new()
+    ByteString::empty()
 }
 
 /// Delete a value from storage

@@ -16,31 +16,30 @@ pub(crate) fn generate(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let struct_name = &item_struct.ident;
     let struct_vis = &item_struct.vis;
     let struct_attrs = &item_struct.attrs;
-    let _struct_fields = &item_struct.fields;
+    let struct_fields = &item_struct.fields;
     
     // Generate the output with storage functionality
     let output = quote! {
-        #[allow(non_snake_case)]
         #(#struct_attrs)*
         #struct_vis struct #struct_name {
-            #item_struct
+            #struct_fields
         }
         
         impl #struct_name {
             pub fn load(key: &str) -> Option<Self> {
-                let storage_context = neo::runtime::get_storage_context();
+                let storage_context = crate::runtime::get_storage_context();
                 let data = storage_context.get(key)?;
-                Some(neo::serialize::from_bytes(&data))
+                Some(crate::serialize::from_bytes(&data))
             }
             
             pub fn save(&self, key: &str) {
-                let storage_context = neo::runtime::get_storage_context();
-                let data = neo::serialize::to_bytes(self);
+                let storage_context = crate::runtime::get_storage_context();
+                let data = crate::serialize::to_bytes(self);
                 storage_context.put(key, &data);
             }
             
             pub fn delete(key: &str) {
-                let storage_context = neo::runtime::get_storage_context();
+                let storage_context = crate::runtime::get_storage_context();
                 storage_context.delete(key);
             }
         }

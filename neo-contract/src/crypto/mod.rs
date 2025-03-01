@@ -26,5 +26,5 @@ pub enum NamedCurveHash {
 /// Hash data using the specified algorithm
 pub fn hash(data: ByteString, hash_type: NamedCurveHash) -> ByteString {
     // In a real implementation, this would call the crypto hash syscall
-    ByteString::new()
+    ByteString::empty()
 }

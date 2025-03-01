@@ -35,6 +35,17 @@ macro_rules! contract_event {
 /// Macro to define a contract storage map
 #[macro_export]
 macro_rules! storage_map {
+    // Single type version (for simple key types like H160)
+    ($key_ty:ty) => {
+        neo_contract::storage::StorageMap<$key_ty, neo_contract::builtin::Int256>
+    };
+    
+    // Two type version (for key and value types)
+    ($key_ty:ty, $value_ty:ty) => {
+        neo_contract::storage::StorageMap<$key_ty, $value_ty>
+    };
+    
+    // Original version with struct definition
     ($(#[$attr:meta])* $vis:vis $name:ident : $key_ty:ty => $value_ty:ty) => {
         $(#[$attr])*
         $vis struct $name;

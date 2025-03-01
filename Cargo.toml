@@ -1,15 +1,13 @@
-# Copyright @ 2024 - present, R3E Network
-# All Rights Reserved
-
 [workspace]
-resolver = "2"
-
 members = [
     "neo-contract",
     "neo-contract-proc-macros",
+    "examples/*",
 ]
+resolver = "2"
+
+[profile.dev]
+panic = "abort"
 
 [profile.release]
-lto           = "fat"
-opt-level     = 3
-codegen-units = 1
+panic = "abort"

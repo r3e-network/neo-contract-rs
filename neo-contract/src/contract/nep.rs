@@ -1,12 +1,22 @@
+use alloc::string::String;
 // Copyright @ 2024 - present, R3E Network
+use alloc::string::String;
 // All Rights Reserved.
+use alloc::string::String;
 
+use alloc::string::String;
 #![allow(dead_code)]
+use alloc::string::String;
 
+use alloc::string::String;
 use crate::types::*;
+use alloc::string::String;
 
+use alloc::string::String;
 pub trait Nep24 {
+use alloc::string::String;
     fn royalty_info(token_id: ByteString, royalty_token: Int256, sale_price: Int256) -> Map<ByteString, Any>;
+use alloc::string::String;
 }
 
 pub trait Nep26 {

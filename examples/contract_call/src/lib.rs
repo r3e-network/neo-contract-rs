@@ -2,17 +2,19 @@
 // All Rights Reserved
 
 use neo_contract::{
-    contract::{call, SmartContract, CallFlags},
-    contract_method, smart_contract, static_value,
-    types::*,
+    builtin::{H160, Int256, ByteString, Array, Any},
+    CallFlags,
+    Runtime,
+    contract_method, smart_contract,
 };
+use alloc::vec::Vec;
 
 pub struct ContractCall;
 
 #[smart_contract]
 impl ContractCall {
-    // Static values
-    static_value!(static TARGET_CONTRACT: H160 = "0x13a83e059c2eedd5157b766d3357bc826810905e";);
+    // Define the target contract hash as a constant
+    const TARGET_CONTRACT: &'static str = "0x13a83e059c2eedd5157b766d3357bc826810905e";
     
     // Methods
     contract_method!(pub fn on_nep17_payment(from: H160, amount: Int256, data: Int256) -> bool {
@@ -22,19 +24,21 @@ impl ContractCall {
         }
         
         // Get the executing script hash
-        let this = runtime::executing_script_hash();
+        let this = Runtime::executing_script_hash();
         
         // Get the calling script hash (token contract)
-        let token_hash = runtime::calling_script_hash();
+        let token_hash = Runtime::calling_script_hash();
+        
+        // Parse the target contract hash
+        let target_contract = H160::from_hex_string(Self::TARGET_CONTRACT);
         
         // Call the token contract to get the balance
-        let args = Array::new();
-        args.push(this.into());
+        let mut args = Array::new();
+        args.push(Any::from(this));
         
-        let balance_of = call(
+        let balance_of = Runtime::call_contract(
             token_hash,
-            ByteString::new("balanceOf"),
-            CallFlags::All,
+            ByteString::from("balanceOf"),
             args
         );
         
@@ -45,15 +49,14 @@ impl ContractCall {
         };
         
         // Call the target contract
-        let args = Array::new();
-        args.push(this.into());
-        args.push(token_hash.into());
-        args.push(balance.into());
+        let mut args = Array::new();
+        args.push(Any::from(this));
+        args.push(Any::from(token_hash));
+        args.push(Any::from(balance));
         
-        call(
-            TARGET_CONTRACT,
-            ByteString::new("dummyMethod"),
-            CallFlags::All,
+        Runtime::call_contract(
+            target_contract,
+            ByteString::from("dummyMethod"),
             args
         );
         
@@ -69,5 +72,3 @@ impl ContractCall {
         true
     }
 }
-
-impl SmartContract for ContractCall {}

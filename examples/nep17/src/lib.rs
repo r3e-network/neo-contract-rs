@@ -1,20 +1,22 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
 #![no_std]
 #![no_main]
 
-use neo_contract as neo;
+extern crate alloc;
 
-use neo::contract::nep17::NEP17;
-use neo::contract::SmartContract;
-use neo::runtime;
-use neo::types::*;
+use neo_contract::{
+    builtin::{H160, Int256, ByteString, Map, Array, Any},
+    Runtime,
+    contract::nep17::NEP17,
+};
+use alloc::vec::Vec;
 
 // Storage for the token contract
 struct TokenStorage {
     total_supply: Int256,
-    balances: builtin::Map,
+    balances: Map,
 }
 
 static mut TOKEN_STORAGE: Option<TokenStorage> = None;
@@ -22,10 +24,10 @@ static mut TOKEN_STORAGE: Option<TokenStorage> = None;
 // Initialize the token contract
 #[no_mangle]
 pub fn _deploy(initial_supply: Int256) {
-    let mut balances = builtin::Map::new();
-    let owner = runtime::calling_script_hash();
+    let mut balances = Map::new();
+    let owner = Runtime::calling_script_hash();
     
-    balances.put(&owner, &initial_supply);
+    balances.put(owner.clone(), initial_supply.clone());
     
     unsafe {
         TOKEN_STORAGE = Some(TokenStorage {
@@ -38,13 +40,13 @@ pub fn _deploy(initial_supply: Int256) {
 // Get the token symbol
 #[no_mangle]
 pub fn symbol() -> ByteString {
-    ByteString::new("NEP17".to_string())
+    ByteString::from("NEP17")
 }
 
 // Get the token decimals
 #[no_mangle]
-pub fn decimals() -> Int256 {
-    Int256::from(8)
+pub fn decimals() -> u8 {
+    8
 }
 
 // Get the total supply of tokens
@@ -52,7 +54,7 @@ pub fn decimals() -> Int256 {
 pub fn total_supply() -> Int256 {
     unsafe {
         match &TOKEN_STORAGE {
-            Some(storage) => storage.total_supply,
+            Some(storage) => storage.total_supply.clone(),
             None => Int256::zero(),
         }
     }
@@ -64,10 +66,18 @@ pub fn balance_of(account: H160) -> Int256 {
     unsafe {
         match &TOKEN_STORAGE {
             Some(storage) => {
-                match storage.balances.get(&account) {
-                    Some(balance) => balance,
-                    None => Int256::zero(),
+                // Map doesn't have a get method in the current implementation
+                // We need to iterate through the keys and values
+                for i in 0..storage.balances.len() {
+                    if let Some(key) = storage.balances.keys.get(i) {
+                        if *key == account {
+                            if let Some(value) = storage.balances.values.get(i) {
+                                return value.clone();
+                            }
+                        }
+                    }
                 }
+                Int256::zero()
             },
             None => Int256::zero(),
         }
@@ -77,7 +87,7 @@ pub fn balance_of(account: H160) -> Int256 {
 // Transfer tokens from one account to another
 #[no_mangle]
 pub fn transfer(from: H160, to: H160, amount: Int256, data: Option<Any>) -> bool {
-    if !runtime::check_witness_with_account(from) {
+    if !Runtime::check_witness(from.clone()) {
         return false;
     }
     
@@ -85,7 +95,7 @@ pub fn transfer(from: H160, to: H160, amount: Int256, data: Option<Any>) -> bool
         return false;
     }
     
-    let from_balance = balance_of(from);
+    let from_balance = balance_of(from.clone());
     if from_balance < amount {
         return false;
     }
@@ -93,16 +103,16 @@ pub fn transfer(from: H160, to: H160, amount: Int256, data: Option<Any>) -> bool
     unsafe {
         if let Some(storage) = &mut TOKEN_STORAGE {
             if from != to {
-                let from_new_balance = from_balance - amount;
+                let from_new_balance = from_balance - amount.clone();
                 if from_new_balance.is_zero() {
                     storage.balances.delete(&from);
                 } else {
-                    storage.balances.put(&from, &from_new_balance);
+                    storage.balances.put(from.clone(), from_new_balance);
                 }
                 
-                let to_balance = balance_of(to);
-                let to_new_balance = to_balance + amount;
-                storage.balances.put(&to, &to_new_balance);
+                let to_balance = balance_of(to.clone());
+                let to_new_balance = to_balance + amount.clone();
+                storage.balances.put(to.clone(), to_new_balance);
             }
         } else {
             return false;
@@ -110,17 +120,15 @@ pub fn transfer(from: H160, to: H160, amount: Int256, data: Option<Any>) -> bool
     }
     
     // Emit transfer event
-    let args = builtin::Array::new();
-    args.push(from.into());
-    args.push(to.into());
-    args.push(amount.into());
+    let mut args = Array::new();
+    args.push(Any::from(from));
+    args.push(Any::from(to));
+    args.push(Any::from(amount));
     
-    unsafe {
-        neo::env::syscall::system_runtime_notify(
-            ByteString::new("Transfer".to_string()),
-            args
-        );
-    }
+    Runtime::notify(
+        &ByteString::from("Transfer"),
+        &args
+    );
     
     true
 }

@@ -1,28 +1,35 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use neo_contract::{
-    contract::SmartContract,
-    types::*,
-};
+#![no_std]
+#![no_main]
 
-#[neo_contract::contract]
+extern crate alloc;
+
+use neo_contract::{
+    builtin::{H160, Int256, ByteString, Map, Any, Array},
+    Runtime,
+    contract, storage, constructor, message, event,
+};
+use alloc::vec::Vec;
+
+#[contract]
 mod token {
     use super::*;
     
-    #[neo(storage)]
+    #[storage]
     pub struct Token {
         total_supply: Int256,
-        balances: builtin::Map,
+        balances: Map,
     }
     
     impl Token {
-        #[neo(constructor)]
+        #[constructor]
         pub fn new(initial_supply: Int256) -> Self {
-            let mut balances = builtin::Map::new();
-            let owner = runtime::calling_script_hash();
+            let mut balances = Map::new();
+            let owner = Runtime::calling_script_hash();
             
-            balances.put(&owner, &initial_supply);
+            balances.put(owner.clone(), initial_supply.clone());
             
             Self {
                 total_supply: initial_supply,
@@ -30,22 +37,28 @@ mod token {
             }
         }
         
-        #[neo(message)]
+        #[message]
         pub fn total_supply(&self) -> Int256 {
-            self.total_supply
+            self.total_supply.clone()
         }
         
-        #[neo(message)]
+        #[message]
         pub fn balance_of(&self, account: H160) -> Int256 {
-            match self.balances.get(&account) {
-                Some(balance) => balance,
-                None => Int256::zero(),
+            // Map doesn't have a get method in the current implementation
+            // We need to iterate through the keys and values
+            for i in 0..self.balances.len() {
+                if let Some(key) = self.balances.keys.get(i) {
+                    if *key == account {
+                        if let Some(value) = self.balances.values.get(i) {
+                            return value.clone();
+                        }
+                    }
+                }
             }
+            Int256::zero()
         }
         
-        #[neo(event)]
+        #[event]
         pub fn transfer(from: Option<H160>, to: Option<H160>, amount: Int256) {}
     }
-    
-    impl SmartContract for Token {}
 }

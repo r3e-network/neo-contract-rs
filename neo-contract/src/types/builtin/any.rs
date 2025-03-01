@@ -25,6 +25,14 @@ impl Any {
         }
     }
 
+    /// Create a new empty Any
+    pub fn new() -> Self {
+        Any {
+            type_id: TypeId::of::<()>(),
+            data: core::ptr::null_mut(),
+        }
+    }
+
     /// Cast the Any to a reference of a specific type
     pub fn cast<T: 'static>(&self) -> Option<&T> {
         if self.type_id == TypeId::of::<T>() {
@@ -41,6 +49,17 @@ impl Any {
         } else {
             None
         }
+    }
+    
+    /// Cast the Any to an Int256 if it contains an Int256
+    pub fn as_int256(&self) -> Option<crate::types::builtin::int256::Int256> {
+        self.cast::<crate::types::builtin::int256::Int256>().cloned()
+    }
+}
+
+impl Default for Any {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

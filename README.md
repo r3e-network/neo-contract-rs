@@ -176,3 +176,48 @@ Check the `examples` directory for complete contract examples:
 - `nep17_token` - A NEP-17 token implementation
 - `contract_call` - Example of contract-to-contract calls
 - `csharp_features` - Example showcasing C# framework features
+
+## NeoBurger Example
+
+The NeoBurger example demonstrates a complex contract system for Neo N3 governance. It consists of three contracts:
+
+1. **BurgerNEO** - Core contract that handles NEO staking and bNEO token issuance
+   - Implements NEP-17 token standard
+   - Manages NEO deposits and withdrawals
+   - Distributes GAS rewards to bNEO holders
+
+2. **BurgerAgent** - Agent contract that handles voting and NEO management
+   - Manages voting for consensus nodes
+   - Handles NEO transfers on behalf of the core contract
+   - Claims GAS rewards and sends them to the core contract
+
+3. **GovernanceToken (NOBUG)** - Governance token contract for the NeoBurger system
+   - Implements NEP-17 token standard
+   - Provides governance functionality for the NeoBurger ecosystem
+   - Allows token holders to submit and execute proposals
+
+### Building the NeoBurger Example
+
+```bash
+# Build the core contract
+cd examples/neoburger
+cargo build --release
+
+# Build the agent contract
+cd ../neoburger_agent
+cargo build --release
+
+# Build the governance token contract
+cd ../neoburger_governance
+cargo build --release
+```
+
+### Features Demonstrated
+
+- **ink!-style Attribute Macros**: Using the new unified attribute macro system
+- **NEP-17 Token Standard**: Implementation of the Neo N3 token standard
+- **Storage Management**: Efficient storage of balances, rewards, and governance data
+- **Voting Mechanism**: System for voting on Neo consensus nodes
+- **Reward Distribution**: GAS reward distribution to token holders
+- **Agent Contract System**: Delegation of NEO management to agent contracts
+- **Governance Functionality**: Proposal submission and execution system

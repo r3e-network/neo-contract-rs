@@ -1,33 +1,36 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
+#![no_std]
+#![no_main]
+
+extern crate alloc;
+
 use neo_contract::{
-    contract::{nep17::*, SmartContract},
-    contract_event, contract_method, smart_contract, static_value, storage_map,
-    types::*,
-    utils::address,
+    builtin::{H160, Int256, ByteString, Map, Array, Any},
+    contract_event, contract_method, smart_contract,
+    nep17::*,
+    Runtime,
 };
+use alloc::vec::Vec;
 
 pub struct Token;
 
+// Define a constant for the owner address
+const OWNER_ADDRESS: &str = "0x13a83e059c2eedd5157b766d3357bc826810905e";
+
 #[smart_contract]
 impl Token {
-    // Static values
-    static_value!(static OWNER: H160 = "0x13a83e059c2eedd5157b766d3357bc826810905e";);
-    
-    // Storage maps
-    storage_map!(BalanceMap: H160 => Int256);
-    
     // Events
     contract_event!(fn Transfer(from: Option<H160>, to: Option<H160>, amount: Int256));
     
     // Methods
     contract_method!(pub fn name() -> ByteString {
-        ByteString::new("Example Token")
+        ByteString::from("Example Token")
     });
     
     contract_method!(pub fn symbol() -> ByteString {
-        ByteString::new("EXT")
+        ByteString::from("EXT")
     });
     
     contract_method!(pub fn decimals() -> u32 {
@@ -39,12 +42,32 @@ impl Token {
     });
     
     contract_method!(pub fn balance_of(account: H160) -> Int256 {
-        BalanceMap::new().get(&account).unwrap_or_else(Int256::zero)
+        // Create a storage key for the balance map
+        let prefix = b"balance";
+        
+        // Get the balance from storage
+        let key = [prefix, account.as_bytes()].concat();
+        let storage_context = Runtime::storage_context();
+        let value = Runtime::storage_get(storage_context, &key);
+        
+        match value {
+            Some(bytes) => {
+                // Convert bytes to Int256
+                if bytes.len() >= 8 {
+                    let mut data = [0u8; 8];
+                    data.copy_from_slice(&bytes[0..8]);
+                    Int256::from(i64::from_le_bytes(data))
+                } else {
+                    Int256::zero()
+                }
+            },
+            None => Int256::zero()
+        }
     });
     
     contract_method!(pub fn transfer(from: H160, to: H160, amount: Int256) -> bool {
         // Check if the caller is the owner of the tokens
-        if !runtime::check_witness(from) {
+        if !Runtime::check_witness(from.clone()) {
             return false;
         }
         
@@ -54,30 +77,41 @@ impl Token {
         }
         
         // Get the balance of the sender
-        let balance = Self::balance_of(from);
+        let balance = Self::balance_of(from.clone());
         
         // Check if the sender has enough tokens
         if balance < amount {
             return false;
         }
         
-        // Update balances
-        let balance_map = BalanceMap::new();
+        // Get storage context
+        let storage_context = Runtime::storage_context();
+        let prefix = b"balance";
         
+        // Update balances
         // Subtract from sender
-        let new_balance = balance - amount;
+        let new_balance = balance - amount.clone();
+        let from_key = [prefix, from.as_bytes()].concat();
+        
         if new_balance.is_zero() {
-            balance_map.delete(&from);
+            Runtime::storage_delete(storage_context, &from_key);
         } else {
-            balance_map.put(&from, &new_balance);
+            // Convert Int256 to bytes
+            let bytes = new_balance.to_i64().to_le_bytes().to_vec();
+            Runtime::storage_put(storage_context, &from_key, &bytes);
         }
         
         // Add to receiver
-        let to_balance = Self::balance_of(to);
-        balance_map.put(&to, &(to_balance + amount));
+        let to_balance = Self::balance_of(to.clone());
+        let to_key = [prefix, to.as_bytes()].concat();
+        let new_to_balance = to_balance + amount.clone();
+        
+        // Convert Int256 to bytes
+        let bytes = new_to_balance.to_i64().to_le_bytes().to_vec();
+        Runtime::storage_put(storage_context, &to_key, &bytes);
         
         // Emit transfer event
-        Transfer(Some(from), Some(to), amount);
+        Self::Transfer(Some(from), Some(to), amount);
         
         true
     });
@@ -86,12 +120,23 @@ impl Token {
     pub fn deploy(data: bool) -> bool {
         // Initialize the token
         if data {
+            // Parse owner address
+            let owner = H160::hex_decode(OWNER_ADDRESS).unwrap_or(H160::zero());
+            
+            // Get storage context
+            let storage_context = Runtime::storage_context();
+            let prefix = b"balance";
+            
             // Mint initial supply to owner
-            let balance_map = BalanceMap::new();
-            balance_map.put(&OWNER, &Self::total_supply());
+            let total_supply = Self::total_supply();
+            let owner_key = [prefix, owner.as_bytes()].concat();
+            
+            // Convert Int256 to bytes
+            let bytes = total_supply.to_i64().to_le_bytes().to_vec();
+            Runtime::storage_put(storage_context, &owner_key, &bytes);
             
             // Emit transfer event
-            Transfer(None, Some(OWNER), Self::total_supply());
+            Self::Transfer(None, Some(owner), total_supply);
         }
         
         true
@@ -102,5 +147,4 @@ impl Token {
     }
 }
 
-impl SmartContract for Token {}
-impl TokenContract for Token {}
+impl NEP17 for Token {}

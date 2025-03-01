@@ -2,6 +2,7 @@
 // All Rights Reserved
 
 use alloc::vec::Vec;
+use alloc::string::String;
 use alloc::format;
 use crate::call_flags::CallFlags;
 use crate::types::builtin::array::Array;
@@ -26,7 +27,7 @@ pub unsafe fn system_storage_put(
 /// Get a value from storage
 pub unsafe fn system_storage_get(_context: StorageContext, _key: ByteString) -> ByteString {
     // In a real implementation, this would call the storage get syscall
-    ByteString::new()
+    ByteString::empty()
 }
 
 /// Delete a value from storage
@@ -52,11 +53,11 @@ pub unsafe fn system_iterator_next(_iterator: i32) -> bool {
 /// Get the key of the current iterator value
 pub unsafe fn system_iterator_key(_iterator: i32) -> ByteString {
     // In a real implementation, this would call the iterator key syscall
-    ByteString::new()
+    ByteString::empty()
 }
 
 /// Get the value of the current iterator value
 pub unsafe fn system_iterator_value(_iterator: i32) -> ByteString {
     // In a real implementation, this would call the iterator value syscall
-    ByteString::new()
+    ByteString::empty()
 }

@@ -204,6 +204,7 @@ fn process_event_method(method: &ImplItemMethod) -> syn::Result<proc_macro2::Tok
 /// Check if an attribute list contains a specific neo attribute
 fn has_neo_attribute(attrs: &[syn::Attribute], name: &str) -> bool {
     attrs.iter().any(|attr| {
+        // Check for #[neo(storage)] format
         if attr.path.is_ident("neo") {
             if let Ok(Meta::List(meta_list)) = attr.parse_meta() {
                 return meta_list.nested.iter().any(|nested_meta| {
@@ -212,6 +213,13 @@ fn has_neo_attribute(attrs: &[syn::Attribute], name: &str) -> bool {
                     }
                     false
                 });
+            }
+        }
+        // Check for #[neo_contract::storage] format
+        else if attr.path.segments.len() > 1 && 
+                attr.path.segments[0].ident == "neo_contract" {
+            if let Ok(Meta::Path(path)) = attr.parse_meta() {
+                return path.segments.last().map_or(false, |seg| seg.ident == name);
             }
         }
         false

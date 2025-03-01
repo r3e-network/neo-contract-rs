@@ -4,103 +4,85 @@
 use alloc::vec::Vec;
 use crate::types::builtin::h160::H160;
 
-/// Signer represents a transaction signer
+/// Signer represents a signer of a transaction
 #[derive(Debug, Clone)]
 pub struct Signer {
     account: H160,
-    scopes: WitnessScope,
+    scopes: u8,
     allowed_contracts: Vec<H160>,
     allowed_groups: Vec<H160>,
 }
 
-/// WitnessScope represents the scope of a witness
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Witness scope
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WitnessScope {
-    /// None
+    /// No scope
     None = 0,
-    /// CalledByEntry
+    /// Called by entry
     CalledByEntry = 1,
-    /// CustomContracts
+    /// Custom contracts
     CustomContracts = 16,
-    /// CustomGroups
+    /// Custom groups
     CustomGroups = 32,
     /// Global
     Global = 128,
 }
 
-/// WitnessRule represents a witness rule
-#[derive(Debug, Clone)]
-pub struct WitnessRule {
-    action: WitnessRuleAction,
-    condition: WitnessCondition,
-}
-
-/// WitnessRuleAction represents a witness rule action
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum WitnessRuleAction {
-    /// Deny
-    Deny = 0,
-    /// Allow
-    Allow = 1,
-}
-
-/// WitnessCondition represents a witness condition
-#[derive(Debug, Clone)]
-pub struct WitnessCondition {
-    condition_type: WitnessConditionType,
-    expression: Vec<u8>,
-}
-
-/// WitnessConditionType represents a witness condition type
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum WitnessConditionType {
-    /// Boolean
-    Boolean = 0,
-    /// Not
-    Not = 1,
-    /// And
-    And = 2,
-    /// Or
-    Or = 3,
-    /// ScriptHash
-    ScriptHash = 4,
-    /// Group
-    Group = 5,
-    /// CalledByEntry
-    CalledByEntry = 6,
-    /// CalledByContract
-    CalledByContract = 7,
-    /// CalledByGroup
-    CalledByGroup = 8,
-}
-
 impl Signer {
     /// Create a new signer
-    pub fn new() -> Self {
+    pub fn new(account: H160, scopes: u8) -> Self {
         Self {
-            account: H160::zero(),
-            scopes: WitnessScope::None,
+            account,
+            scopes,
             allowed_contracts: Vec::new(),
             allowed_groups: Vec::new(),
         }
     }
 
-    /// Get the account
+    /// Create a new signer with allowed contracts
+    pub fn new_with_contracts(
+        account: H160,
+        scopes: u8,
+        allowed_contracts: Vec<H160>,
+    ) -> Self {
+        Self {
+            account,
+            scopes,
+            allowed_contracts,
+            allowed_groups: Vec::new(),
+        }
+    }
+
+    /// Create a new signer with allowed groups
+    pub fn new_with_groups(
+        account: H160,
+        scopes: u8,
+        allowed_groups: Vec<H160>,
+    ) -> Self {
+        Self {
+            account,
+            scopes,
+            allowed_contracts: Vec::new(),
+            allowed_groups,
+        }
+    }
+
+    /// Get the account of the signer
     pub fn account(&self) -> H160 {
         self.account.clone()
     }
 
-    /// Get the scopes
-    pub fn scopes(&self) -> WitnessScope {
-        self.scopes.clone()
+    /// Get the scopes of the signer
+    pub fn scopes(&self) -> u8 {
+        self.scopes
     }
 
-    /// Get the allowed contracts
+    /// Get the allowed contracts of the signer
     pub fn allowed_contracts(&self) -> Vec<H160> {
         self.allowed_contracts.clone()
     }
 
-    /// Get the allowed groups
+    /// Get the allowed groups of the signer
     pub fn allowed_groups(&self) -> Vec<H160> {
         self.allowed_groups.clone()
     }

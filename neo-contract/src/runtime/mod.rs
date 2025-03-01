@@ -2,79 +2,76 @@
 // All Rights Reserved
 
 use alloc::vec::Vec;
-use crate::types::builtin::array::Array;
-use crate::types::builtin::h160::H160;
-use crate::types::builtin::h256::H256;
-use crate::types::builtin::string::ByteString;
-use crate::types::notification::Notification;
-use crate::types::tx::TriggerType;
+use crate::builtin::{H160, ByteString, Array, Any};
+use crate::CallFlags;
+use crate::types::context::StorageContext;
 
-/// Get the executing script hash
-pub fn get_executing_script_hash() -> H160 {
-    H160::zero()
-}
+/// Runtime provides access to the Neo runtime
+pub struct Runtime;
 
-/// Get the calling script hash
-pub fn get_calling_script_hash() -> H160 {
-    H160::zero()
-}
+impl Runtime {
+    /// Get the executing script hash
+    pub fn executing_script_hash() -> H160 {
+        unsafe { crate::env::syscall_non_wasm::system_runtime_executing_script_hash() }
+    }
 
-/// Get the entry script hash
-pub fn get_entry_script_hash() -> H160 {
-    H160::zero()
-}
+    /// Get the calling script hash
+    pub fn calling_script_hash() -> H160 {
+        unsafe { crate::env::syscall_non_wasm::system_runtime_calling_script_hash() }
+    }
 
-/// Check if the witness is valid
-pub fn check_witness(_hash: &H160) -> bool {
-    false
-}
+    /// Check if the witness is valid
+    pub fn check_witness(hash: H160) -> bool {
+        unsafe { crate::env::syscall_non_wasm::system_runtime_check_witness(hash) }
+    }
 
-/// Get the platform
-pub fn platform() -> ByteString {
-    ByteString::from("NEO")
-}
+    /// Notify an event
+    pub fn notify(event_name: &ByteString, args: &Array<Any>) {
+        unsafe { crate::env::syscall_non_wasm::system_runtime_notify(event_name.clone(), args.clone()) }
+    }
 
-/// Get the trigger
-pub fn trigger() -> TriggerType {
-    TriggerType::Application
-}
-
-/// Get the gas left
-pub fn gas_left() -> i64 {
-    0
-}
-
-/// Get the invocation counter
-pub fn invocation_counter() -> i32 {
-    0
-}
-
-/// Get the time
-pub fn time() -> u64 {
-    0
-}
-
-/// Notify an event
-pub fn notify(event_name: &str, arg: &[u8]) -> Notification {
-    Notification::new(ByteString::from(event_name), Vec::from(arg))
-}
-
-/// Log a message
-pub fn log(message: &str) {
-    // In a real implementation, this would log the message
-}
-
-/// Get the notifications
-pub fn get_notifications(_hash: H160) -> Array<Notification> {
-    Array::new()
-}
-
-/// Get the random
-pub fn get_random() -> u64 {
-    0
-}
-
-/// Get the network
-pub fn network() -> u8 {
-    0
+    /// Call a contract
+    pub fn call_contract(hash: H160, method: ByteString, args: Array<Any>) -> Any {
+        unsafe { 
+            crate::env::syscall_non_wasm::system_contract_call(
+                hash, 
+                method, 
+                CallFlags::All, 
+                args
+            )
+        }
+    }
+    
+    /// Get the storage context
+    pub fn storage_context() -> StorageContext {
+        StorageContext::new()
+    }
+    
+    /// Get a value from storage
+    pub fn storage_get(context: StorageContext, key: &[u8]) -> Option<Vec<u8>> {
+        unsafe {
+            crate::env::syscall_non_wasm::system_storage_get(context, key)
+        }
+    }
+    
+    /// Put a value in storage
+    pub fn storage_put(context: StorageContext, key: &[u8], value: &[u8]) {
+        unsafe {
+            crate::env::syscall_non_wasm::system_storage_put(context, key, value)
+        }
+    }
+    
+    /// Delete a value from storage
+    pub fn storage_delete(context: StorageContext, key: &[u8]) {
+        unsafe {
+            crate::env::syscall_non_wasm::system_storage_delete(context, key)
+        }
+    }
+    
+    /// Assert a condition
+    pub fn assert(condition: bool) {
+        if !condition {
+            panic!("Assertion failed");
+        }
+    }
 }

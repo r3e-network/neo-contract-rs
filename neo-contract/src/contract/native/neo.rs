@@ -1,31 +1,32 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use crate::types::builtin::h160::H160;
-use crate::types::builtin::int256::Int256;
-use crate::types::builtin::string::ByteString;
+use alloc::string::String;
+use crate::builtin::{H160, ByteString, Int256};
 
-/// NEO represents the NEO native contract
-pub struct NEO;
+/// NEO script hash
+pub const SCRIPT_HASH: H160 = H160([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
-impl NEO {
-    /// Get the contract hash
-    pub fn hash() -> H160 {
-        H160::hex_decode("0xef4073a0f2b305a38ec4050e4d3d28bc40ea63f5").expect("Invalid hash")
-    }
+/// Transfer NEO
+pub fn transfer(from: H160, to: H160, amount: Int256, data: Option<ByteString>) -> bool {
+    // In a real implementation, this would call the NEO transfer method
+    true
+}
 
-    /// Get the symbol
-    pub fn symbol() -> ByteString {
-        ByteString::from("NEO")
-    }
+/// Register a candidate
+pub fn register_candidate(candidate: ByteString) -> bool {
+    // In a real implementation, this would call the NEO register candidate method
+    true
+}
 
-    /// Get the decimals
-    pub fn decimals() -> u8 {
-        0
-    }
+/// Unregister a candidate
+pub fn unregister_candidate(candidate: ByteString) -> bool {
+    // In a real implementation, this would call the NEO unregister candidate method
+    true
+}
 
-    /// Get the total supply
-    pub fn total_supply() -> Int256 {
-        Int256::from(100_000_000)
-    }
+/// Vote for a candidate
+pub fn vote(account: H160, candidate: ByteString) -> bool {
+    // In a real implementation, this would call the NEO vote method
+    true
 }

@@ -2,14 +2,14 @@
 // All Rights Reserved
 
 use alloc::string::String;
-use alloc::format;
 use alloc::vec::Vec;
+use alloc::format;
 use core::fmt;
-use core::ops::{Deref, DerefMut};
+use core::cmp::Ordering;
 use crate::utils::hex;
 
 /// H256 represents a 256-bit hash
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct H256(pub [u8; 32]);
 
 impl H256 {
@@ -23,89 +23,54 @@ impl H256 {
         H256([0; 32])
     }
 
-    /// Get the bytes
-    #[cfg(not(target_family = "wasm"))]
+    /// Get the bytes of the H256
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
-    
-    #[cfg(target_family = "wasm")]
-    pub fn as_bytes(&self) -> &[u8] {
-        unsafe { crate::env::extension::h256_as_bytes(self) }
-    }
 
-    /// Convert to a hex string
-    pub fn to_hex(&self) -> String {
-        let mut hex = String::with_capacity(64);
-        for byte in self.0.iter() {
-            hex.push_str(&format!("{:02x}", byte));
-        }
-        hex
-    }
-
-    /// Decode a hex string to an H256
+    /// Decode a hex string into a H256
     pub fn hex_decode(hex: &str) -> Option<Self> {
-        let bytes = hex::decode(hex)?;
-        if bytes.len() != 32 {
+        let hex = if hex.starts_with("0x") {
+            &hex[2..]
+        } else {
+            hex
+        };
+
+        if hex.len() != 64 {
             return None;
         }
-        let mut result = [0; 32];
-        result.copy_from_slice(&bytes);
-        Some(H256(result))
-    }
-    
-    #[cfg(not(target_family = "wasm"))]
-    pub fn from_bytes(bytes: [u8; 32]) -> Self {
-        H256(bytes)
-    }
-    
-    pub fn to_string(&self) -> String {
-        #[cfg(not(target_family = "wasm"))]
-        {
-            let bytes = self.as_bytes();
-            let mut hex = String::with_capacity(2 + bytes.len() * 2);
-            hex.push_str("0x");
-            for byte in bytes {
-                hex.push_str(&format!("{:02x}", byte));
-            }
-            hex
-        }
-        
-        #[cfg(target_family = "wasm")]
-        {
-            self.hex_encode().to_string()
+
+        match hex::decode(hex) {
+            Ok(bytes) => {
+                let mut result = [0u8; 32];
+                result.copy_from_slice(&bytes);
+                Some(H256(result))
+            },
+            Err(_) => None
         }
     }
 }
 
-impl Deref for H256 {
-    type Target = [u8; 32];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl Default for H256 {
+    fn default() -> Self {
+        Self::zero()
     }
 }
 
-impl DerefMut for H256 {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+impl PartialOrd for H256 {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
-impl From<[u8; 32]> for H256 {
-    fn from(bytes: [u8; 32]) -> Self {
-        H256(bytes)
-    }
-}
-
-impl From<H256> for [u8; 32] {
-    fn from(h256: H256) -> Self {
-        h256.0
+impl Ord for H256 {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
     }
 }
 
 impl fmt::Display for H256 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "0x{}", self.to_hex())
+        write!(f, "0x{}", hex::encode(&self.0))
     }
 }

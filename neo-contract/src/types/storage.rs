@@ -2,7 +2,6 @@
 // All Rights Reserved
 
 use alloc::vec::Vec;
-use crate::types::builtin::h160::H160;
 use crate::types::builtin::string::ByteString;
 use crate::types::context::StorageContext;
 
@@ -19,8 +18,8 @@ impl Storage {
     pub fn new() -> Self {
         Self {
             context: StorageContext::new(),
-            key: ByteString::new(),
-            value: ByteString::new(),
+            key: ByteString::empty(),
+            value: ByteString::empty(),
         }
     }
 
