@@ -37,6 +37,21 @@ impl H160 {
         hex
     }
     
+    /// Convert to a string
+    pub fn to_string(&self) -> String {
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let mut b = self.0.clone();
+            b.reverse();
+            format!("0x{}", hex::encode(&b))
+        }
+        
+        #[cfg(target_family = "wasm")]
+        {
+            self.to_hex_string()
+        }
+    }
+    
     /// Convert to a hex string with 0x prefix
     pub fn to_hex_string(&self) -> String {
         let mut hex = String::with_capacity(42);

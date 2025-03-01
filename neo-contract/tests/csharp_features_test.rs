@@ -3,8 +3,11 @@
 
 #[cfg(test)]
 mod tests {
-    // Import only the proc macros for testing
-    use neo_contract_proc_macros::*;
+    // Import the proc macros for testing
+    use neo_contract_proc_macros::{
+        byte_array, hash160, integer, public_key, string, contract_hash,
+        manifest_extra, contract_permission, contract_trust, supported_standards
+    };
 
     #[test]
     fn test_static_field_initialization() {
