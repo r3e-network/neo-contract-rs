@@ -18,21 +18,37 @@ impl Ledger {
 
     #[inline(always)]
     pub fn current_block_index() -> u32 {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_ledger_current_block_index() }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_ledger_current_block_index() }
     }
 
     #[inline(always)]
     pub fn current_block_hash() -> H256 {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_ledger_current_block_hash() }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_ledger_current_block_hash() }
     }
 
     #[inline(always)]
     pub fn block_of_index(index: u32) -> Block {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_ledger_block_of_index(index) }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_ledger_block_of_index(index) }
     }
 
     #[inline(always)]
     pub fn block_of_hash(hash: H256) -> Block {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_ledger_block_of_hash(hash) }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_ledger_block_of_hash(hash) }
     }
 }

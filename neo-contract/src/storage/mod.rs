@@ -47,10 +47,18 @@ impl ReadOnlyStorageContext {
     }
 }
 
+#[cfg(target_family = "wasm")]
 #[repr(C)]
 pub struct Iter<T> {
     iter: Placeholder,
     _marker: core::marker::PhantomData<T>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[repr(C)]
+pub struct Iter<T> {
+    values: Vec<T>,
+    current_index: usize,
 }
 
 #[allow(private_bounds)]
@@ -64,6 +72,29 @@ impl<T: FromPlaceholder> Iter<T> {
     #[inline(always)]
     pub fn value(&self) -> T {
         T::from_placeholder(unsafe { env::syscall::system_iterator_value(self.iter) })
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl<T: Clone> Iter<T> {
+    pub fn new(values: Vec<T>) -> Self {
+        Self {
+            values,
+            current_index: 0,
+        }
+    }
+    
+    pub fn next(&mut self) -> bool {
+        if self.current_index < self.values.len() {
+            self.current_index += 1;
+            true
+        } else {
+            false
+        }
+    }
+    
+    pub fn value(&self) -> T {
+        self.values[self.current_index - 1].clone()
     }
 }
 

@@ -53,12 +53,14 @@ pub struct ContractManifest {
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct ContractGroup {
     public_key: PublicKey,
     sign: ByteString,
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct ContractPermission {
     contract: ByteString,
     methods: Array<ByteString>,
@@ -71,6 +73,7 @@ pub struct ContractAbi {
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct ContractMethodDescriptor {
     name: ByteString,
     params: Array<ContractParam>,
@@ -80,18 +83,21 @@ pub struct ContractMethodDescriptor {
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct ContractEventDescriptor {
     name: ByteString,
     params: Array<ContractParam>,
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct ContractParam {
     name: ByteString,
     param_type: ContractParamType,
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct NeoCandidate {
     public_key: PublicKey,
     votes: Int256,

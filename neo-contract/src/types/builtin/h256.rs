@@ -6,6 +6,7 @@ use crate::{env, types::*};
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
+#[derive(Default)]
 pub struct H256([u8; 32]);
 
 #[cfg(target_family = "wasm")]

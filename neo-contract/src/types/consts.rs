@@ -52,6 +52,7 @@ pub enum CallFlags {
 }
 
 #[repr(u32)]
+#[derive(Clone)]
 pub enum WitnessScope {
     /// None indicates that no witness is required.
     None = 0x00,
@@ -75,6 +76,7 @@ pub enum WitnessScope {
 }
 
 #[repr(u32)]
+#[derive(Clone)]
 pub enum WitnessRuleAction {
     Deny = 0x00,
     Allow = 0x01,
@@ -92,6 +94,7 @@ pub enum FindOptions {
 }
 
 #[repr(u32)]
+#[derive(Clone)]
 pub enum WitnessConditionType {
     /// Indicates that the condition will always be met or not met. i.e. Boolean
     Bool = 0x00,
@@ -215,6 +218,7 @@ pub enum TxAttrType {
 }
 
 #[repr(u32)]
+#[derive(Clone)]
 pub enum ContractParamType {
     Any = 0x00,
 
