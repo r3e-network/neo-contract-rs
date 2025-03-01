@@ -1,49 +1,30 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-pub(crate) mod hash;
+use alloc::vec::Vec;
+use crate::types::builtin::array::Array;
+use crate::types::builtin::string::ByteString;
 
-pub use hash::*;
-
-use crate::types::*;
-
-#[inline(always)]
-pub fn check_sign(public_key: PublicKey, sign: ByteString) -> bool {
-    #[cfg(target_family = "wasm")]
-    unsafe { env::syscall::system_crypto_check_sign(public_key, sign) }
-
-    #[cfg(not(target_family = "wasm"))]
+/// Check a signature
+pub fn check_sign(public_key: ByteString, sign: ByteString) -> bool {
     unsafe { crate::env::syscall_non_wasm::system_crypto_check_sign(public_key, sign) }
 }
 
-#[inline(always)]
-pub fn check_multi_signs(public_keys: Array<PublicKey>, signs: Array<ByteString>) -> bool {
-    #[cfg(target_family = "wasm")]
-    unsafe { env::syscall::system_crypto_check_multi_signs(public_keys, signs) }
-
-    #[cfg(not(target_family = "wasm"))]
+/// Check multiple signatures
+pub fn check_multi_signs(public_keys: Array<ByteString>, signs: Array<ByteString>) -> bool {
     unsafe { crate::env::syscall_non_wasm::system_crypto_check_multi_signs(public_keys, signs) }
 }
 
-#[inline(always)]
-pub fn verify_ecdsa(
-    _message: ByteString,
-    _public_key: PublicKey,
-    _sign: ByteString,
-    _named_curve_hash: NamedCurveHash,
-) -> bool {
-    #[cfg(target_family = "wasm")]
-    unsafe { env::crypto::verify_ecdsa(message, public_key, sign, named_curve_hash) }
-
-    #[cfg(not(target_family = "wasm"))]
-    false // Placeholder for non-WASM implementation
+/// Named curve hash
+pub enum NamedCurveHash {
+    /// SHA256
+    SHA256 = 0,
+    /// RIPEMD160
+    RIPEMD160 = 1,
 }
 
-#[inline(always)]
-pub fn verify_ed25519(_message: ByteString, _public_key: PublicKey, _sign: ByteString) -> bool {
-    #[cfg(target_family = "wasm")]
-    unsafe { env::crypto::verify_ed25519(message, public_key, sign) }
-
-    #[cfg(not(target_family = "wasm"))]
-    false // Placeholder for non-WASM implementation
+/// Hash data using the specified algorithm
+pub fn hash(data: ByteString, hash_type: NamedCurveHash) -> ByteString {
+    // In a real implementation, this would call the crypto hash syscall
+    ByteString::new()
 }

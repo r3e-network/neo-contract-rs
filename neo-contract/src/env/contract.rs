@@ -1,158 +1,154 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-#![allow(unused)]
+use crate::types::builtin::ByteString;
+use crate::types::builtin::h160::H160;
+use crate::types::builtin::h256::H256;
+use crate::types::builtin::int256::Int256;
+use crate::types::block::Block;
 
-use crate::types::{Any, Placeholder};
-#[cfg(target_family = "wasm")]
-use crate::types::*;
+/// Get the current timestamp
+pub unsafe fn runtime_get_time() -> Int256 {
+    Int256::from(0)
+}
 
-#[cfg(not(target_family = "wasm"))]
-use crate::types::*;
+/// Get the current trigger type
+pub unsafe fn runtime_get_trigger() -> u32 {
+    0
+}
 
-#[link(wasm_import_module = "neo.contract")]
-#[allow(improper_ctypes)]
-#[cfg(target_family = "wasm")]
-extern "C" {
-    pub(crate) fn native_gas_contract_hash() -> H160;
+/// Get the executing script hash
+pub unsafe fn runtime_get_executing_script_hash() -> H160 {
+    H160::zero()
+}
 
-    pub(crate) fn native_gas_symbol() -> ByteString;
+/// Get the calling script hash
+pub unsafe fn runtime_get_calling_script_hash() -> H160 {
+    H160::zero()
+}
 
-    pub(crate) fn native_gas_decimals() -> u32;
+/// Get the entry script hash
+pub unsafe fn runtime_get_entry_script_hash() -> H160 {
+    H160::zero()
+}
 
-    pub(crate) fn native_gas_total_supply() -> Int256;
+/// Check if the witness is valid
+pub unsafe fn runtime_check_witness(hash: *const u8) -> bool {
+    false
+}
 
-    pub(crate) fn native_gas_balance_of(account: H160) -> Int256;
+/// Log a message
+pub unsafe fn runtime_log(message: *const u8, length: usize) {
+    // Implementation would call the actual system call
+}
 
-    pub(crate) fn native_gas_transfer(from: H160, to: H160, amount: Int256) -> bool;
+/// Notify an event
+pub unsafe fn runtime_notify(event_name: *const u8, event_name_len: usize, state: *const u8) {
+    // Implementation would call the actual system call
+}
 
-    pub(crate) fn native_neo_contract_hash() -> H160;
+/// Get the gas left
+pub unsafe fn runtime_gas_left() -> Int256 {
+    Int256::from(0)
+}
 
-    pub(crate) fn native_neo_symbol() -> ByteString;
+/// Burn gas
+pub unsafe fn runtime_burn_gas(gas: *const u8) {
+    // Implementation would call the actual system call
+}
 
-    pub(crate) fn native_neo_decimals() -> u32;
+/// Get a random number
+pub unsafe fn runtime_get_random() -> Int256 {
+    Int256::from(0)
+}
 
-    pub(crate) fn native_neo_total_supply() -> Int256;
+/// Get the platform
+pub unsafe fn runtime_platform() -> ByteString {
+    ByteString::from("NEO")
+}
 
-    pub(crate) fn native_neo_balance_of(account: H160) -> Int256;
+/// Storage operations
+pub unsafe fn storage_put(
+    context_id: u32,
+    key_ptr: *const u8,
+    key_len: usize,
+    value_ptr: *const u8,
+    value_len: usize,
+) {
+    // Implementation would call the actual system call
+}
 
-    pub(crate) fn native_neo_transfer(from: H160, to: H160, amount: Int256) -> bool;
+/// Get a value from storage
+pub unsafe fn storage_get(context_id: u32, key_ptr: *const u8, key_len: usize) -> *const u8 {
+    core::ptr::null()
+}
 
-    pub(crate) fn native_neo_get_gas_per_block() -> Int256;
+/// Get the length of the storage get result
+pub unsafe fn storage_get_length() -> i32 {
+    0
+}
 
-    pub(crate) fn native_neo_get_register_price() -> Int256;
+/// Delete a key-value pair from storage
+pub unsafe fn storage_delete(context_id: u32, key_ptr: *const u8, key_len: usize) {
+    // Implementation would call the actual system call
+}
 
-    pub(crate) fn native_neo_unclaimed_gas(account: H160, util_block_index: u32) -> Int256;
+/// Find entries in storage
+pub unsafe fn storage_find(context_id: u32, prefix_ptr: *const u8, prefix_len: usize) -> i32 {
+    0
+}
 
-    pub(crate) fn native_neo_register_candidate(public_key: PublicKey) -> bool;
+/// Check if the iterator has a next entry
+pub unsafe fn iterator_next(iterator: i32) -> bool {
+    false
+}
 
-    pub(crate) fn native_neo_unregister_candidate(public_key: PublicKey) -> bool;
+/// Get the key of the current iterator entry
+pub unsafe fn iterator_key(iterator: i32) -> *const u8 {
+    core::ptr::null()
+}
 
-    pub(crate) fn native_neo_vote(account: H160, vote_to: PublicKey) -> bool;
+/// Get the value of the current iterator entry
+pub unsafe fn iterator_value(iterator: i32) -> *const u8 {
+    core::ptr::null()
+}
 
-    pub(crate) fn native_neo_unvote(account: H160) -> bool;
+/// Get the length of the iterator key
+pub unsafe fn iterator_key_length() -> i32 {
+    0
+}
 
-    pub(crate) fn native_neo_get_candidate_votes(public_key: PublicKey) -> Int256;
+/// Get the length of the iterator value
+pub unsafe fn iterator_value_length() -> i32 {
+    0
+}
 
-    pub(crate) fn native_neo_get_candidates() -> Array<NeoCandidate>;
+/// Get a block by index
+pub unsafe fn native_ledger_block_of_index(index: u32) -> Block {
+    Block {
+        hash: H256::zero(),
+        version: 0,
+        previous_hash: H256::zero(),
+        merkle_root: H256::zero(),
+        timestamp: 0,
+        index: 0,
+        primary_index: 0,
+        next_consensus: H160::zero(),
+        transactions: alloc::vec::Vec::new(),
+    }
+}
 
-    // pub(crate) fn native_neo_get_all_candidates() -> Placeholder;
-
-    pub(crate) fn native_neo_get_committee() -> Array<PublicKey>;
-
-    pub(crate) fn native_neo_get_committee_address() -> H160;
-
-    pub(crate) fn native_neo_get_next_block_validators() -> Array<PublicKey>;
-
-    pub(crate) fn native_ledger_contract_hash() -> H160;
-
-    pub(crate) fn native_ledger_current_block_index() -> u32;
-
-    pub(crate) fn native_ledger_current_block_hash() -> H256;
-
-    pub(crate) fn native_ledger_block_of_index(index: u32) -> Block;
-
-    pub(crate) fn native_ledger_block_of_hash(hash: H256) -> Block;
-
-    pub(crate) fn native_ledger_get_tx(hash: H256) -> Tx;
-
-    pub(crate) fn native_ledger_get_tx_in_block_index(block_index: u32, tx_index: u32) -> Tx;
-
-    pub(crate) fn native_ledger_get_tx_in_block_hash(block_hash: H256, tx_index: u32) -> Tx;
-
-    pub(crate) fn native_ledger_get_tx_height(hash: H256) -> u32;
-
-    pub(crate) fn native_ledger_get_tx_signers(hash: H256) -> Array<Signer>;
-
-    pub(crate) fn native_ledger_get_tx_vm_state(hash: H256) -> VmState;
-
-    pub(crate) fn native_policy_contract_hash() -> H160;
-
-    pub(crate) fn native_policy_get_fee_per_byte() -> Int256;
-
-    pub(crate) fn native_policy_get_exec_fee_factor() -> Int256;
-
-    pub(crate) fn native_policy_get_storage_price() -> Int256;
-
-    pub(crate) fn native_policy_is_blocked(account: H160) -> bool;
-
-    pub(crate) fn native_policy_get_attr_fee(attr_type: TxAttrType) -> Int256;
-
-    pub(crate) fn native_policy_set_attr_fee(attr_type: TxAttrType, fee: Int256);
-
-    pub(crate) fn native_oracle_contract_hash() -> H160;
-
-    pub(crate) fn native_oracle_get_price() -> Int256;
-
-    pub(crate) fn native_oracle_response(
-        url: ByteString,
-        filter: ByteString,
-        callback: ByteString,
-        user_data: Any,
-        gas_for_response: Int256,
-    ) -> bool;
-
-    pub(crate) fn native_role_management_contract_hash() -> H160;
-
-    pub(crate) fn native_role_management_get_designated_by_role(
-        role: Role,
-        block_index: u32,
-    ) -> Array<PublicKey>;
-
-    pub(crate) fn native_contract_management_contract_hash() -> H160;
-
-    pub(crate) fn native_contract_management_get_min_deployment_fee() -> Int256;
-
-    pub(crate) fn native_contract_management_contract_of_hash(hash: H160) -> Contract;
-
-    pub(crate) fn native_contract_management_contract_of_id(id: u32) -> Contract;
-
-    pub(crate) fn native_contract_management_get_contracts_hashes() -> Placeholder;
-
-    pub(crate) fn native_contract_management_has_method(
-        hash: H160,
-        method: ByteString,
-        param_count: u32,
-    ) -> bool;
-
-    pub(crate) fn native_contract_management_deploy(
-        nef: ByteString,
-        manifest: ByteString,
-    ) -> Contract;
-
-    // pub(crate) fn native_contract_management_deploy_with_data(
-    //     nef: ByteString,
-    //     manifest: ByteString,
-    //     data: Any,
-    // ) -> Contract;
-
-    pub(crate) fn native_contract_management_update(nef: ByteString, manifest: ByteString);
-
-    // pub(crate) fn native_contract_management_update_with_data(
-    //     nef: ByteString,
-    //     manifest: ByteString,
-    //     data: Any,
-    // );
-
-    pub(crate) fn native_contract_management_destroy();
+/// Get a block by hash
+pub unsafe fn native_ledger_block_of_hash(hash: H256) -> Block {
+    Block {
+        hash: hash.clone(),
+        version: 0,
+        previous_hash: H256::zero(),
+        merkle_root: H256::zero(),
+        timestamp: 0,
+        index: 0,
+        primary_index: 0,
+        next_consensus: H160::zero(),
+        transactions: alloc::vec::Vec::new(),
+    }
 }

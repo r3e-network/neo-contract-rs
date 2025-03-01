@@ -1,173 +1,160 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-#[allow(unused_imports)]
-use crate::{env, types::*};
+use alloc::string::String;
+use alloc::format;
+use alloc::vec::Vec;
+use alloc::string::ToString;
+use crate::types::builtin::string::ByteString;
+use core::fmt;
+use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-#[cfg(not(target_family = "wasm"))]
-#[repr(C)]
-#[derive(Default)]
-pub struct Int256(num256::Int256);
+/// Int256 represents a 256-bit integer
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq)]
+pub struct Int256(pub i128);
 
-#[cfg(target_family = "wasm")]
-#[repr(C)]
-pub struct Int256(Placeholder);
-
-#[cfg(target_family = "wasm")]
 impl Int256 {
-    #[inline(always)]
+    /// Create a new Int256
+    pub fn new(value: i128) -> Self {
+        Int256(value)
+    }
+
+    /// Create a zero Int256
     pub fn zero() -> Self {
-        unsafe { env::numeric::int256_zero() }
+        Int256(0)
     }
 
-    #[inline(always)]
-    pub fn one() -> Self {
-        unsafe { env::numeric::int256_one() }
+    /// Get the value
+    pub fn value(&self) -> i128 {
+        self.0
     }
-
-    #[inline(always)]
-    pub fn minus_one() -> Self {
-        unsafe { env::numeric::int256_minus_one() }
-    }
-
-    #[inline(always)]
-    pub fn is_zero(&self) -> bool {
-        unsafe { env::numeric::int256_is_zero(Self(self.0)) }
-    }
-
-    #[inline(always)]
-    pub fn is_one(&self) -> bool {
-        unsafe { env::numeric::int256_is_one(Self(self.0)) }
-    }
-
-    #[inline(always)]
-    pub fn is_positive(&self) -> bool {
-        unsafe { env::numeric::int256_is_positive(Self(self.0)) }
-    }
-
-    #[inline(always)]
-    pub fn is_negative(&self) -> bool {
-        unsafe { env::numeric::int256_is_negative(Self(self.0)) }
+    
+    /// Convert to u8
+    pub fn to_u8(&self) -> u8 {
+        self.0 as u8
     }
 }
 
-#[cfg(not(target_family = "wasm"))]
-impl Int256 {
-    pub(crate) fn new(n: i64) -> Self {
-        Int256(num256::Int256::from(n))
-    }
-
-    pub fn zero() -> Self {
-        Int256(num256::Int256::from(0))
-    }
-
-    pub fn one() -> Self {
-        Int256(num256::Int256::from(1))
-    }
-
-    pub fn minus_one() -> Self {
-        Int256(num256::Int256::from(-1))
-    }
-
-    pub fn is_zero(&self) -> bool {
-        self.0 == num256::Int256::from(0)
-    }
-
-    pub fn is_positive(&self) -> bool {
-        self.0 > num256::Int256::from(0)
-    }
-
-    pub fn is_negative(&self) -> bool {
-        self.0 < num256::Int256::from(0)
+impl From<i128> for Int256 {
+    fn from(value: i128) -> Self {
+        Int256(value)
     }
 }
 
-impl PartialEq for Int256 {
-    #[inline(always)]
-    #[cfg(target_family = "wasm")]
-    fn eq(&self, other: &Self) -> bool {
-        unsafe { env::numeric::int256_eq(Self(self.0), Self(other.0)) }
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
+impl From<i64> for Int256 {
+    fn from(value: i64) -> Self {
+        Int256(value as i128)
     }
 }
 
-impl Clone for Int256 {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
+impl From<i32> for Int256 {
+    fn from(value: i32) -> Self {
+        Int256(value as i128)
     }
 }
 
-impl Eq for Int256 {}
-impl Copy for Int256 {}
+impl From<u64> for Int256 {
+    fn from(value: u64) -> Self {
+        Int256(value as i128)
+    }
+}
 
-impl std::ops::Add for Int256 {
+impl From<u32> for Int256 {
+    fn from(value: u32) -> Self {
+        Int256(value as i128)
+    }
+}
+
+impl From<Int256> for i128 {
+    fn from(value: Int256) -> Self {
+        value.0
+    }
+}
+
+impl TryFrom<ByteString> for Int256 {
+    type Error = ();
+
+    fn try_from(value: ByteString) -> Result<Self, Self::Error> {
+        let s = String::from_utf8_lossy(&value.0);
+        match s.parse::<i128>() {
+            Ok(val) => Ok(Int256(val)),
+            Err(_) => Err(()),
+        }
+    }
+}
+
+impl From<Int256> for ByteString {
+    fn from(value: Int256) -> Self {
+        ByteString::from(value.0.to_string())
+    }
+}
+
+impl Add for Int256 {
     type Output = Self;
 
-    #[inline(always)]
-    #[cfg(target_family = "wasm")]
-    fn add(self, other: Self) -> Self {
-        unsafe { env::numeric::int256_add(self, other) }
-    }
-
-    #[cfg(not(target_family = "wasm"))]
     fn add(self, other: Self) -> Self {
         Int256(self.0 + other.0)
     }
 }
 
-impl std::ops::Sub for Int256 {
+impl AddAssign for Int256 {
+    fn add_assign(&mut self, other: Self) {
+        self.0 += other.0;
+    }
+}
+
+impl Sub for Int256 {
     type Output = Self;
 
-    #[inline(always)]
-    #[cfg(target_family = "wasm")]
-    fn sub(self, other: Self) -> Self {
-        unsafe { env::numeric::int256_sub(self, other) }
-    }
-
-    #[cfg(not(target_family = "wasm"))]
     fn sub(self, other: Self) -> Self {
         Int256(self.0 - other.0)
     }
 }
 
-impl std::ops::Neg for Int256 {
+impl SubAssign for Int256 {
+    fn sub_assign(&mut self, other: Self) {
+        self.0 -= other.0;
+    }
+}
+
+impl Mul for Int256 {
     type Output = Self;
 
-    #[inline(always)]
-    #[cfg(target_family = "wasm")]
-    fn neg(self) -> Self {
-        unsafe { env::numeric::int256_neg(self) }
+    fn mul(self, other: Self) -> Self {
+        Int256(self.0 * other.0)
     }
+}
 
-    #[cfg(not(target_family = "wasm"))]
+impl MulAssign for Int256 {
+    fn mul_assign(&mut self, other: Self) {
+        self.0 *= other.0;
+    }
+}
+
+impl Div for Int256 {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self {
+        Int256(self.0 / other.0)
+    }
+}
+
+impl DivAssign for Int256 {
+    fn div_assign(&mut self, other: Self) {
+        self.0 /= other.0;
+    }
+}
+
+impl Neg for Int256 {
+    type Output = Self;
+
     fn neg(self) -> Self {
         Int256(-self.0)
     }
 }
 
-impl std::cmp::PartialOrd for Int256 {
-    #[inline(always)]
-    #[cfg(target_family = "wasm")]
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        if unsafe { env::numeric::int256_lt(Self(self.0), Self(other.0)) } {
-            Some(std::cmp::Ordering::Less)
-        } else if unsafe { env::numeric::int256_gt(Self(self.0), Self(other.0)) } {
-            Some(std::cmp::Ordering::Greater)
-        } else {
-            Some(std::cmp::Ordering::Equal)
-        }
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.0.partial_cmp(&other.0)
+impl fmt::Display for Int256 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
-
-#[cfg(target_family = "wasm")]
-crate::impl_placeholder!(Int256);

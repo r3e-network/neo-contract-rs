@@ -1,6 +1,3 @@
-# Copyright @ 2023 - 2024, R3E Network
-# All Rights Reserved
-
 [package]
 name = "neo-contract"
 version = "0.1.0"
@@ -8,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 neo-contract-proc-macros = { path = "../neo-contract-proc-macros" }
+bitflags = "1.3.2"
 
-[target.'cfg(not(target_family = "wasm"))'.dependencies]
-num256 = { version = "0.6" }
-hex    = { version = "0.4" }
+[features]
+default = []

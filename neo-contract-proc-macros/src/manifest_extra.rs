@@ -2,34 +2,30 @@
 // All Rights Reserved
 
 use proc_macro::TokenStream;
-use quote::quote;
 use syn::{
-    parse_macro_input, AttributeArgs, Lit, Meta, NestedMeta, Item,
+    parse_macro_input, AttributeArgs, Lit, NestedMeta,
 };
 
 /// Process the manifest_extra attribute macro
 pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
-    // Parse the module containing the contract
-    let item = parse_macro_input!(item as Item);
-    
-    // Parse attribute arguments (if any)
+    // Parse attribute arguments
     let args = parse_macro_input!(attr as AttributeArgs);
     
     // Extract the key and value from the attribute arguments
-    if args.len() < 1 {
+    if args.is_empty() || args.len() > 2 {
         return syn::Error::new_spanned(
-            proc_macro2::TokenStream::from(attr),
-            "Expected at least one argument for manifest extra attribute"
+            proc_macro2::TokenStream::new(),
+            "Expected one or two arguments for manifest_extra attribute: key and optional value"
         )
         .to_compile_error()
         .into();
     }
     
-    let key = match &args[0] {
+    let _key = match &args[0] {
         NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
         _ => {
             return syn::Error::new_spanned(
-                proc_macro2::TokenStream::from(attr),
+                proc_macro2::TokenStream::new(),
                 "Expected string literal for key"
             )
             .to_compile_error()
@@ -37,12 +33,12 @@ pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
     
-    let value = if args.len() > 1 {
+    let _value = if args.len() > 1 {
         match &args[1] {
-            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            NestedMeta::Lit(Lit::Str(lit)) => Some(lit.value()),
             _ => {
                 return syn::Error::new_spanned(
-                    proc_macro2::TokenStream::from(attr),
+                    proc_macro2::TokenStream::new(),
                     "Expected string literal for value"
                 )
                 .to_compile_error()
@@ -50,16 +46,9 @@ pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
         }
     } else {
-        String::new()
+        None
     };
     
-    // Generate the output - for now, we'll just pass through the item
-    // In a real implementation, we would store the manifest extra information
-    // to be used when generating the contract manifest
-    let output = quote! {
-        // Store manifest extra information: key = #key, value = #value
-        #item
-    };
-    
-    output.into()
+    // Return the original item
+    item
 }

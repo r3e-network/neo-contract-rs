@@ -1,140 +1,219 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-use crate::types::*;
+use alloc::vec::Vec;
+use crate::types::builtin::h160::H160;
+use crate::types::builtin::int256::Int256;
+use crate::types::builtin::string::ByteString;
+use crate::types::key::PublicKey;
 
-#[repr(C)]
-pub struct ContractHash {
-    id: u32,
-    hash: H160,
-}
-
-#[repr(C)]
+/// Contract represents a Neo contract
+#[derive(Debug, Clone)]
 pub struct Contract {
-    id: u32,
-    update_counter: u32,
-    hash: H160,
-    nef: ByteString,
+    script_hash: H160,
     manifest: ContractManifest,
 }
 
-impl Contract {
-    #[inline(always)]
-    pub fn id(&self) -> u32 {
-        self.id
-    }
-
-    #[inline(always)]
-    pub fn update_counter(&self) -> u32 {
-        self.update_counter
-    }
-
-    #[inline(always)]
-    pub fn hash(&self) -> H160 {
-        self.hash
-    }
-
-    #[inline(always)]
-    pub fn nef(&self) -> ByteString {
-        self.nef.clone()
-    }
-}
-
-#[repr(C)]
+/// ContractManifest represents a Neo contract manifest
+#[derive(Debug, Clone)]
 pub struct ContractManifest {
     name: ByteString,
-    groups: Array<ContractGroup>,
-    _reserved: Any,
-    supported_standards: Array<ByteString>,
-    abi: ContractAbi,
-    permissions: Array<ContractPermission>,
-    trusts: Array<ByteString>,
-    extra: ByteString,
+    groups: Vec<ContractGroup>,
+    features: ContractFeatures,
+    supported_standards: Vec<ByteString>,
+    abi: ContractABI,
+    permissions: Vec<ContractPermission>,
+    trusts: Vec<ContractTrust>,
+    extra: ContractExtra,
 }
 
-#[repr(C)]
-#[derive(Clone)]
+/// ContractGroup represents a Neo contract group
+#[derive(Debug, Clone)]
 pub struct ContractGroup {
-    public_key: PublicKey,
-    sign: ByteString,
+    pub_key: PublicKey,
+    signature: Vec<u8>,
 }
 
-#[repr(C)]
-#[derive(Clone)]
-pub struct ContractPermission {
-    contract: ByteString,
-    methods: Array<ByteString>,
+/// ContractFeatures represents Neo contract features
+#[derive(Debug, Clone)]
+pub struct ContractFeatures {
+    storage: bool,
+    payable: bool,
 }
 
-#[repr(C)]
-pub struct ContractAbi {
-    methods: Array<ContractMethodDescriptor>,
-    events: Array<ContractEventDescriptor>,
+/// ContractABI represents a Neo contract ABI
+#[derive(Debug, Clone)]
+pub struct ContractABI {
+    methods: Vec<ContractMethod>,
+    events: Vec<ContractEvent>,
 }
 
-#[repr(C)]
-#[derive(Clone)]
-pub struct ContractMethodDescriptor {
+/// ContractMethod represents a Neo contract method
+#[derive(Debug, Clone)]
+pub struct ContractMethod {
     name: ByteString,
-    params: Array<ContractParam>,
-    return_type: ContractParamType,
+    parameters: Vec<ContractParameter>,
+    return_type: ContractParameterType,
     offset: u32,
     safe: bool,
 }
 
-#[repr(C)]
-#[derive(Clone)]
-pub struct ContractEventDescriptor {
+/// ContractEvent represents a Neo contract event
+#[derive(Debug, Clone)]
+pub struct ContractEvent {
     name: ByteString,
-    params: Array<ContractParam>,
+    parameters: Vec<ContractParameter>,
 }
 
-#[repr(C)]
-#[derive(Clone)]
-pub struct ContractParam {
+/// ContractParameter represents a Neo contract parameter
+#[derive(Debug, Clone)]
+pub struct ContractParameter {
     name: ByteString,
-    param_type: ContractParamType,
+    param_type: ContractParameterType,
 }
 
-#[repr(C)]
-#[derive(Clone)]
+/// ContractParameterType represents a Neo contract parameter type
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ContractParameterType {
+    Any,
+    Boolean,
+    Integer,
+    ByteArray,
+    String,
+    Hash160,
+    Hash256,
+    PublicKey,
+    Signature,
+    Array,
+    Map,
+    InteropInterface,
+    Void,
+}
+
+/// ContractPermission represents a Neo contract permission
+#[derive(Debug, Clone)]
+pub struct ContractPermission {
+    contract: H160,
+    methods: Vec<ByteString>,
+}
+
+/// ContractTrust represents a Neo contract trust
+#[derive(Debug, Clone)]
+pub struct ContractTrust {
+    contract: H160,
+}
+
+/// ContractExtra represents Neo contract extra information
+#[derive(Debug, Clone)]
+pub struct ContractExtra {
+    data: Vec<(ByteString, ByteString)>,
+}
+
+/// NeoCandidate represents a Neo candidate
+#[derive(Debug, Clone)]
 pub struct NeoCandidate {
-    public_key: PublicKey,
+    pub_key: PublicKey,
     votes: Int256,
 }
 
+impl Contract {
+    /// Create a new contract
+    pub fn new(script_hash: H160, manifest: ContractManifest) -> Self {
+        Self {
+            script_hash,
+            manifest,
+        }
+    }
+
+    /// Get the script hash
+    pub fn script_hash(&self) -> H160 {
+        self.script_hash.clone()
+    }
+
+    /// Get the manifest
+    pub fn manifest(&self) -> &ContractManifest {
+        &self.manifest
+    }
+}
+
+impl ContractManifest {
+    /// Create a new contract manifest
+    pub fn new(
+        name: ByteString,
+        groups: Vec<ContractGroup>,
+        features: ContractFeatures,
+        supported_standards: Vec<ByteString>,
+        abi: ContractABI,
+        permissions: Vec<ContractPermission>,
+        trusts: Vec<ContractTrust>,
+        extra: ContractExtra,
+    ) -> Self {
+        Self {
+            name,
+            groups,
+            features,
+            supported_standards,
+            abi,
+            permissions,
+            trusts,
+            extra,
+        }
+    }
+
+    /// Get the name
+    pub fn name(&self) -> ByteString {
+        self.name.clone()
+    }
+
+    /// Get the groups
+    pub fn groups(&self) -> &[ContractGroup] {
+        &self.groups
+    }
+
+    /// Get the features
+    pub fn features(&self) -> &ContractFeatures {
+        &self.features
+    }
+
+    /// Get the supported standards
+    pub fn supported_standards(&self) -> &[ByteString] {
+        &self.supported_standards
+    }
+
+    /// Get the ABI
+    pub fn abi(&self) -> &ContractABI {
+        &self.abi
+    }
+
+    /// Get the permissions
+    pub fn permissions(&self) -> &[ContractPermission] {
+        &self.permissions
+    }
+
+    /// Get the trusts
+    pub fn trusts(&self) -> &[ContractTrust] {
+        &self.trusts
+    }
+
+    /// Get the extra
+    pub fn extra(&self) -> &ContractExtra {
+        &self.extra
+    }
+}
+
 impl NeoCandidate {
-    #[inline(always)]
-    pub fn public_key(&self) -> PublicKey {
-        self.public_key.clone()
+    /// Create a new Neo candidate
+    pub fn new(pub_key: PublicKey, votes: Int256) -> Self {
+        Self { pub_key, votes }
     }
 
-    #[inline(always)]
+    /// Get the public key
+    pub fn pub_key(&self) -> &PublicKey {
+        &self.pub_key
+    }
+
+    /// Get the votes
     pub fn votes(&self) -> Int256 {
-        self.votes
-    }
-}
-
-#[repr(C)]
-pub struct NeoAccountState {
-    balance: Int256,
-    height: Int256,
-    vote_to: PublicKey,
-}
-
-impl NeoAccountState {
-    #[inline(always)]
-    pub fn balance(&self) -> Int256 {
-        self.balance
-    }
-
-    #[inline(always)]
-    pub fn height(&self) -> Int256 {
-        self.height
-    }
-
-    #[inline(always)]
-    pub fn vote_to(&self) -> PublicKey {
-        self.vote_to.clone()
+        self.votes.clone()
     }
 }

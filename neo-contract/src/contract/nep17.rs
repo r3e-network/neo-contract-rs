@@ -1,115 +1,80 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-use crate::{contract::*, runtime, storage::StorageMap, types::*};
+use alloc::vec::Vec;
+use crate::runtime;
+use crate::storage::map::StorageMap;
+use crate::types::builtin::h160::H160;
+use crate::types::builtin::int256::Int256;
+use crate::types::builtin::string::ByteString;
+use crate::types::consts::*;
 
-pub const DEFAULT_TOTAL_SUPPLY_KEY: u8 = 0x00;
-pub const DEFAULT_BALANCE_KEY: u8 = 0x01;
+/// NEP17 represents a NEP17 token
+pub struct NEP17;
 
-pub trait Nep17Token: TokenContract {
-    fn transfer(from: H160, to: H160, amount: Int256) -> bool {
-        if amount.is_negative() {
-            runtime::abort();
-            return false; // unreachable
-        }
+impl NEP17 {
+    /// Get the balance of the specified address
+    pub fn balance_of(account: H160) -> Int256 {
+        let key = account.to_hex_string();
+        let context = crate::types::context::StorageContext::new();
+        StorageMap::new(context, Vec::from([DEFAULT_BALANCE_KEY])).get(&key)
+            .unwrap_or_else(Int256::zero)
+    }
 
-        if !runtime::check_witness_with_account(from) {
+    /// Transfer tokens from one address to another
+    pub fn transfer(from: H160, to: H160, amount: Int256) -> bool {
+        if amount <= Int256::zero() {
             return false;
         }
 
-        if amount.is_positive() {
-            let from_balance = Self::balance_of(from);
-            if from_balance < amount {
-                return false;
-            }
-            
-            // Use copied bytes instead of chaining iterators
-            let mut from_key = Vec::with_capacity(21);
-            from_key.push(DEFAULT_BALANCE_KEY);
-            from_key.extend_from_slice(from.as_bytes());
-            
-            let mut to_key = Vec::with_capacity(21);
-            to_key.push(DEFAULT_BALANCE_KEY);
-            to_key.extend_from_slice(to.as_bytes());
-            
-            let storage = StorageMap::new();
-            
-            // Update from balance
-            let from_balance = storage.get::<Int256>(&from_key).unwrap_or_default();
-            let new_from_balance = from_balance - amount;
-            if new_from_balance.is_zero() {
-                storage.delete(&from_key);
-            } else {
-                storage.put(&from_key, &new_from_balance);
-            }
-            
-            // Update to balance
-            let to_balance = storage.get::<Int256>(&to_key).unwrap_or_default();
-            let new_to_balance = to_balance + amount;
-            storage.put(&to_key, &new_to_balance);
+        if !runtime::check_witness(&from) {
+            return false;
         }
 
-        return true;
+        let from_balance = Self::balance_of(from);
+        if from_balance < amount {
+            return false;
+        }
+
+        let from_key = from.to_hex_string();
+        let to_key = to.to_hex_string();
+        let context = crate::types::context::StorageContext::new();
+        let balance_map = StorageMap::new(context, Vec::from([DEFAULT_BALANCE_KEY]));
+
+        if from_balance == amount {
+            balance_map.delete(&from_key);
+        } else {
+            balance_map.put(&from_key, from_balance - amount);
+        }
+
+        let to_balance = Self::balance_of(to);
+        balance_map.put(&to_key, to_balance + amount);
+
+        // Emit transfer event
+        runtime::notify("Transfer", &[]);
+
+        true
     }
 
-    // fn transfer_with_data(from: H160, to: H160, amount: Int256, data: Any) -> bool;
-
-    fn mint(account: H160, amount: Int256) {
-        if amount.is_negative() {
-            runtime::abort();
-            return;
-        }
-        
-        // Update total supply
-        let storage = StorageMap::new();
-        let total_supply_key = [DEFAULT_TOTAL_SUPPLY_KEY].to_vec();
-        let current_supply = storage.get::<Int256>(&total_supply_key).unwrap_or_default();
-        let new_supply = current_supply + amount;
-        storage.put(&total_supply_key, &new_supply);
-        
-        // Update account balance
-        update_nep17_balance::<DEFAULT_BALANCE_KEY>(account, amount);
+    /// Get the total supply of the token
+    pub fn total_supply() -> Int256 {
+        let context = crate::types::context::StorageContext::new();
+        StorageMap::new(context, Vec::from([DEFAULT_TOTAL_SUPPLY_KEY])).get("")
+            .unwrap_or_else(Int256::zero)
     }
 
-    fn burn(account: H160, amount: Int256) {
-        if amount.is_negative() {
-            runtime::abort();
-            return;
-        }
-        
-        // Check balance
-        let balance = Self::balance_of(account);
-        if balance < amount {
-            runtime::abort();
-            return;
-        }
-        
-        // Update total supply
-        let storage = StorageMap::new();
-        let total_supply_key = [DEFAULT_TOTAL_SUPPLY_KEY].to_vec();
-        let current_supply = storage.get::<Int256>(&total_supply_key).unwrap_or_default();
-        let new_supply = current_supply - amount;
-        storage.put(&total_supply_key, &new_supply);
-        
-        // Update account balance
-        update_nep17_balance::<DEFAULT_BALANCE_KEY>(account, -amount);
+    /// Get the decimals of the token
+    pub fn decimals() -> u8 {
+        let context = crate::types::context::StorageContext::new();
+        StorageMap::new(context, Vec::from([DEFAULT_DECIMALS_KEY])).get("")
+            .map(|i: Int256| i.value() as u8)
+            .unwrap_or(DEFAULT_DECIMALS)
     }
-}
 
-pub fn update_nep17_balance<const BALANCE_PREFIX: u8>(account: H160, amount: Int256) {
-    let storage = StorageMap::new();
-    
-    // Create key directly instead of using chain
-    let mut key = Vec::with_capacity(21);
-    key.push(BALANCE_PREFIX);
-    key.extend_from_slice(account.as_bytes());
-    
-    let current_balance = storage.get::<Int256>(&key).unwrap_or_default();
-    let new_balance = current_balance + amount;
-    
-    if new_balance.is_zero() {
-        storage.delete(&key);
-    } else {
-        storage.put(&key, &new_balance);
+    /// Get the symbol of the token
+    pub fn symbol() -> ByteString {
+        let context = crate::types::context::StorageContext::new();
+        StorageMap::new(context, Vec::from([DEFAULT_SYMBOL_KEY])).get("")
+            .unwrap_or_else(|| ByteString::from(DEFAULT_SYMBOL))
     }
 }

@@ -1,47 +1,44 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
 pub mod any;
 pub mod array;
-pub mod buffer;
 pub mod h160;
 pub mod h256;
 pub mod int256;
-pub mod interop;
 pub mod map;
 pub mod string;
 
-pub use {any::*, array::*, buffer::*, interop::*, map::*};
-pub use {h160::*, h256::*, int256::*, string::*};
+// Re-exports
+pub use any::Any;
+pub use array::Array;
+pub use h160::H160;
+pub use h256::H256;
+pub use int256::Int256;
+pub use map::Map;
+pub use string::ByteString;
 
-pub trait Builtin: inner::Sealed {}
+/// Primitive trait for types that can be used as keys in maps
+pub trait Primitive: Clone {}
 
-pub trait Primitive: Builtin + Eq + PartialEq {}
+// Implement Primitive for basic types
+impl Primitive for u8 {}
+impl Primitive for u16 {}
+impl Primitive for u32 {}
+impl Primitive for u64 {}
+impl Primitive for i8 {}
+impl Primitive for i16 {}
+impl Primitive for i32 {}
+impl Primitive for i64 {}
+impl Primitive for bool {}
+impl Primitive for char {}
+impl Primitive for H160 {}
+impl Primitive for H256 {}
+impl Primitive for Int256 {}
+impl Primitive for ByteString {}
 
-// impl Primitive for a list of types
-macro_rules! impl_primitive {
-    ($($type:ty),*) => {
-        $(impl Primitive for $type {})*
+// Implement Primitive for Array
+impl<T: Primitive> Primitive for Array<T> {}
 
-        $(impl Builtin for $type {})*
-
-        $(impl inner::Sealed for $type {})*
-    };
-}
-
-// impl_primitive!(i8, i16, u8, u16);
-impl_primitive!(i32, i64, u32, u64, isize, usize);
-impl_primitive!(bool, ByteString, Int256, H256, H160);
-
-impl<T: Clone> Builtin for Array<T> {}
-impl<T: Clone> inner::Sealed for Array<T> {}
-
-impl Builtin for Buffer {}
-impl inner::Sealed for Buffer {}
-
-impl<K: Primitive + std::hash::Hash, V> Builtin for Map<K, V> {}
-impl<K: Primitive + std::hash::Hash, V> inner::Sealed for Map<K, V> {}
-
-pub(crate) mod inner {
-    pub trait Sealed {}
-}
+// Implement Primitive for Map
+impl<K: Primitive + core::hash::Hash + Ord, V: Clone> Primitive for Map<K, V> {}

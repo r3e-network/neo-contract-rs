@@ -1,155 +1,245 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-//! Attribute macros for Neo N3 smart contracts
+//! Attributes for Neo N3 smart contracts
 //!
-//! This module re-exports the attribute macros from the neo-contract-proc-macros crate
-//! and provides documentation for their usage.
+//! This module provides attributes for Neo N3 smart contracts, including:
+//! - Contract metadata attributes
+//! - Contract permission attributes
+//! - Contract trust attributes
+//! - Supported standards attributes
 
-/// Attribute for defining a Neo N3 smart contract
-///
-/// This attribute is used to define a Neo N3 smart contract module. It processes
-/// the module and generates the necessary code for the contract.
-///
-/// # Example
-///
-/// ```
-/// #[neo_contract::contract]
-/// mod my_contract {
-///     #[neo(storage)]
-///     pub struct MyContract {
-///         value: bool,
-///     }
-///
-///     impl MyContract {
-///         // Contract methods and events
-///     }
-/// }
-/// ```
-pub use neo_contract_proc_macros::contract;
+/// Contract metadata attributes
+pub mod metadata {
+    /// Manifest extra attribute
+    ///
+    /// This attribute adds extra information to the contract manifest.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[manifest_extra("Author", "Neo Team")]
+    /// struct MyContract;
+    /// ```
+    pub use neo_contract_proc_macros::manifest_extra;
 
-/// Attribute for adding extra information to the contract manifest
-///
-/// This attribute is used to add extra information to the contract manifest.
-///
-/// # Example
-///
-/// ```
-/// #[neo_contract::manifest_extra("key", "value")]
-/// mod my_contract {
-///     // Contract code
-/// }
-/// ```
-pub use neo_contract_proc_macros::manifest_extra;
+    /// Contract permission attribute
+    ///
+    /// This attribute specifies which contracts and methods this contract is allowed to call.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[contract_permission("0102030405060708090a0b0c0d0e0f1011121314", "transfer", "balanceOf")]
+    /// struct MyContract;
+    /// ```
+    pub use neo_contract_proc_macros::contract_permission;
 
-/// Attribute for specifying the contract author
-///
-/// This attribute is used to specify the author of the contract in the manifest.
-///
-/// # Example
-///
-/// ```
-/// #[neo_contract::contract_author("John Doe")]
-/// mod my_contract {
-///     // Contract code
-/// }
-/// ```
-pub use neo_contract_proc_macros::contract_author;
+    /// Contract trust attribute
+    ///
+    /// This attribute specifies which contracts or groups this contract trusts.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[contract_trust("0102030405060708090a0b0c0d0e0f1011121314")]
+    /// struct MyContract;
+    /// ```
+    pub use neo_contract_proc_macros::contract_trust;
 
-/// Attribute for specifying the contract email
-///
-/// This attribute is used to specify the email of the contract author in the manifest.
-///
-/// # Example
-///
-/// ```
-/// #[neo_contract::contract_email("john.doe@example.com")]
-/// mod my_contract {
-///     // Contract code
-/// }
-/// ```
-pub use neo_contract_proc_macros::contract_email;
+    /// Supported standards attribute
+    ///
+    /// This attribute specifies which standards this contract supports.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[supported_standards("NEP-17", "NEP-11")]
+    /// struct MyContract;
+    /// ```
+    pub use neo_contract_proc_macros::supported_standards;
+}
 
-/// Attribute for specifying the contract description
-///
-/// This attribute is used to specify the description of the contract in the manifest.
-///
-/// # Example
-///
-/// ```
-/// #[neo_contract::contract_description("A simple contract")]
-/// mod my_contract {
-///     // Contract code
-/// }
-/// ```
-pub use neo_contract_proc_macros::contract_description;
+/// Static field initialization attributes
+pub mod static_field {
+    /// Byte array attribute
+    ///
+    /// This attribute initializes a static byte array field.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[byte_array("0102030405")]
+    /// static BYTE_ARRAY: [u8; 5] = [0; 5];
+    /// ```
+    pub use neo_contract_proc_macros::byte_array;
 
-/// Attribute for specifying the contract version
-///
-/// This attribute is used to specify the version of the contract in the manifest.
-///
-/// # Example
-///
-/// ```
-/// #[neo_contract::contract_version("1.0.0")]
-/// mod my_contract {
-///     // Contract code
-/// }
-/// ```
-pub use neo_contract_proc_macros::contract_version;
+    /// Hash160 attribute
+    ///
+    /// This attribute initializes a static Hash160 field.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[hash160("0102030405060708090a0b0c0d0e0f1011121314")]
+    /// static HASH160: [u8; 20] = [0; 20];
+    /// ```
+    pub use neo_contract_proc_macros::hash160;
 
-/// Attribute for specifying the contract source code URL
-///
-/// This attribute is used to specify the URL of the contract source code in the manifest.
-///
-/// # Example
-///
-/// ```
-/// #[neo_contract::contract_source_code("https://github.com/example/contract")]
-/// mod my_contract {
-///     // Contract code
-/// }
-/// ```
-pub use neo_contract_proc_macros::contract_source_code;
+    /// Integer attribute
+    ///
+    /// This attribute initializes a static integer field.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[integer("42")]
+    /// static INTEGER: i64 = 0;
+    /// ```
+    pub use neo_contract_proc_macros::integer;
 
-/// Attribute for specifying the contract permissions
-///
-/// This attribute is used to specify which contracts and methods are allowed to call from this contract.
-///
-/// # Example
-///
-/// ```
-/// #[neo_contract::contract_permission("0x1234567890abcdef1234567890abcdef12345678", "method1", "method2")]
-/// mod my_contract {
-///     // Contract code
-/// }
-/// ```
-pub use neo_contract_proc_macros::contract_permission;
+    /// Public key attribute
+    ///
+    /// This attribute initializes a static public key field.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[public_key("03b209fd4f53a7170ea4444e0cb0a6bb6a53c2bd016926989cf85f9b0fba17a70c")]
+    /// static PUBLIC_KEY: [u8; 33] = [0; 33];
+    /// ```
+    pub use neo_contract_proc_macros::public_key;
 
-/// Attribute for specifying the contract trust
-///
-/// This attribute is used to specify which contracts are trusted by this contract.
-///
-/// # Example
-///
-/// ```
-/// #[neo_contract::contract_trust("0x1234567890abcdef1234567890abcdef12345678")]
-/// mod my_contract {
-///     // Contract code
-/// }
-/// ```
-pub use neo_contract_proc_macros::contract_trust;
+    /// String attribute
+    ///
+    /// This attribute initializes a static string field.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[string("Hello, Neo!")]
+    /// static STRING: &str = "";
+    /// ```
+    pub use neo_contract_proc_macros::string;
 
-/// Attribute for specifying the supported standards
-///
-/// This attribute is used to specify which standards the contract supports.
-///
-/// # Example
-///
-/// ```
-/// #[neo_contract::supported_standards("NEP-17", "NEP-11")]
-/// mod my_contract {
-///     // Contract code
-/// }
-/// ```
-pub use neo_contract_proc_macros::supported_standards;
+    /// Contract hash attribute
+    ///
+    /// This attribute initializes a static contract hash field.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[contract_hash("0102030405060708090a0b0c0d0e0f1011121314")]
+    /// static CONTRACT_HASH: [u8; 20] = [0; 20];
+    /// ```
+    pub use neo_contract_proc_macros::contract_hash;
+}
+
+/// Security attributes
+pub mod security {
+    /// Safe attribute
+    ///
+    /// This attribute marks a function as safe, meaning it doesn't modify the contract state.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[safe]
+    /// fn get_balance(account: &str) -> u64 {
+    ///     42 // Return a value to satisfy the return type
+    /// }
+    /// ```
+    pub use neo_contract_proc_macros::safe;
+
+    /// No reentrant attribute
+    ///
+    /// This attribute prevents reentrancy attacks by adding a lock to the function.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[no_reentrant]
+    /// fn transfer(from: &str, to: &str, amount: u64) -> bool {
+    ///     true // Return a value to satisfy the return type
+    /// }
+    /// ```
+    pub use neo_contract_proc_macros::no_reentrant;
+
+    /// No reentrant method attribute
+    ///
+    /// This attribute is used internally by the no_reentrant attribute.
+    pub use neo_contract_proc_macros::no_reentrant_method;
+}
+
+/// Structure attributes
+pub mod structure {
+    /// Stored attribute
+    ///
+    /// This attribute adds storage functionality to a struct.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[stored]
+    /// struct StoredData {
+    ///     value: u64,
+    /// }
+    /// ```
+    pub use neo_contract_proc_macros::stored;
+
+    /// Modifier attribute
+    ///
+    /// This attribute creates a function modifier.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[modifier]
+    /// fn only_owner() {
+    ///     // Check if caller is owner
+    /// }
+    /// ```
+    pub use neo_contract_proc_macros::modifier;
+
+    /// Calling convention attribute
+    ///
+    /// This attribute specifies the calling convention for a function.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[calling_convention(Cdecl)]
+    /// fn external_function() {
+    ///     // External function implementation
+    /// }
+    /// ```
+    pub use neo_contract_proc_macros::calling_convention;
+
+    /// Op code attribute
+    ///
+    /// This attribute specifies the op code for a function.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[op_code(SYSCALL, "System.Runtime.GetTime")]
+    /// fn get_time() -> u64 {
+    ///     42 // Return a value to satisfy the return type
+    /// }
+    /// ```
+    pub use neo_contract_proc_macros::op_code;
+
+    /// Syscall attribute
+    ///
+    /// This attribute specifies the syscall for a function.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[syscall("System.Runtime.GetTime")]
+    /// fn get_time() -> u64 {
+    ///     42 // Return a value to satisfy the return type
+    /// }
+    /// ```
+    pub use neo_contract_proc_macros::syscall;
+}

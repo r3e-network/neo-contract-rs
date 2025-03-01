@@ -1,36 +1,31 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use std::marker::PhantomData;
+use alloc::vec::Vec;
 
+/// Iterator for storage values
 pub struct Iter<T> {
     data: Vec<T>,
     index: usize,
-    _marker: PhantomData<T>,
 }
 
-impl<T: Clone> Iter<T> {
+impl<T> Iter<T> {
+    /// Create a new iterator from a vector
     pub fn new(data: Vec<T>) -> Self {
-        Self {
-            data,
-            index: 0,
-            _marker: PhantomData,
-        }
+        Iter { data, index: 0 }
     }
 
-    pub fn next(&mut self) -> Option<T> {
-        if self.index < self.data.len() {
-            let item = self.data[self.index].clone();
+    /// Check if the iterator has a next element
+    pub fn has_next(&self) -> bool {
+        self.index < self.data.len()
+    }
+
+    /// Get the next element from the iterator
+    pub fn next(&mut self) -> Option<&T> {
+        if self.has_next() {
+            let result = &self.data[self.index];
             self.index += 1;
-            Some(item)
-        } else {
-            None
-        }
-    }
-
-    pub fn value(&self) -> Option<&T> {
-        if self.index < self.data.len() {
-            Some(&self.data[self.index])
+            Some(result)
         } else {
             None
         }

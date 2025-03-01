@@ -1,94 +1,90 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-#[allow(unused_imports)]
-use crate::{env, types::*};
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::fmt;
+use core::ops::{Deref, DerefMut};
 
-/// ByteString is a non utf-8 string
-#[cfg(not(target_family = "wasm"))]
-#[repr(C)]
-#[derive(Default, Hash)]
-pub struct ByteString(Vec<u8>);
+/// ByteString represents a byte string
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ByteString(pub Vec<u8>);
 
-#[cfg(target_family = "wasm")]
-#[repr(C)]
-pub struct ByteString(Placeholder);
-
-#[cfg(target_family = "wasm")]
 impl ByteString {
-    #[inline(always)]
-    pub fn len(&self) -> usize {
-        unsafe { env::asm::string_len(Self(self.0)) }
+    /// Create a new empty ByteString
+    pub fn new() -> Self {
+        ByteString(Vec::new())
     }
 
-    #[inline(always)]
-    pub fn substr(&self, start_index: usize, count: usize) -> Self {
-        unsafe { env::asm::string_sub(Self(self.0), start_index, start_index + count) }
+    /// Create a new ByteString from a byte array
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        ByteString(bytes.to_vec())
     }
 
-    #[inline(always)]
-    pub fn concat(&self, other: &Self) -> Self {
-        unsafe { env::asm::string_concat(Self(self.0), Self(other.0)) }
+    /// Create a new ByteString from a string
+    pub fn from_string(s: &str) -> Self {
+        ByteString(s.as_bytes().to_vec())
     }
 
-    #[inline(always)]
-    pub fn hex_encode(&self) -> Self {
-        unsafe { env::stdlib::hex_encode(Self(self.0)) }
-    }
-}
-
-#[cfg(not(target_family = "wasm"))]
-impl ByteString {
-    pub(crate) fn new(value: String) -> Self {
-        Self(value.into())
+    /// Get the underlying bytes
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
     }
 
+    /// Get the length of the string
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
-    pub fn substr(&self, start_index: usize, count: usize) -> Self {
-        Self(self.0[start_index..start_index + count].to_vec())
+    /// Check if the string is empty
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
+}
 
-    pub fn concat(&self, other: &Self) -> Self {
-        let mut vec = self.0.clone();
-        vec.extend(other.0.clone());
-        Self(vec)
+// Custom implementation to convert ByteString to String
+// We don't implement ToString directly to avoid conflict with the blanket impl
+impl ByteString {
+    pub fn to_string(&self) -> String {
+        String::from_utf8_lossy(&self.0).into_owned()
     }
+}
 
-    pub fn hex_encode(&self) -> Self {
-        Self(hex::encode(self.0.as_slice()).into_bytes())
-    }
-
-    pub(crate) fn to_string(self) -> String {
-        String::from_utf8_lossy(&self.0).to_string()
-    }
-    
-    pub fn as_bytes(&self) -> &[u8] {
+impl AsRef<[u8]> for ByteString {
+    fn as_ref(&self) -> &[u8] {
         &self.0
     }
 }
 
-impl PartialEq for ByteString {
-    #[inline(always)]
-    #[cfg(target_family = "wasm")]
-    fn eq(&self, other: &Self) -> bool {
-        unsafe { env::asm::string_eq(Self(self.0), Self(other.0)) }
-    }
+impl Deref for ByteString {
+    type Target = Vec<u8>;
 
-    #[cfg(not(target_family = "wasm"))]
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-impl Eq for ByteString {}
+impl DerefMut for ByteString {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-impl Clone for ByteString {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
+impl From<Vec<u8>> for ByteString {
+    fn from(bytes: Vec<u8>) -> Self {
+        ByteString(bytes)
+    }
+}
+
+impl From<&[u8]> for ByteString {
+    fn from(bytes: &[u8]) -> Self {
+        ByteString(bytes.to_vec())
+    }
+}
+
+impl From<String> for ByteString {
+    fn from(s: String) -> Self {
+        ByteString(s.into_bytes())
     }
 }
 
@@ -98,9 +94,14 @@ impl From<&str> for ByteString {
     }
 }
 
-#[cfg(target_family = "wasm")]
-crate::impl_placeholder!(ByteString);
+impl From<ByteString> for Vec<u8> {
+    fn from(s: ByteString) -> Self {
+        s.0
+    }
+}
 
-pub trait IntoByteString {
-    fn into_byte_string(self) -> ByteString;
+impl fmt::Display for ByteString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
 }

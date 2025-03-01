@@ -1,30 +1,91 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-use crate::types::*;
+use alloc::vec::Vec;
+use alloc::string::String;
+use alloc::format;
+use crate::types::builtin::h160::H160;
+use crate::utils::hex;
 
-#[repr(C)]
-pub struct PublicKey(pub ByteString);
+/// PublicKey represents a public key
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublicKey(pub [u8; 33]);
+
+/// Role represents a Neo role
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Role {
+    /// StateValidator
+    StateValidator = 4,
+    /// Oracle
+    Oracle = 8,
+    /// NeoFSAlphabetNode
+    NeoFSAlphabetNode = 16,
+}
+
+/// ContractParamType represents a contract parameter type
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ContractParamType {
+    /// Any
+    Any = 0,
+    /// Boolean
+    Boolean = 1,
+    /// Integer
+    Integer = 2,
+    /// ByteArray
+    ByteArray = 3,
+    /// String
+    String = 4,
+    /// Hash160
+    Hash160 = 5,
+    /// Hash256
+    Hash256 = 6,
+    /// PublicKey
+    PublicKey = 7,
+    /// Signature
+    Signature = 8,
+    /// Array
+    Array = 16,
+    /// Map
+    Map = 17,
+    /// InteropInterface
+    InteropInterface = 32,
+    /// Void
+    Void = 255,
+}
 
 impl PublicKey {
-    #[inline(always)]
-    pub fn is_valid(&self) -> bool {
-        true // TODO: implement
+    /// Create a new PublicKey
+    pub fn new(bytes: [u8; 33]) -> Self {
+        PublicKey(bytes)
     }
-}
 
-impl Clone for PublicKey {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
+    /// Create a zero PublicKey
+    pub fn zero() -> Self {
+        PublicKey([0; 33])
     }
-}
 
-impl Eq for PublicKey {}
+    /// Get the bytes
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
 
-impl PartialEq for PublicKey {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
+    /// Convert to a hex string
+    pub fn to_hex(&self) -> String {
+        let mut hex = String::with_capacity(66);
+        for byte in self.0.iter() {
+            hex.push_str(&format!("{:02x}", byte));
+        }
+        hex
+    }
+
+    /// Decode a hex string to a PublicKey
+    pub fn hex_decode(hex: &str) -> Option<Self> {
+        let bytes = hex::decode(hex)?;
+        if bytes.len() != 33 {
+            return None;
+        }
+        let mut result = [0; 33];
+        result.copy_from_slice(&bytes);
+        Some(PublicKey(result))
     }
 }

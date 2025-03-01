@@ -3,6 +3,7 @@
 
 #[allow(unused_imports)]
 use crate::{env, types::*};
+use crate::types::builtin::h160::H160;
 
 pub struct Policy;
 
@@ -14,6 +15,6 @@ impl Policy {
         unsafe { env::contract::native_policy_contract_hash() }
 
         #[cfg(not(target_family = "wasm"))]
-        H160::hex_decode("0xcc5e4edd9f5f8dba8bb65734541df7a1c081c67b")
+        H160::hex_decode("0xcc5e4edd9f5f8dba8bb65734541df7a1c081c67b").unwrap_or_else(H160::zero)
     }
 }

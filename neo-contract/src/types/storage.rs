@@ -1,28 +1,41 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-#[allow(unused_imports)]
-use crate::types::*;
+use alloc::vec::Vec;
+use crate::types::builtin::h160::H160;
+use crate::types::builtin::string::ByteString;
+use crate::types::context::StorageContext;
 
-#[cfg(target_family = "wasm")]
-#[repr(C)]
-pub struct StorageItem<T> {
-    value: Placeholder,
-    _marker: core::marker::PhantomData<T>,
+/// Storage represents a storage item
+#[derive(Debug, Clone)]
+pub struct Storage {
+    context: StorageContext,
+    key: ByteString,
+    value: ByteString,
 }
 
-#[cfg(not(target_family = "wasm"))]
-#[repr(C)]
-pub struct StorageItem<T> {
-    value: T,
-    _marker: core::marker::PhantomData<T>,
-}
+impl Storage {
+    /// Create a new storage item
+    pub fn new() -> Self {
+        Self {
+            context: StorageContext::new(),
+            key: ByteString::new(),
+            value: ByteString::new(),
+        }
+    }
 
-#[cfg(not(target_family = "wasm"))]
-impl<T> StorageItem<T> {
-    #[inline(always)]
-    #[allow(dead_code)]
-    pub(crate) fn new(value: T) -> Self {
-        Self { value, _marker: core::marker::PhantomData }
+    /// Get the context
+    pub fn context(&self) -> StorageContext {
+        self.context.clone()
+    }
+
+    /// Get the key
+    pub fn key(&self) -> ByteString {
+        self.key.clone()
+    }
+
+    /// Get the value
+    pub fn value(&self) -> ByteString {
+        self.value.clone()
     }
 }

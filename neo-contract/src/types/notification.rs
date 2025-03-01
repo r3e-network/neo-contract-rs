@@ -1,30 +1,47 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-use crate::types::*;
+use alloc::vec::Vec;
+use crate::types::builtin::h160::H160;
+use crate::types::builtin::string::ByteString;
 
-#[repr(C)]
-#[derive(Clone)]
+/// Notification represents a Neo notification
+#[derive(Debug, Clone)]
 pub struct Notification {
     sender: H160,
     script_hash: H160,
-    state: Array<Any>,
+    event_name: ByteString,
+    state: Vec<u8>,
 }
 
 impl Notification {
-    #[inline(always)]
+    /// Create a new notification
+    pub fn new(event_name: ByteString, state: Vec<u8>) -> Self {
+        Self {
+            sender: H160::zero(),
+            script_hash: H160::zero(),
+            event_name,
+            state,
+        }
+    }
+
+    /// Get the sender
     pub fn sender(&self) -> H160 {
-        self.sender
+        self.sender.clone()
     }
 
-    #[inline(always)]
+    /// Get the script hash
     pub fn script_hash(&self) -> H160 {
-        self.script_hash
+        self.script_hash.clone()
     }
 
-    // TODO: implement state
-    // #[inline(always)]
-    // pub fn state(&self) -> Array<Any> {
-    //     self.state
-    // }
+    /// Get the event name
+    pub fn event_name(&self) -> ByteString {
+        self.event_name.clone()
+    }
+
+    /// Get the state
+    pub fn state(&self) -> Vec<u8> {
+        self.state.clone()
+    }
 }

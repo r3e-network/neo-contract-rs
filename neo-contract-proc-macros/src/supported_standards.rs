@@ -2,53 +2,42 @@
 // All Rights Reserved
 
 use proc_macro::TokenStream;
-use quote::quote;
 use syn::{
-    parse_macro_input, AttributeArgs, Lit, Meta, NestedMeta, Item,
+    parse_macro_input, AttributeArgs, Lit, NestedMeta,
 };
 
 /// Process the supported_standards attribute macro
 pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
-    // Parse the module containing the contract
-    let item = parse_macro_input!(item as Item);
-    
-    // Parse attribute arguments (if any)
+    // Parse attribute arguments
     let args = parse_macro_input!(attr as AttributeArgs);
     
-    // Extract the supportedStandards from the attribute arguments
+    // Extract the standards from the attribute arguments
     if args.is_empty() {
         return syn::Error::new_spanned(
-            proc_macro2::TokenStream::from(attr),
-            "Expected at least one argument for supported standards attribute"
+            proc_macro2::TokenStream::new(),
+            "Expected at least one argument for supported_standards attribute"
         )
         .to_compile_error()
         .into();
     }
     
-    let standards: Vec<String> = args.iter().filter_map(|arg| {
-        match arg {
-            NestedMeta::Lit(Lit::Str(lit)) => Some(lit.value()),
-            _ => None,
+    // Extract standards
+    let mut standards = Vec::new();
+    for arg in args.iter() {
+        if let NestedMeta::Lit(Lit::Str(lit)) = arg {
+            standards.push(lit.value());
+        } else {
+            return syn::Error::new_spanned(
+                proc_macro2::TokenStream::new(),
+                "Expected string literals for standards"
+            )
+            .to_compile_error()
+            .into();
         }
-    }).collect();
-    
-    if standards.is_empty() {
-        return syn::Error::new_spanned(
-            proc_macro2::TokenStream::from(attr),
-            "Expected at least one valid string argument for supported standards attribute"
-        )
-        .to_compile_error()
-        .into();
     }
     
-    // Generate the output - for now, we'll just pass through the item
-    // In a real implementation, we would store the supported standards information
-    // to be used when generating the contract manifest
-    let standards_str = standards.join(", ");
-    let output = quote! {
-        // Store supported standards information: standards = [#standards_str]
-        #item
-    };
+    let _standards_str = standards.join(", ");
     
-    output.into()
+    // Return the original item
+    item
 }

@@ -1,108 +1,29 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-pub(crate) mod map;
-mod item;
+use alloc::vec::Vec;
+use crate::types::builtin::string::ByteString;
+use crate::types::context::StorageContext;
+
 pub mod iter;
-mod context;
+pub mod map;
 
-pub use {map::*, context::*};
-
-use crate::types::*;
-
-#[repr(C)]
-pub struct StorageContext(Placeholder);
-
-impl StorageContext {
-    #[inline(always)]
-    #[rustfmt::skip]
-    pub fn new() -> Self {
-        #[cfg(target_family = "wasm")]
-        unsafe { env::syscall::system_storage_get_context() }
-
-        #[cfg(not(target_family = "wasm"))]
-        StorageContext(Placeholder::new(0))
-    }
-
-    #[inline(always)]
-    #[rustfmt::skip]
-    pub fn as_readonly(self) -> ReadOnlyStorageContext {
-        #[cfg(target_family = "wasm")]
-        unsafe { env::syscall::system_storage_as_readonly(self) }
-
-        #[cfg(not(target_family = "wasm"))]
-        ReadOnlyStorageContext(self.0)
-    }
+/// Put a value in storage
+pub fn put(context: StorageContext, key: ByteString, value: ByteString) {
+    unsafe { crate::env::syscall_non_wasm::system_storage_put(context, key, value) }
 }
 
-#[repr(C)]
-pub struct ReadOnlyStorageContext(Placeholder);
-
-impl ReadOnlyStorageContext {
-    #[inline(always)]
-    #[rustfmt::skip]
-    pub fn new() -> Self {
-        #[cfg(target_family = "wasm")]
-        unsafe { env::syscall::system_storage_get_readonly_context() }
-
-        #[cfg(not(target_family = "wasm"))]
-        ReadOnlyStorageContext(Placeholder::new(0))
-    }
+/// Get a value from storage
+pub fn get(context: StorageContext, key: ByteString) -> ByteString {
+    unsafe { crate::env::syscall_non_wasm::system_storage_get(context, key) }
 }
 
-#[cfg(target_family = "wasm")]
-#[repr(C)]
-pub struct Iter<T> {
-    iter: Placeholder,
-    _marker: core::marker::PhantomData<T>,
+/// Delete a value from storage
+pub fn delete(context: StorageContext, key: ByteString) {
+    unsafe { crate::env::syscall_non_wasm::system_storage_delete(context, key) }
 }
 
-#[cfg(not(target_family = "wasm"))]
-#[repr(C)]
-pub struct Iter<T> {
-    values: Vec<T>,
-    current_index: usize,
+/// Find values in storage
+pub fn find(context: StorageContext, prefix: ByteString) -> i32 {
+    unsafe { crate::env::syscall_non_wasm::system_storage_find(context, prefix) }
 }
-
-#[allow(private_bounds)]
-#[cfg(target_family = "wasm")]
-impl<T: FromPlaceholder> Iter<T> {
-    #[inline(always)]
-    pub fn next(&mut self) -> bool {
-        unsafe { env::syscall::system_iterator_next(self.iter) }
-    }
-
-    #[inline(always)]
-    pub fn value(&self) -> T {
-        T::from_placeholder(unsafe { env::syscall::system_iterator_value(self.iter) })
-    }
-}
-
-#[cfg(not(target_family = "wasm"))]
-impl<T: Clone> Iter<T> {
-    pub fn new(values: Vec<T>) -> Self {
-        Self {
-            values,
-            current_index: 0,
-        }
-    }
-    
-    pub fn next(&mut self) -> bool {
-        if self.current_index < self.values.len() {
-            self.current_index += 1;
-            true
-        } else {
-            false
-        }
-    }
-    
-    pub fn value(&self) -> T {
-        self.values[self.current_index - 1].clone()
-    }
-}
-
-#[cfg(target_family = "wasm")]
-crate::impl_placeholder!(StorageContext);
-
-#[cfg(target_family = "wasm")]
-crate::impl_placeholder!(ReadOnlyStorageContext);
