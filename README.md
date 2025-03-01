@@ -221,3 +221,11 @@ cargo build --release
 - **Reward Distribution**: GAS reward distribution to token holders
 - **Agent Contract System**: Delegation of NEO management to agent contracts
 - **Governance Functionality**: Proposal submission and execution system
+## Neoburger Example Contracts
+
+The repository includes example contracts for the Neoburger ecosystem:
+- **neoburger**: Main contract for the Neoburger platform
+- **neoburger_agent**: Agent contract for Neoburger operations
+- **neoburger_governance**: Governance contract for Neoburger ecosystem
+
+These examples demonstrate complex contract interactions and governance mechanisms.
