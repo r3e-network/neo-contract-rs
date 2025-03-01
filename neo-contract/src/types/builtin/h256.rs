@@ -24,8 +24,14 @@ impl H256 {
     }
 
     /// Get the bytes
+    #[cfg(not(target_family = "wasm"))]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
+    }
+    
+    #[cfg(target_family = "wasm")]
+    pub fn as_bytes(&self) -> &[u8] {
+        unsafe { crate::env::extension::h256_as_bytes(self) }
     }
 
     /// Convert to a hex string
@@ -46,6 +52,29 @@ impl H256 {
         let mut result = [0; 32];
         result.copy_from_slice(&bytes);
         Some(H256(result))
+    }
+    
+    #[cfg(not(target_family = "wasm"))]
+    pub fn from_bytes(bytes: [u8; 32]) -> Self {
+        H256(bytes)
+    }
+    
+    pub fn to_string(&self) -> String {
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let bytes = self.as_bytes();
+            let mut hex = String::with_capacity(2 + bytes.len() * 2);
+            hex.push_str("0x");
+            for byte in bytes {
+                hex.push_str(&format!("{:02x}", byte));
+            }
+            hex
+        }
+        
+        #[cfg(target_family = "wasm")]
+        {
+            self.hex_encode().to_string()
+        }
     }
 }
 

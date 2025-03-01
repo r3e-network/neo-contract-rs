@@ -13,6 +13,7 @@ mod crypto;
 mod env;
 mod macros;
 mod runtime;
+mod serialize;
 mod static_values;
 mod storage;
 mod types;
@@ -23,12 +24,15 @@ pub use call_flags::CallFlags;
 pub use contract::{nep11, nep17, native};
 pub use crypto::*;
 pub use env::{contract as env_contract, contract_non_wasm, syscall, syscall_non_wasm};
-// pub use macros::*; // Unused
+pub use macros::*;
 pub use runtime::*;
 pub use static_values::*;
 pub use storage::*;
 pub use types::{block, builtin as types_builtin, bytes, context, key, notification, signer, storage as types_storage, tx};
 pub use utils::*;
+
+// Re-export proc macros
+pub use neo_contract_proc_macros::{export_trait, smart_contract};
 
 // Re-export builtin types for easier access
 pub mod builtin {

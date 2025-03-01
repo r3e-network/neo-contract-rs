@@ -5,6 +5,7 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use alloc::format;
 use crate::types::builtin::h160::H160;
+use crate::types::builtin::string::ByteString;
 use crate::utils::hex;
 
 /// PublicKey represents a public key
@@ -87,5 +88,28 @@ impl PublicKey {
         let mut result = [0; 33];
         result.copy_from_slice(&bytes);
         Some(PublicKey(result))
+    }
+
+    /// Check if the public key is valid
+    #[inline(always)]
+    pub fn is_valid(&self) -> bool {
+        true // TODO: implement
+    }
+    
+    /// Create a PublicKey from bytes
+    #[cfg(not(target_family = "wasm"))]
+    pub fn from_bytes(bytes: [u8; 33]) -> Self {
+        Self(bytes)
+    }
+    
+    /// Create a PublicKey from bytes (WASM version)
+    #[cfg(target_family = "wasm")]
+    pub fn from_bytes(bytes: [u8; 33]) -> Self {
+        Self(bytes)
+    }
+    
+    /// Convert to a string representation
+    pub fn to_string(&self) -> String {
+        self.to_hex()
     }
 }
