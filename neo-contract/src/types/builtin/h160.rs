@@ -45,6 +45,11 @@ impl H160 {
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
+    
+    #[cfg(not(target_family = "wasm"))]
+    pub fn from_bytes(bytes: [u8; 20]) -> Self {
+        H160(bytes)
+    }
 }
 
 impl PartialEq for H160 {

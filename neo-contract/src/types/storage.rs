@@ -21,6 +21,7 @@ pub struct StorageItem<T> {
 #[cfg(not(target_family = "wasm"))]
 impl<T> StorageItem<T> {
     #[inline(always)]
+    #[allow(dead_code)]
     pub(crate) fn new(value: T) -> Self {
         Self { value, _marker: core::marker::PhantomData }
     }

@@ -5,7 +5,7 @@ pub(crate) mod hash;
 
 pub use hash::*;
 
-use crate::{env, types::*};
+use crate::types::*;
 
 #[inline(always)]
 pub fn check_sign(public_key: PublicKey, sign: ByteString) -> bool {
@@ -27,10 +27,10 @@ pub fn check_multi_signs(public_keys: Array<PublicKey>, signs: Array<ByteString>
 
 #[inline(always)]
 pub fn verify_ecdsa(
-    message: ByteString,
-    public_key: PublicKey,
-    sign: ByteString,
-    named_curve_hash: NamedCurveHash,
+    _message: ByteString,
+    _public_key: PublicKey,
+    _sign: ByteString,
+    _named_curve_hash: NamedCurveHash,
 ) -> bool {
     #[cfg(target_family = "wasm")]
     unsafe { env::crypto::verify_ecdsa(message, public_key, sign, named_curve_hash) }
@@ -40,7 +40,7 @@ pub fn verify_ecdsa(
 }
 
 #[inline(always)]
-pub fn verify_ed25519(message: ByteString, public_key: PublicKey, sign: ByteString) -> bool {
+pub fn verify_ed25519(_message: ByteString, _public_key: PublicKey, _sign: ByteString) -> bool {
     #[cfg(target_family = "wasm")]
     unsafe { env::crypto::verify_ed25519(message, public_key, sign) }
 

@@ -5,7 +5,7 @@ pub mod assert;
 
 pub use assert::*;
 
-use crate::{env, types::*};
+use crate::types::*;
 
 #[inline(always)]
 pub fn get_trigger() -> TriggerType {

@@ -20,10 +20,14 @@ impl Clone for Placeholder {
 
 impl Copy for Placeholder {}
 
+/// Trait for converting from a placeholder to a concrete type
+#[allow(dead_code)]
 pub(crate) trait FromPlaceholder {
     fn from_placeholder(placeholder: Placeholder) -> Self;
 }
 
+/// Trait for converting from a concrete type to a placeholder
+#[allow(dead_code)]
 pub(crate) trait IntoPlaceholder {
     fn into_placeholder(self) -> Placeholder;
 }

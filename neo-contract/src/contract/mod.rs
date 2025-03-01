@@ -8,7 +8,8 @@ pub mod nep17;
 
 pub use {nep11::*, nep17::*};
 
-use crate::{env, storage::StorageMap, types::*};
+use crate::{storage::StorageMap, types::*};
+use crate::types::consts::DEFAULT_BALANCE_KEY;
 
 pub trait SmartContract {
     #[inline(always)]

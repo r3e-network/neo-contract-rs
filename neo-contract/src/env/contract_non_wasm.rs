@@ -5,6 +5,11 @@
 
 use crate::types::*;
 
+// Get current contract hash
+pub unsafe fn get_current_contract_hash() -> H160 {
+    H160::default()
+}
+
 // Non-WASM implementations for testing
 pub unsafe fn native_gas_contract_hash() -> H160 {
     H160::default()
