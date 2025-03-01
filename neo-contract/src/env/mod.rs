@@ -1,14 +1,17 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-pub(crate) mod asm;
-pub(crate) mod contract;
-pub(crate) mod crypto;
-pub(crate) mod extension;
-pub(crate) mod numeric;
-pub(crate) mod stdlib;
-pub(crate) mod syscall;
+pub mod contract;
+pub mod contract_non_wasm;
+pub mod syscall;
+pub mod syscall_non_wasm;
+
+// Re-exports
+#[cfg(target_family = "wasm")]
+pub use contract::*;
 #[cfg(not(target_family = "wasm"))]
-pub(crate) mod contract_non_wasm;
+pub use contract_non_wasm::*;
+#[cfg(target_family = "wasm")]
+pub use syscall::*;
 #[cfg(not(target_family = "wasm"))]
-pub(crate) mod syscall_non_wasm;
+pub use syscall_non_wasm::*;

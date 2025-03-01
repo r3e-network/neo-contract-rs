@@ -1,53 +1,31 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-#[repr(C)]
-pub(crate) struct Placeholder(i32);
+use alloc::vec::Vec;
+use core::fmt;
+
+/// Placeholder represents a placeholder for a value
+#[derive(Debug, Clone)]
+pub struct Placeholder {
+    data: Vec<u8>,
+}
 
 impl Placeholder {
-    #[cfg(not(target_family = "wasm"))]
-    pub(crate) fn new(value: i32) -> Self {
-        Self(value)
+    /// Create a new placeholder
+    pub fn new() -> Self {
+        Self {
+            data: Vec::new(),
+        }
+    }
+
+    /// Get the data
+    pub fn data(&self) -> &[u8] {
+        &self.data
     }
 }
 
-impl Clone for Placeholder {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        Self(self.0)
+impl fmt::Display for Placeholder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Placeholder")
     }
-}
-
-impl Copy for Placeholder {}
-
-/// Trait for converting from a placeholder to a concrete type
-#[allow(dead_code)]
-pub(crate) trait FromPlaceholder {
-    fn from_placeholder(placeholder: Placeholder) -> Self;
-}
-
-/// Trait for converting from a concrete type to a placeholder
-#[allow(dead_code)]
-pub(crate) trait IntoPlaceholder {
-    fn into_placeholder(self) -> Placeholder;
-}
-
-#[cfg(target_family = "wasm")]
-#[macro_export]
-macro_rules! impl_placeholder {
-    ($type:ty) => {
-        impl IntoPlaceholder for $type {
-            #[inline(always)]
-            fn into_placeholder(self) -> Placeholder {
-                self.0
-            }
-        }
-
-        impl FromPlaceholder for $type {
-            #[inline(always)]
-            fn from_placeholder(placeholder: Placeholder) -> Self {
-                Self(placeholder)
-            }
-        }
-    };
 }

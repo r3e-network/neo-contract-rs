@@ -1,70 +1,84 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-use crate::types::*;
+use alloc::vec::Vec;
+use crate::types::builtin::h160::H160;
+use crate::types::builtin::h256::H256;
+use crate::types::builtin::int256::Int256;
+use crate::types::tx::Transaction;
 
-#[repr(C)]
+/// Block represents a Neo block
+#[derive(Debug, Clone)]
 pub struct Block {
-    hash: H256,
-    version: u32,
-    prev_hash: H256,
-    merkle_root: H256,
-    timestamp: u64,
-    nonce: u64,
-    index: u32, // current block index
-    primary_index: u32,
-    next_consensus: H160,
-    tx_count: u32,
+    pub hash: H256,
+    pub version: u8,
+    pub previous_hash: H256,
+    pub merkle_root: H256,
+    pub timestamp: u64,
+    pub index: u32,
+    pub primary_index: u8,
+    pub next_consensus: H160,
+    pub transactions: Vec<Transaction>,
 }
 
 impl Block {
-    #[inline(always)]
-    pub fn hash(&self) -> H256 {
-        self.hash
+    /// Create a new block
+    pub fn new() -> Self {
+        Self {
+            hash: H256::zero(),
+            version: 0,
+            previous_hash: H256::zero(),
+            merkle_root: H256::zero(),
+            timestamp: 0,
+            index: 0,
+            primary_index: 0,
+            next_consensus: H160::zero(),
+            transactions: Vec::new(),
+        }
     }
 
-    #[inline(always)]
-    pub fn version(&self) -> u32 {
+    /// Get the block hash
+    pub fn hash(&self) -> H256 {
+        self.hash.clone()
+    }
+
+    /// Get the block version
+    pub fn version(&self) -> u8 {
         self.version
     }
 
-    #[inline(always)]
-    pub fn prev_hash(&self) -> H256 {
-        self.prev_hash
+    /// Get the previous block hash
+    pub fn previous_hash(&self) -> H256 {
+        self.previous_hash.clone()
     }
 
-    #[inline(always)]
+    /// Get the merkle root
     pub fn merkle_root(&self) -> H256 {
-        self.merkle_root
+        self.merkle_root.clone()
     }
 
-    #[inline(always)]
+    /// Get the timestamp
     pub fn timestamp(&self) -> u64 {
         self.timestamp
     }
 
-    #[inline(always)]
-    pub fn nonce(&self) -> u64 {
-        self.nonce
-    }
-
-    #[inline(always)]
+    /// Get the block index
     pub fn index(&self) -> u32 {
         self.index
     }
 
-    #[inline(always)]
-    pub fn primary_index(&self) -> u32 {
+    /// Get the primary index
+    pub fn primary_index(&self) -> u8 {
         self.primary_index
     }
 
-    #[inline(always)]
+    /// Get the next consensus
     pub fn next_consensus(&self) -> H160 {
-        self.next_consensus
+        self.next_consensus.clone()
     }
 
-    #[inline(always)]
-    pub fn tx_count(&self) -> u32 {
-        self.tx_count
+    /// Get the transactions
+    pub fn transactions(&self) -> Vec<Transaction> {
+        self.transactions.clone()
     }
 }

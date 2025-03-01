@@ -10,6 +10,11 @@ pub mod policy;
 pub use {gas::*, legder::*, neo::*, oracle::*, policy::*};
 
 use crate::types::*;
+use crate::types::builtin::h160::H160;
+use crate::types::builtin::string::ByteString;
+use crate::types::builtin::int256::Int256;
+use crate::types::builtin::array::Array;
+use crate::types::contract::Contract;
 
 pub struct ContractManagement;
 
@@ -21,7 +26,7 @@ impl ContractManagement {
         unsafe { env::contract::native_contract_management_contract_hash() }
 
         #[cfg(not(target_family = "wasm"))]
-        H160::hex_decode("0xfffdc93764dbaddd97c48f252a53ea4643faa3fd")
+        H160::hex_decode("0xfffdc93764dbaddd97c48f252a53ea4643faa3fd").unwrap_or_else(H160::zero)
     }
 
     #[inline(always)]
@@ -105,16 +110,24 @@ impl RoleManagement {
         unsafe { env::contract::native_role_management_contract_hash() }
 
         #[cfg(not(target_family = "wasm"))]
-        H160::hex_decode("0x49cf4e5378ffcd4dec034fd98a174c5491e395e2")
+        H160::hex_decode("0x49cf4e5378ffcd4dec034fd98a174c5491e395e2").unwrap_or_else(H160::zero)
     }
 
     #[inline(always)]
     #[rustfmt::skip]
-    pub fn get_designated_by_role(role: Role, block_index: u32) -> Array<PublicKey> {
+    pub fn get_designated_by_role(role: Role, block_index: u32) -> Array<crate::types::key::PublicKey> {
         #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_role_management_get_designated_by_role(role, block_index) }
 
         #[cfg(not(target_family = "wasm"))]
-        unsafe { crate::env::contract_non_wasm::native_role_management_get_designated_by_role(role, block_index) }
+        unsafe { 
+            // Convert from contract_non_wasm::PublicKey to types::key::PublicKey
+            let result = crate::env::contract_non_wasm::native_role_management_get_designated_by_role(role, block_index);
+            let mut converted = Array::new();
+            for pk in result.iter() {
+                converted.push(crate::types::key::PublicKey::new(pk.0));
+            }
+            converted
+        }
     }
 }

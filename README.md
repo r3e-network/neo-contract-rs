@@ -63,6 +63,111 @@ mod my_contract {
 
 The traditional macro approach is still supported for backward compatibility.
 
+## C# Framework Features
+
+Neo Contract RS now supports additional features from the C# Neo framework:
+
+### Static Field Initialization Attributes
+
+```rust
+// Initialize a byte array with a hex string
+#[neo::byte_array("0123456789ABCDEF")]
+static BYTE_ARRAY: [u8; 8] = [0; 8];
+
+// Initialize a Hash160 with a hex string
+#[neo::hash160("0x0123456789abcdef0123456789abcdef01234567")]
+static HASH160: H160 = H160::zero();
+
+// Initialize an integer with a value
+#[neo::integer("1000000")]
+static AMOUNT: Int256 = Int256::zero();
+
+// Initialize a public key with a hex string
+#[neo::public_key("03b209fd4f53a7170ea4444e0cb0a6bb6a53c2bd016926989cf85f9b0fba17a70c")]
+static PUBLIC_KEY: [u8; 33] = [0; 33];
+
+// Initialize a string with a value
+#[neo::string("Hello, NEO!")]
+static GREETING: &str = "";
+
+// Initialize a contract hash with a hex string
+#[neo::contract_hash("0x0123456789abcdef0123456789abcdef01234567")]
+static CONTRACT_HASH: H160 = H160::zero();
+```
+
+### Contract Safety and Security Attributes
+
+```rust
+// Safe method that doesn't modify state
+#[neo::safe]
+#[neo(message)]
+pub fn total_supply(&self) -> Int256 {
+    self.total_supply
+}
+
+// Method with reentrancy protection
+#[neo::no_reentrant]
+#[neo(message)]
+pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
+    // Implementation
+}
+
+// Method with specific reentrancy protection
+#[neo::no_reentrant_method]
+#[neo(message)]
+pub fn withdraw(&mut self, account: H160, amount: Int256) -> bool {
+    // Implementation
+}
+```
+
+### Call Flags
+
+```rust
+use neo::call_flags::CallFlags;
+
+// Method with call flags
+#[neo(message)]
+pub fn call_other_contract(&self, contract_hash: H160, method: &str, args: &[Any]) -> Any {
+    // Use call flags
+    let flags = CallFlags::ReadStates.add(CallFlags::AllowCall);
+    runtime::call_contract(contract_hash, method, args, flags)
+}
+```
+
+### Contract Structure Attributes
+
+```rust
+// Mark a struct as stored in the contract storage
+#[neo::stored]
+pub struct StoredData {
+    // Fields
+}
+
+// Define a modifier method
+#[neo::modifier]
+pub fn only_owner() {
+    // Implementation
+}
+
+// Specify the calling convention of a method
+#[neo::calling_convention(Cdecl)]
+pub fn external_function() {
+    // Implementation
+}
+
+// Specify the opcode of a method
+#[neo::op_code(SYSCALL, "System.Runtime.GetTime")]
+pub fn get_time() -> u64 {
+    // Implementation
+}
+
+// Specify the syscall of a method
+#[neo::syscall("System.Runtime.GetTime")]
+pub fn get_time_syscall() -> u64 {
+    // Implementation
+}
+```
+
 ## Examples
 
 Check the `examples` directory for complete contract examples:
@@ -70,3 +175,4 @@ Check the `examples` directory for complete contract examples:
 - `ink_style_token_with_attributes` - A token contract using the ink!-style attribute macros
 - `nep17_token` - A NEP-17 token implementation
 - `contract_call` - Example of contract-to-contract calls
+- `csharp_features` - Example showcasing C# framework features

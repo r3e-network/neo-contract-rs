@@ -1,122 +1,142 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-#[cfg(target_family = "wasm")]
-use crate::{env, types::*};
+use alloc::vec::Vec;
+use core::fmt;
+use core::ops::{Deref, DerefMut};
+use crate::types::builtin::any::Any;
 
-#[cfg(not(target_family = "wasm"))]
-#[repr(C)]
-#[derive(Default, Clone)]
-pub struct Array<T> 
-where
-    T: Clone,
-{
-    value: Vec<T>,
-    // _marker: core::marker::PhantomData<T>,
-}
-
-#[cfg(target_family = "wasm")]
-#[repr(C)]
+/// Array represents an array
+#[derive(Debug, Clone, PartialEq)]
 pub struct Array<T> {
-    value: Placeholder,
-    _marker: core::marker::PhantomData<T>,
+    items: Vec<T>,
 }
 
-#[cfg(target_family = "wasm")]
 impl<T> Array<T> {
-    #[inline(always)]
+    /// Create a new empty array
     pub fn new() -> Self {
-        Self {
-            value: unsafe { env::asm::array_new() },
-            _marker: core::marker::PhantomData,
+        Array { items: Vec::new() }
+    }
+
+    /// Create a new array with the given capacity
+    pub fn with_capacity(capacity: usize) -> Self {
+        Array {
+            items: Vec::with_capacity(capacity),
         }
     }
 
-    #[inline(always)]
-    pub fn size(&self) -> usize {
-        unsafe { env::asm::array_size(self.value) }
+    /// Create a new array from a vector
+    pub fn from_vec(items: Vec<T>) -> Self {
+        Array { items }
     }
 
-    // #[inline(always)]
-    // pub fn push(&mut self, value: T) {
-    //     unsafe { env::asm::array_push(self.value, value) }
-    // }
-
-    // #[inline(always)]
-    // pub fn pop(&mut self) -> T {
-    //     unsafe { env::asm::array_pop(self.value) }
-    // }
-
-    // TODO: implement this
-    // #[inline(always)]
-    // pub fn try_pop(&mut self) -> Option<T> {
-    //     unsafe { env::asm::array_try_pop(self.0) }
-    // }
-
-    // TODO: implement this
-    // #[inline(always)]
-    // pub fn get(&self, index: usize) -> T {
-    //     unsafe { env::asm::array_get(self.value, index) }
-    // }
-
-    // TODO: implement this
-    // #[inline(always)]
-    // pub fn set(&mut self, index: usize, value: T) {
-    //     unsafe { env::asm::array_set(self.value, index, value) }
-    // }
-}
-
-#[cfg(not(target_family = "wasm"))]
-impl<T: Clone> Array<T> {
-    pub fn new() -> Self {
-        Self { value: Vec::new() }
-    }
-
-    pub fn size(&self) -> usize {
-        self.value.len()
-    }
-    
+    /// Get the length of the array
     pub fn len(&self) -> usize {
-        self.value.len()
+        self.items.len()
     }
 
-    pub fn push(&mut self, value: T) {
-        self.value.push(value);
+    /// Check if the array is empty
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
     }
 
-    pub fn pop(&mut self) -> T {
-        self.value.pop().unwrap()
+    /// Get a reference to the item at the given index
+    pub fn get(&self, index: usize) -> Option<&T> {
+        self.items.get(index)
     }
-    
+
+    /// Get a mutable reference to the item at the given index
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        self.items.get_mut(index)
+    }
+
+    /// Push an item to the end of the array
+    pub fn push(&mut self, item: T) {
+        self.items.push(item);
+    }
+
+    /// Pop an item from the end of the array
+    pub fn pop(&mut self) -> Option<T> {
+        self.items.pop()
+    }
+
+    /// Insert an item at the given index
+    pub fn insert(&mut self, index: usize, item: T) {
+        self.items.insert(index, item);
+    }
+
+    /// Remove an item at the given index
     pub fn remove(&mut self, index: usize) -> T {
-        self.value.remove(index)
+        self.items.remove(index)
     }
 
-    pub fn get(&self, index: usize) -> &T {
-        &self.value[index] // TODO: return a clone
+    /// Clear the array
+    pub fn clear(&mut self) {
+        self.items.clear();
     }
 
-    pub fn set(&mut self, index: usize, value: T) {
-        self.value[index] = value;
-    }
-    
-    pub fn iter(&self) -> std::slice::Iter<'_, T> {
-        self.value.iter()
+    /// Get the underlying vector
+    pub fn into_vec(self) -> Vec<T> {
+        self.items
     }
 }
 
-#[cfg(target_family = "wasm")]
-impl<T: 'static> FromPlaceholder for Array<T> {
-    #[inline(always)]
-    fn from_placeholder(placeholder: Placeholder) -> Self {
-        Self { value: placeholder, _marker: core::marker::PhantomData }
+impl<T> Deref for Array<T> {
+    type Target = Vec<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.items
     }
 }
 
-#[cfg(target_family = "wasm")]
-impl<T: 'static> IntoPlaceholder for Array<T> {
-    #[inline(always)]
-    fn into_placeholder(self) -> Placeholder {
-        self.value
+impl<T> DerefMut for Array<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.items
+    }
+}
+
+impl<T> From<Vec<T>> for Array<T> {
+    fn from(items: Vec<T>) -> Self {
+        Array { items }
+    }
+}
+
+impl<T> From<Array<T>> for Vec<T> {
+    fn from(array: Array<T>) -> Self {
+        array.items
+    }
+}
+
+impl<T> Default for Array<T> {
+    fn default() -> Self {
+        Array::new()
+    }
+}
+
+impl<T> fmt::Display for Array<T>
+where
+    T: fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[")?;
+        for (i, item) in self.items.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", item)?;
+        }
+        write!(f, "]")
+    }
+}
+
+impl<T: Clone + 'static> TryFrom<Any> for Array<T> {
+    type Error = ();
+
+    fn try_from(any: Any) -> Result<Self, Self::Error> {
+        if let Some(array) = any.cast::<Self>() {
+            Ok(array.clone())
+        } else {
+            Err(())
+        }
     }
 }

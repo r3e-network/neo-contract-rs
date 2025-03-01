@@ -2,48 +2,37 @@
 // All Rights Reserved
 
 use proc_macro::TokenStream;
-use quote::quote;
 use syn::{
-    parse_macro_input, AttributeArgs, Lit, Meta, NestedMeta, Item,
+    parse_macro_input, AttributeArgs, Lit, NestedMeta,
 };
 
 /// Process the contract_trust attribute macro
 pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
-    // Parse the module containing the contract
-    let item = parse_macro_input!(item as Item);
-    
-    // Parse attribute arguments (if any)
+    // Parse attribute arguments
     let args = parse_macro_input!(attr as AttributeArgs);
     
-    // Extract the contractOrGroup from the attribute arguments
+    // Extract the contract or group from the attribute arguments
     if args.len() != 1 {
         return syn::Error::new_spanned(
-            proc_macro2::TokenStream::from(attr),
-            "Expected exactly one argument for contract trust attribute"
+            proc_macro2::TokenStream::new(),
+            "Expected exactly one argument for contract_trust attribute: contract hash or group"
         )
         .to_compile_error()
         .into();
     }
     
-    let contract_or_group = match &args[0] {
+    let _contract_or_group = match &args[0] {
         NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
         _ => {
             return syn::Error::new_spanned(
-                proc_macro2::TokenStream::from(attr),
-                "Expected string literal for contractOrGroup"
+                proc_macro2::TokenStream::new(),
+                "Expected string literal for contract hash or group"
             )
             .to_compile_error()
             .into();
         }
     };
     
-    // Generate the output - for now, we'll just pass through the item
-    // In a real implementation, we would store the contract trust information
-    // to be used when generating the contract manifest
-    let output = quote! {
-        // Store contract trust information: contractOrGroup = #contract_or_group
-        #item
-    };
-    
-    output.into()
+    // Return the original item
+    item
 }

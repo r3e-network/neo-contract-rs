@@ -4,105 +4,126 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
+
 mod contract;
-mod manifest_extra;
 mod contract_permission;
 mod contract_trust;
+mod manifest_extra;
+mod security;
+mod static_field;
+mod structure;
 mod supported_standards;
 
-/// Attribute macro for defining Neo N3 smart contracts
-///
-/// This macro provides an ink!-style unified approach to defining Neo N3 smart contracts.
-/// It allows you to use attribute macros for contract components instead of separate macros.
-///
-/// # Example
-///
-/// ```
-/// #[neo_contract::contract]
-/// mod my_contract {
-///     #[neo(storage)]
-///     pub struct MyContract {
-///         value: bool,
-///     }
-///
-///     impl MyContract {
-///         #[neo(constructor)]
-///         pub fn new(initial_value: bool) -> Self {
-///             Self { value: initial_value }
-///         }
-///
-///         #[neo(message)]
-///         pub fn get(&self) -> bool {
-///             self.value
-///         }
-///     }
-/// }
-/// ```
-#[proc_macro_attribute]
-pub fn contract(attr: TokenStream, item: TokenStream) -> TokenStream {
-    contract::generate(attr, item)
-}
-
-/// Attribute for adding extra information to the contract manifest
+/// Attribute macro for adding extra information to the contract manifest
 #[proc_macro_attribute]
 pub fn manifest_extra(attr: TokenStream, item: TokenStream) -> TokenStream {
     manifest_extra::generate(attr, item)
 }
 
-/// Attribute for specifying the contract author
-#[proc_macro_attribute]
-pub fn contract_author(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr_str = format!("\"Author\", {}", attr.to_string());
-    let new_attr = attr_str.parse().unwrap();
-    manifest_extra::generate(new_attr, item)
-}
-
-/// Attribute for specifying the contract email
-#[proc_macro_attribute]
-pub fn contract_email(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr_str = format!("\"E-mail\", {}", attr.to_string());
-    let new_attr = attr_str.parse().unwrap();
-    manifest_extra::generate(new_attr, item)
-}
-
-/// Attribute for specifying the contract description
-#[proc_macro_attribute]
-pub fn contract_description(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr_str = format!("\"Description\", {}", attr.to_string());
-    let new_attr = attr_str.parse().unwrap();
-    manifest_extra::generate(new_attr, item)
-}
-
-/// Attribute for specifying the contract version
-#[proc_macro_attribute]
-pub fn contract_version(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr_str = format!("\"Version\", {}", attr.to_string());
-    let new_attr = attr_str.parse().unwrap();
-    manifest_extra::generate(new_attr, item)
-}
-
-/// Attribute for specifying the contract source code URL
-#[proc_macro_attribute]
-pub fn contract_source_code(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr_str = format!("\"Sourcecode\", {}", attr.to_string());
-    let new_attr = attr_str.parse().unwrap();
-    manifest_extra::generate(new_attr, item)
-}
-
-/// Attribute for specifying the contract permissions
+/// Attribute macro for specifying contract permissions
 #[proc_macro_attribute]
 pub fn contract_permission(attr: TokenStream, item: TokenStream) -> TokenStream {
     contract_permission::generate(attr, item)
 }
 
-/// Attribute for specifying the contract trust
+/// Attribute macro for specifying contract trust
 #[proc_macro_attribute]
 pub fn contract_trust(attr: TokenStream, item: TokenStream) -> TokenStream {
     contract_trust::generate(attr, item)
 }
 
-/// Attribute for specifying the supported standards
+/// Attribute macro for specifying supported standards
 #[proc_macro_attribute]
 pub fn supported_standards(attr: TokenStream, item: TokenStream) -> TokenStream {
     supported_standards::generate(attr, item)
+}
+
+/// Attribute macro for initializing a static byte array field
+#[proc_macro_attribute]
+pub fn byte_array(attr: TokenStream, item: TokenStream) -> TokenStream {
+    static_field::byte_array_generate(attr, item)
+}
+
+/// Attribute macro for initializing a static hash160 field
+#[proc_macro_attribute]
+pub fn hash160(attr: TokenStream, item: TokenStream) -> TokenStream {
+    static_field::hash160_generate(attr, item)
+}
+
+/// Attribute macro for initializing a static integer field
+#[proc_macro_attribute]
+pub fn integer(attr: TokenStream, item: TokenStream) -> TokenStream {
+    static_field::integer_generate(attr, item)
+}
+
+/// Attribute macro for initializing a static public key field
+#[proc_macro_attribute]
+pub fn public_key(attr: TokenStream, item: TokenStream) -> TokenStream {
+    static_field::public_key_generate(attr, item)
+}
+
+/// Attribute macro for initializing a static string field
+#[proc_macro_attribute]
+pub fn string(attr: TokenStream, item: TokenStream) -> TokenStream {
+    static_field::string_generate(attr, item)
+}
+
+/// Attribute macro for initializing a static contract hash field
+#[proc_macro_attribute]
+pub fn contract_hash(attr: TokenStream, item: TokenStream) -> TokenStream {
+    static_field::contract_hash_generate(attr, item)
+}
+
+/// Attribute macro for marking a function as safe
+#[proc_macro_attribute]
+pub fn safe(attr: TokenStream, item: TokenStream) -> TokenStream {
+    security::safe::generate(attr, item)
+}
+
+/// Attribute macro for preventing reentrancy attacks
+#[proc_macro_attribute]
+pub fn no_reentrant(attr: TokenStream, item: TokenStream) -> TokenStream {
+    security::no_reentrant::generate(attr, item)
+}
+
+/// Attribute macro for preventing reentrancy attacks on a method
+#[proc_macro_attribute]
+pub fn no_reentrant_method(attr: TokenStream, item: TokenStream) -> TokenStream {
+    security::no_reentrant_method::generate(attr, item)
+}
+
+/// Attribute macro for adding storage functionality to a struct
+#[proc_macro_attribute]
+pub fn stored(attr: TokenStream, item: TokenStream) -> TokenStream {
+    structure::stored::generate(attr, item)
+}
+
+/// Attribute macro for creating a function modifier
+#[proc_macro_attribute]
+pub fn modifier(attr: TokenStream, item: TokenStream) -> TokenStream {
+    structure::modifier::generate(attr, item)
+}
+
+/// Attribute macro for specifying the calling convention for a function
+#[proc_macro_attribute]
+pub fn calling_convention(attr: TokenStream, item: TokenStream) -> TokenStream {
+    structure::calling_convention::generate(attr, item)
+}
+
+/// Attribute macro for specifying the op code for a function
+#[proc_macro_attribute]
+pub fn op_code(attr: TokenStream, item: TokenStream) -> TokenStream {
+    structure::op_code::generate(attr, item)
+}
+
+/// Attribute macro for specifying the syscall for a function
+#[proc_macro_attribute]
+pub fn syscall(attr: TokenStream, item: TokenStream) -> TokenStream {
+    structure::syscall::generate(attr, item)
+}
+
+/// Attribute macro for defining a Neo N3 smart contract
+#[proc_macro_attribute]
+pub fn contract(attr: TokenStream, item: TokenStream) -> TokenStream {
+    contract::generate(attr, item)
 }

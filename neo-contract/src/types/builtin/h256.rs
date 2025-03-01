@@ -1,78 +1,82 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-#[allow(unused_imports)]
-use crate::{env, types::*};
+use alloc::string::String;
+use alloc::format;
+use alloc::vec::Vec;
+use core::fmt;
+use core::ops::{Deref, DerefMut};
+use crate::utils::hex;
 
-#[cfg(not(target_family = "wasm"))]
-#[repr(C)]
-#[derive(Default)]
-pub struct H256([u8; 32]);
+/// H256 represents a 256-bit hash
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct H256(pub [u8; 32]);
 
-#[cfg(target_family = "wasm")]
-#[repr(C)]
-pub struct H256(Placeholder);
-
-#[cfg(not(target_family = "wasm"))]
 impl H256 {
-    pub const SIZE: usize = 32;
-
-    #[cfg(target_family = "wasm")]
-    #[inline(always)]
-    pub fn hex_encode(&self) -> ByteString {
-        self.0.hex_encode()
+    /// Create a new H256
+    pub fn new(bytes: [u8; 32]) -> Self {
+        H256(bytes)
     }
 
-    #[cfg(not(target_family = "wasm"))]
-    pub fn hex_encode(&self) -> ByteString {
-        let mut b = self.0.clone();
-        b.reverse();
-        ByteString::new("0x".to_string() + &hex::encode(b.as_slice()))
+    /// Create a zero H256
+    pub fn zero() -> Self {
+        H256([0; 32])
     }
 
-    #[cfg(not(target_family = "wasm"))]
-    #[allow(dead_code)]
-    pub(crate) fn hex_decode(hex: &str) -> Self {
-        let hex = if hex.starts_with("0x") || hex.starts_with("0X") { &hex[2..] } else { hex };
-
-        let bytes = hex::decode(hex).unwrap();
-        let mut buf = [0u8; 32];
-        buf.copy_from_slice(&bytes);
-
-        buf.reverse();
-        H256(buf)
-    }
-}
-
-impl PartialEq for H256 {
-    #[inline(always)]
-    #[cfg(target_family = "wasm")]
-    fn eq(&self, other: &Self) -> bool {
-        unsafe { env::extension::h256_eq(*self, *other) }
+    /// Get the bytes
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
     }
 
-    #[cfg(not(target_family = "wasm"))]
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
+    /// Convert to a hex string
+    pub fn to_hex(&self) -> String {
+        let mut hex = String::with_capacity(64);
+        for byte in self.0.iter() {
+            hex.push_str(&format!("{:02x}", byte));
+        }
+        hex
+    }
+
+    /// Decode a hex string to an H256
+    pub fn hex_decode(hex: &str) -> Option<Self> {
+        let bytes = hex::decode(hex)?;
+        if bytes.len() != 32 {
+            return None;
+        }
+        let mut result = [0; 32];
+        result.copy_from_slice(&bytes);
+        Some(H256(result))
     }
 }
 
-impl Clone for H256 {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
+impl Deref for H256 {
+    type Target = [u8; 32];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-impl Eq for H256 {}
-impl Copy for H256 {}
+impl DerefMut for H256 {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-#[cfg(target_family = "wasm")]
-crate::impl_placeholder!(H256);
-#[cfg(target_family = "wasm")]
-impl IntoByteString for H256 {
-    #[inline(always)]
-    fn into_byte_string(self) -> ByteString {
-        unsafe { env::extension::h256_to_byte_string(self) }
+impl From<[u8; 32]> for H256 {
+    fn from(bytes: [u8; 32]) -> Self {
+        H256(bytes)
+    }
+}
+
+impl From<H256> for [u8; 32] {
+    fn from(h256: H256) -> Self {
+        h256.0
+    }
+}
+
+impl fmt::Display for H256 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "0x{}", self.to_hex())
     }
 }

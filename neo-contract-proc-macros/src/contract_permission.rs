@@ -2,56 +2,54 @@
 // All Rights Reserved
 
 use proc_macro::TokenStream;
-use quote::quote;
 use syn::{
-    parse_macro_input, AttributeArgs, Lit, Meta, NestedMeta, Item,
+    parse_macro_input, AttributeArgs, Lit, NestedMeta,
 };
 
 /// Process the contract_permission attribute macro
 pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
-    // Parse the module containing the contract
-    let item = parse_macro_input!(item as Item);
-    
-    // Parse attribute arguments (if any)
+    // Parse attribute arguments
     let args = parse_macro_input!(attr as AttributeArgs);
     
     // Extract the contract and methods from the attribute arguments
-    if args.len() < 1 {
+    if args.is_empty() {
         return syn::Error::new_spanned(
-            proc_macro2::TokenStream::from(attr),
-            "Expected at least one argument for contract permission attribute"
+            proc_macro2::TokenStream::new(),
+            "Expected at least one argument for contract_permission attribute: contract hash and optional methods"
         )
         .to_compile_error()
         .into();
     }
     
-    let contract = match &args[0] {
+    let _contract = match &args[0] {
         NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
         _ => {
             return syn::Error::new_spanned(
-                proc_macro2::TokenStream::from(attr),
-                "Expected string literal for contract"
+                proc_macro2::TokenStream::new(),
+                "Expected string literal for contract hash"
             )
             .to_compile_error()
             .into();
         }
     };
     
-    let methods: Vec<String> = args.iter().skip(1).filter_map(|arg| {
-        match arg {
-            NestedMeta::Lit(Lit::Str(lit)) => Some(lit.value()),
-            _ => None,
+    // Extract methods if provided
+    let mut methods = Vec::new();
+    for arg in args.iter().skip(1) {
+        if let NestedMeta::Lit(Lit::Str(lit)) = arg {
+            methods.push(lit.value());
+        } else {
+            return syn::Error::new_spanned(
+                proc_macro2::TokenStream::new(),
+                "Expected string literals for methods"
+            )
+            .to_compile_error()
+            .into();
         }
-    }).collect();
+    }
     
-    // Generate the output - for now, we'll just pass through the item
-    // In a real implementation, we would store the contract permission information
-    // to be used when generating the contract manifest
-    let methods_str = methods.join(", ");
-    let output = quote! {
-        // Store contract permission information: contract = #contract, methods = [#methods_str]
-        #item
-    };
+    let _methods_str = methods.join(", ");
     
-    output.into()
+    // Return the original item
+    item
 }

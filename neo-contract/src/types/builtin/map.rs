@@ -1,83 +1,148 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-#[allow(unused_imports)]
-use crate::{env, types::*};
+use alloc::vec::Vec;
+use core::fmt;
+use alloc::collections::BTreeMap;
+use core::ops::{Deref, DerefMut};
+use crate::types::builtin::any::Any;
 
-#[cfg(not(target_family = "wasm"))]
-use std::collections::HashMap;
+/// Map represents a map
+#[derive(Debug, Clone, PartialEq)]
+pub struct Map<K, V> {
+    items: BTreeMap<K, V>,
+}
 
-#[cfg(not(target_family = "wasm"))]
-#[repr(C)]
-#[derive(Default)]
-pub struct Map<K, V> 
+impl<K, V> Map<K, V>
 where
-    K: Primitive + Eq + std::hash::Hash,
+    K: Ord,
 {
-    value: HashMap<K, V>,
-}
-
-#[cfg(target_family = "wasm")]
-#[repr(C)]
-pub struct Map<K: Primitive, V> {
-    value: Placeholder,
-    _marker: core::marker::PhantomData<(K, V)>,
-}
-
-#[cfg(target_family = "wasm")]
-impl<K: Primitive, V> Map<K, V> {
-    #[inline(always)]
+    /// Create a new empty map
     pub fn new() -> Self {
-        Self {
-            value: unsafe { env::asm::map_new() },
-            _marker: core::marker::PhantomData,
+        Map {
+            items: BTreeMap::new(),
         }
     }
 
-    #[inline(always)]
-    pub fn size(&self) -> usize {
-        unsafe { env::asm::map_size(self.value) }
-    }
-}
-
-#[cfg(not(target_family = "wasm"))]
-impl<K, V> Map<K, V> 
-where
-    K: Primitive + Eq + std::hash::Hash,
-{
-    pub fn new() -> Self {
-        Self { value: HashMap::new() }
+    /// Get the length of the map
+    pub fn len(&self) -> usize {
+        self.items.len()
     }
 
-    pub fn size(&self) -> usize {
-        self.value.len()
+    /// Check if the map is empty
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
     }
-    
-    pub fn insert(&mut self, key: K, value: V) -> Option<V> {
-        self.value.insert(key, value)
-    }
-    
+
+    /// Get a reference to the value for the given key
     pub fn get(&self, key: &K) -> Option<&V> {
-        self.value.get(key)
+        self.items.get(key)
     }
-    
+
+    /// Get a mutable reference to the value for the given key
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+        self.items.get_mut(key)
+    }
+
+    /// Insert a key-value pair into the map
+    pub fn insert(&mut self, key: K, value: V) -> Option<V> {
+        self.items.insert(key, value)
+    }
+
+    /// Remove a key-value pair from the map
     pub fn remove(&mut self, key: &K) -> Option<V> {
-        self.value.remove(key)
+        self.items.remove(key)
+    }
+
+    /// Clear the map
+    pub fn clear(&mut self) {
+        self.items.clear();
+    }
+
+    /// Get the keys of the map
+    pub fn keys(&self) -> Vec<&K> {
+        self.items.keys().collect()
+    }
+
+    /// Get the values of the map
+    pub fn values(&self) -> Vec<&V> {
+        self.items.values().collect()
     }
 }
 
-#[cfg(target_family = "wasm")]
-impl<K: Primitive + 'static, V: 'static> FromPlaceholder for Map<K, V> {
-    #[inline(always)]
-    fn from_placeholder(placeholder: Placeholder) -> Self {
-        Self { value: placeholder, _marker: core::marker::PhantomData }
+impl<K, V> Deref for Map<K, V>
+where
+    K: Ord,
+{
+    type Target = BTreeMap<K, V>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.items
     }
 }
 
-#[cfg(target_family = "wasm")]
-impl<K: Primitive + 'static, V: 'static> IntoPlaceholder for Map<K, V> {
-    #[inline(always)]
-    fn into_placeholder(self) -> Placeholder {
-        self.value
+impl<K, V> DerefMut for Map<K, V>
+where
+    K: Ord,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.items
+    }
+}
+
+impl<K, V> From<BTreeMap<K, V>> for Map<K, V>
+where
+    K: Ord,
+{
+    fn from(items: BTreeMap<K, V>) -> Self {
+        Map { items }
+    }
+}
+
+impl<K, V> From<Map<K, V>> for BTreeMap<K, V>
+where
+    K: Ord,
+{
+    fn from(map: Map<K, V>) -> Self {
+        map.items
+    }
+}
+
+impl<K, V> Default for Map<K, V>
+where
+    K: Ord,
+{
+    fn default() -> Self {
+        Map::new()
+    }
+}
+
+impl<K, V> fmt::Display for Map<K, V>
+where
+    K: fmt::Display,
+    V: fmt::Display,
+    K: Ord,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{{")?;
+        for (i, (key, value)) in self.items.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}: {}", key, value)?;
+        }
+        write!(f, "}}")
+    }
+}
+
+impl<K: Clone + Ord + 'static, V: Clone + 'static> TryFrom<Any> for Map<K, V> {
+    type Error = ();
+
+    fn try_from(any: Any) -> Result<Self, Self::Error> {
+        if let Some(map) = any.cast::<Self>() {
+            Ok(map.clone())
+        } else {
+            Err(())
+        }
     }
 }

@@ -1,28 +1,42 @@
 // Copyright @ 2024 - present, R3E Network
-// All Rights Reserved.
+// All Rights Reserved
 
-pub mod contract;
-pub mod crypto;
-pub mod env;
-pub mod runtime;
-pub mod serialize;
-pub mod storage;
-pub mod types;
-pub mod utils;
-pub mod macros;
-pub mod static_values;
+#![no_std]
+#![allow(unused_variables)]
+
+extern crate alloc;
+
 pub mod attributes;
+mod call_flags;
+mod contract;
+mod crypto;
+mod env;
+mod macros;
+mod runtime;
+mod static_values;
+mod storage;
+mod types;
+mod utils;
 
-// Re-export proc macros
-pub use neo_contract_proc_macros::{
-    contract,
-    manifest_extra,
-    contract_author,
-    contract_email,
-    contract_description,
-    contract_version,
-    contract_source_code,
-    contract_permission,
-    contract_trust,
-    supported_standards,
-};
+// Re-exports
+pub use call_flags::CallFlags;
+pub use contract::{nep11, nep17, native};
+pub use crypto::*;
+pub use env::{contract as env_contract, contract_non_wasm, syscall, syscall_non_wasm};
+// pub use macros::*; // Unused
+pub use runtime::*;
+pub use static_values::*;
+pub use storage::*;
+pub use types::{block, builtin as types_builtin, bytes, context, key, notification, signer, storage as types_storage, tx};
+pub use utils::*;
+
+// Re-export builtin types for easier access
+pub mod builtin {
+    pub use crate::types::builtin::h160::H160;
+    pub use crate::types::builtin::h256::H256;
+    pub use crate::types::builtin::int256::Int256;
+    pub use crate::types::builtin::string::ByteString;
+    pub use crate::types::builtin::array::Array;
+    pub use crate::types::builtin::any::Any;
+    pub use crate::types::builtin::map::Map;
+}

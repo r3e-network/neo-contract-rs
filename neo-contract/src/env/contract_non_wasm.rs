@@ -3,7 +3,34 @@
 
 #![allow(unused)]
 
+use alloc::vec::Vec;
+use alloc::borrow::Cow;
+
 use crate::types::*;
+use crate::types::builtin::h160::H160;
+use crate::types::builtin::h256::H256;
+use crate::types::builtin::int256::Int256;
+use crate::types::builtin::string::ByteString;
+use crate::types::builtin::array::Array;
+use crate::types::builtin::any::Any;
+use crate::types::block::Block;
+use crate::types::tx::Tx;
+use crate::types::signer::Signer;
+
+// Define these types for the non-wasm environment
+pub enum VmState {
+    None,
+    Halt,
+    Fault,
+    Break,
+}
+
+pub struct NeoCandidate {
+    pub public_key: PublicKey,
+    pub votes: Int256,
+}
+
+pub struct PublicKey(pub [u8; 33]);
 
 // Get current contract hash
 pub unsafe fn get_current_contract_hash() -> H160 {
