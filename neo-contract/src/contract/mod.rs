@@ -3,8 +3,8 @@
 
 pub mod native;
 pub(crate) mod nep;
-pub(crate) mod nep11;
-pub(crate) mod nep17;
+pub mod nep11;
+pub mod nep17;
 
 pub use {nep11::*, nep17::*};
 
