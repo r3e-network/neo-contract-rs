@@ -48,12 +48,22 @@ impl Neo {
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
     pub fn balance_of(account: H160) -> Int256 {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_neo_balance_of(account) }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_neo_balance_of(account) }
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
     pub fn transfer(from: H160, to: H160, amount: Int256) -> bool {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_neo_transfer(from, to, amount) }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_neo_transfer(from, to, amount) }
     }
 }

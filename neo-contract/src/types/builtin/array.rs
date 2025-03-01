@@ -6,7 +6,11 @@ use crate::{env, types::*};
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
-pub struct Array<T> {
+#[derive(Default, Clone)]
+pub struct Array<T> 
+where
+    T: Clone,
+{
     value: Vec<T>,
     // _marker: core::marker::PhantomData<T>,
 }
@@ -63,12 +67,16 @@ impl<T> Array<T> {
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl<T> Array<T> {
+impl<T: Clone> Array<T> {
     pub fn new() -> Self {
         Self { value: Vec::new() }
     }
 
     pub fn size(&self) -> usize {
+        self.value.len()
+    }
+    
+    pub fn len(&self) -> usize {
         self.value.len()
     }
 
@@ -79,6 +87,10 @@ impl<T> Array<T> {
     pub fn pop(&mut self) -> T {
         self.value.pop().unwrap()
     }
+    
+    pub fn remove(&mut self, index: usize) -> T {
+        self.value.remove(index)
+    }
 
     pub fn get(&self, index: usize) -> &T {
         &self.value[index] // TODO: return a clone
@@ -86,6 +98,10 @@ impl<T> Array<T> {
 
     pub fn set(&mut self, index: usize, value: T) {
         self.value[index] = value;
+    }
+    
+    pub fn iter(&self) -> std::slice::Iter<'_, T> {
+        self.value.iter()
     }
 }
 

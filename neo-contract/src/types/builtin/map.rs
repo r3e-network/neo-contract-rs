@@ -9,7 +9,11 @@ use std::collections::HashMap;
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
-pub struct Map<K: Primitive, V> {
+#[derive(Default)]
+pub struct Map<K, V> 
+where
+    K: Primitive + Eq + std::hash::Hash,
+{
     value: HashMap<K, V>,
 }
 
@@ -37,13 +41,28 @@ impl<K: Primitive, V> Map<K, V> {
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl<K: Primitive, V> Map<K, V> {
+impl<K, V> Map<K, V> 
+where
+    K: Primitive + Eq + std::hash::Hash,
+{
     pub fn new() -> Self {
         Self { value: HashMap::new() }
     }
 
     pub fn size(&self) -> usize {
         self.value.len()
+    }
+    
+    pub fn insert(&mut self, key: K, value: V) -> Option<V> {
+        self.value.insert(key, value)
+    }
+    
+    pub fn get(&self, key: &K) -> Option<&V> {
+        self.value.get(key)
+    }
+    
+    pub fn remove(&mut self, key: &K) -> Option<V> {
+        self.value.remove(key)
     }
 }
 

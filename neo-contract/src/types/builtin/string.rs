@@ -7,6 +7,7 @@ use crate::{env, types::*};
 /// ByteString is a non utf-8 string
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
+#[derive(Default, Hash)]
 pub struct ByteString(Vec<u8>);
 
 #[cfg(target_family = "wasm")]
@@ -63,6 +64,10 @@ impl ByteString {
     pub(crate) fn to_string(self) -> String {
         String::from_utf8_lossy(&self.0).to_string()
     }
+    
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
 }
 
 impl PartialEq for ByteString {
@@ -84,6 +89,12 @@ impl Clone for ByteString {
     #[inline(always)]
     fn clone(&self) -> Self {
         Self(self.0.clone())
+    }
+}
+
+impl From<&str> for ByteString {
+    fn from(s: &str) -> Self {
+        ByteString(s.as_bytes().to_vec())
     }
 }
 

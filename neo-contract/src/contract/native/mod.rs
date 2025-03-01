@@ -25,38 +25,73 @@ impl ContractManagement {
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
     pub fn get_min_deployment_fee() -> Int256 {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_contract_management_get_min_deployment_fee() }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_contract_management_get_min_deployment_fee() }
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
     pub fn contract_of_hash(hash: H160) -> Contract {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_contract_management_contract_of_hash(hash) }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_contract_management_contract_of_hash(hash) }
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
     pub fn contract_of_id(id: u32) -> Contract {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_contract_management_contract_of_id(id) }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_contract_management_contract_of_id(id) }
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
     pub fn has_method(hash: H160, method: ByteString, param_count: u32) -> bool {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_contract_management_has_method(hash, method, param_count) }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_contract_management_has_method(hash, method, param_count) }
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
     pub fn deploy(nef: ByteString, manifest: ByteString) -> Contract {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_contract_management_deploy(nef, manifest) }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_contract_management_deploy(nef, manifest) }
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
     pub fn update(nef: ByteString, manifest: ByteString) {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_contract_management_update(nef, manifest) }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_contract_management_update(nef, manifest) }
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
     pub fn destroy() {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_contract_management_destroy() }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_contract_management_destroy() }
     }
 }
 
@@ -74,7 +109,12 @@ impl RoleManagement {
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
     pub fn get_designated_by_role(role: Role, block_index: u32) -> Array<PublicKey> {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_role_management_get_designated_by_role(role, block_index) }
+
+        #[cfg(not(target_family = "wasm"))]
+        unsafe { crate::env::contract_non_wasm::native_role_management_get_designated_by_role(role, block_index) }
     }
 }

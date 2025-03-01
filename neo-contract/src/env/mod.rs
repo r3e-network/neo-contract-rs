@@ -8,3 +8,7 @@ pub(crate) mod extension;
 pub(crate) mod numeric;
 pub(crate) mod stdlib;
 pub(crate) mod syscall;
+#[cfg(not(target_family = "wasm"))]
+pub(crate) mod contract_non_wasm;
+#[cfg(not(target_family = "wasm"))]
+pub(crate) mod syscall_non_wasm;

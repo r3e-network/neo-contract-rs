@@ -6,6 +6,7 @@ use crate::{env, types::*};
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
+#[derive(Default)]
 pub struct Int256(num256::Int256);
 
 #[cfg(target_family = "wasm")]
@@ -103,6 +104,70 @@ impl Clone for Int256 {
 
 impl Eq for Int256 {}
 impl Copy for Int256 {}
+
+impl std::ops::Add for Int256 {
+    type Output = Self;
+
+    #[inline(always)]
+    #[cfg(target_family = "wasm")]
+    fn add(self, other: Self) -> Self {
+        unsafe { env::numeric::int256_add(self, other) }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn add(self, other: Self) -> Self {
+        Int256(self.0 + other.0)
+    }
+}
+
+impl std::ops::Sub for Int256 {
+    type Output = Self;
+
+    #[inline(always)]
+    #[cfg(target_family = "wasm")]
+    fn sub(self, other: Self) -> Self {
+        unsafe { env::numeric::int256_sub(self, other) }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn sub(self, other: Self) -> Self {
+        Int256(self.0 - other.0)
+    }
+}
+
+impl std::ops::Neg for Int256 {
+    type Output = Self;
+
+    #[inline(always)]
+    #[cfg(target_family = "wasm")]
+    fn neg(self) -> Self {
+        unsafe { env::numeric::int256_neg(self) }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn neg(self) -> Self {
+        Int256(-self.0)
+    }
+}
+
+impl std::cmp::PartialOrd for Int256 {
+    #[inline(always)]
+    #[cfg(target_family = "wasm")]
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if unsafe { env::numeric::int256_lt(Self(self.0), Self(other.0)) } {
+            Some(std::cmp::Ordering::Less)
+        } else if unsafe { env::numeric::int256_gt(Self(self.0), Self(other.0)) } {
+            Some(std::cmp::Ordering::Greater)
+        } else {
+            Some(std::cmp::Ordering::Equal)
+        }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
 
 #[cfg(target_family = "wasm")]
 crate::impl_placeholder!(Int256);

@@ -6,6 +6,7 @@ use crate::{env, types::*};
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
+#[derive(Default)]
 pub struct H160([u8; 20]);
 
 #[cfg(target_family = "wasm")]
@@ -39,6 +40,10 @@ impl H160 {
 
         buf.reverse();
         H160(buf)
+    }
+    
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
     }
 }
 

@@ -33,14 +33,14 @@ macro_rules! impl_primitive {
 impl_primitive!(i32, i64, u32, u64, isize, usize);
 impl_primitive!(bool, ByteString, Int256, H256, H160);
 
-impl<T> Builtin for Array<T> {}
-impl<T> inner::Sealed for Array<T> {}
+impl<T: Clone> Builtin for Array<T> {}
+impl<T: Clone> inner::Sealed for Array<T> {}
 
 impl Builtin for Buffer {}
 impl inner::Sealed for Buffer {}
 
-impl<K: Primitive, V> Builtin for Map<K, V> {}
-impl<K: Primitive, V> inner::Sealed for Map<K, V> {}
+impl<K: Primitive + std::hash::Hash, V> Builtin for Map<K, V> {}
+impl<K: Primitive + std::hash::Hash, V> inner::Sealed for Map<K, V> {}
 
 pub(crate) mod inner {
     pub trait Sealed {}
