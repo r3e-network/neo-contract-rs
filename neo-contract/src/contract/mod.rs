@@ -3,13 +3,13 @@
 
 pub mod native;
 pub(crate) mod nep;
-pub mod nep5;
 pub mod nep11;
 pub mod nep17;
 
-pub use {nep5::*, nep11::*, nep17::*};
+pub use {nep11::*, nep17::*};
 
-use crate::{storage::StorageMap, types::{*, consts::DEFAULT_BALANCE_KEY}};
+use crate::{storage::StorageMap, types::*};
+use crate::types::consts::DEFAULT_BALANCE_KEY;
 
 pub trait SmartContract {
     #[inline(always)]
