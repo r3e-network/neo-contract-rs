@@ -8,7 +8,8 @@ Cargo.lock
 .idea/
 /target
 .vscode/
-/tools
+/tools/*
+!tools/neo-wasm
 
 # wasm
 *.wasm
@@ -18,3 +19,4 @@ Cargo.lock
 # macos
 **/.DS_Store
 settings.json
+bin/
