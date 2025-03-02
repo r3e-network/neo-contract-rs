@@ -1,0 +1,71 @@
+name: Build Neo Contracts
+
+on:
+  push:
+    branches: [ jimmy, main ]
+  pull_request:
+    branches: [ jimmy, main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Create bin directory
+        run: mkdir -p bin
+
+      - name: Build neo-wasm
+        run: |
+          chmod +x scripts/build/build_neo_wasm.sh
+          scripts/build/build_neo_wasm.sh || scripts/build/download_neo_wasm.sh
+
+      - name: Build examples
+        run: |
+          chmod +x scripts/build_examples.sh
+          ./scripts/build_examples.sh
+
+      - name: Verify output files
+        run: |
+          # Check if the dist directory exists
+          if [ ! -d "dist" ]; then
+            echo "Error: dist directory not found"
+            exit 1
+          fi
+          
+          # Check if at least one example was built successfully
+          if [ -z "$(ls -A dist)" ]; then
+            echo "Error: No examples were built successfully"
+            exit 1
+          fi
+          
+          # Check if the hello_world example was built successfully
+          if [ -d "dist/hello_world" ]; then
+            echo "Hello world example built successfully"
+            ls -la dist/hello_world
+          fi
