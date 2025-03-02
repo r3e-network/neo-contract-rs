@@ -16,9 +16,9 @@ use neo_contract::{
     Runtime,
     contract_author, contract_email, contract_description,
     contract_version, contract_permission, contract_trust,
-    storage, constructor, message,
+    storage, constructor, message, safe,
 };
-use neo_contract::contract::native::legder::Ledger;
+use neo_contract::contract::native::ledger::Ledger;
 
 // Use wee_alloc as the global allocator
 #[global_allocator]
@@ -206,31 +206,23 @@ mod burger_contract {
                 return false;
             }
             
-            let from_balance = match self.balances.get(&from) {
-                Some(balance) => *balance,
-                None => Int256::from(0),
-            };
-            
-            if from_balance < amount {
+            let from_balance = self.balances.get(&from).unwrap_or_else(|| &Int256::from(0));
+            if *from_balance < amount {
                 return false;
             }
             
             // Handle burning
             if to == H160::zero() {
-                self.balances.put(from.clone(), from_balance - amount);
+                self.balances.put(from.clone(), *from_balance - amount);
                 self.total = self.total - amount;
                 emit_transfer(Some(from), Some(to), amount);
                 return true;
             }
             
             // Regular transfer
-            let to_balance = match self.balances.get(&to) {
-                Some(balance) => *balance,
-                None => Int256::from(0),
-            };
-            
-            self.balances.put(from.clone(), from_balance - amount);
-            self.balances.put(to.clone(), to_balance + amount);
+            let to_balance = self.balances.get(&to).unwrap_or_else(|| &Int256::from(0));
+            self.balances.put(from.clone(), *from_balance - amount);
+            self.balances.put(to.clone(), *to_balance + amount);
             
             emit_transfer(Some(from), Some(to), amount);
             true
@@ -356,7 +348,7 @@ mod burger_contract {
             }
             
             // Update total staked by voter
-            let total_staked = match self.total_staked_by_voter.get(&addr) {
+            let _total_staked = match self.total_staked_by_voter.get(&addr) {
                 Some(total) => {
                     let new_total = *total - amount;
                     if new_total.is_zero() {
@@ -386,17 +378,13 @@ mod burger_contract {
                 return false;
             }
             
-            let balance = match self.balances.get(&addr) {
-                Some(balance) => *balance,
-                None => Int256::from(0),
-            };
-            
-            if balance < amount {
+            let balance = self.balances.get(&addr).unwrap_or_else(|| &Int256::from(0));
+            if *balance < amount {
                 return false;
             }
             
             // Update balance
-            let new_balance = balance - amount;
+            let new_balance = *balance - amount;
             if new_balance.is_zero() {
                 self.balances.delete(&addr);
             } else {
@@ -468,12 +456,8 @@ mod burger_contract {
                 self.staking_balance.put(addr.clone(), new_staked);
             }
             
-            let balance = match self.balances.get(&addr) {
-                Some(balance) => *balance,
-                None => Int256::from(0),
-            };
-            
-            let new_balance = balance + amount;
+            let balance = self.balances.get(&addr).unwrap_or_else(|| &Int256::from(0));
+            let new_balance = *balance + amount;
             self.balances.put(addr.clone(), new_balance);
             
             self.total = self.total + amount;
@@ -487,7 +471,7 @@ mod burger_contract {
         #[safe]
         pub fn balance_of(&self, account: H160) -> Int256 {
             match self.balances.get(&account) {
-                Some(balance) => balance.clone(),
+                Some(balance) => *balance,
                 None => Int256::from(0),
             }
         }

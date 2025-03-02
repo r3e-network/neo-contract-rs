@@ -12,7 +12,7 @@ use neo_contract::{
     Runtime,
     contract, contract_author, contract_description,
     contract_version, contract_email,
-    storage, constructor, message, event,
+    storage, constructor, message,
 };
 use core::panic::PanicInfo;
 
@@ -33,6 +33,22 @@ fn panic(_info: &PanicInfo) -> ! {
 #[contract_version("0.1.0")]
 mod token_contract {
     use super::*;
+
+    pub fn emit_transfer(from: H160, to: H160, amount: Int256) {
+        // Create event name as ByteString
+        let event_name = ByteString::from("transfer");
+        
+        // Create an Array to hold our parameters
+        let mut event_data = Array::<Any>::new();
+        
+        // Add the parameters as Any values
+        event_data.push(Any::from(from));
+        event_data.push(Any::from(to));
+        event_data.push(Any::from(amount));
+        
+        // Emit the event
+        Runtime::notify(&event_name, &event_data);
+    }
     
     #[storage]
     pub struct Token {
@@ -93,7 +109,8 @@ mod token_contract {
                 self.balances.put(to, to_new_balance);
             }
             
-            // Log transfer event but don't actually emit it in this simplified example
+            // Emit the transfer event
+            emit_transfer(from, to, amount);
             
             true
         }
@@ -120,6 +137,9 @@ mod token_contract {
             } else {
                 self.balances.put(account, new_balance);
             }
+            
+            // Emit withdraw event (same as transfer from account to 0)
+            emit_transfer(account, H160::zero(), amount);
             
             true
         }

@@ -12,6 +12,12 @@ extern crate wee_alloc;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 use neo_contract as neo;
+use core::panic::PanicInfo;
+
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
 
 #[contract]
 #[contract_author("R3E Network")]
@@ -24,6 +30,58 @@ mod burger_governance {
     use neo::prelude::*;
     use neo::runtime;
     use neo::types::*;
+    use neo::builtin::{H160, Int256, ByteString, Map, Array, Any};
+
+    // Helper function to emit a Transfer event
+    pub fn emit_transfer(from: H160, to: H160, amount: Int256) {
+        // Create event name as ByteString
+        let event_name = ByteString::from("Transfer");
+        
+        // Create an Array to hold parameters
+        let mut event_data = Array::<Any>::new();
+        
+        // Add parameters as Any values
+        event_data.push(Any::from(from));
+        event_data.push(Any::from(to));
+        event_data.push(Any::from(amount));
+        
+        // Emit the event
+        runtime::notify(&event_name, &event_data);
+    }
+    
+    // Helper function to emit a ProposalCreated event
+    pub fn emit_proposal_created(proposal_id: Int256, description: ByteString) {
+        let event_name = ByteString::from("ProposalCreated");
+        
+        let mut event_data = Array::<Any>::new();
+        event_data.push(Any::from(proposal_id));
+        event_data.push(Any::from(description));
+        
+        runtime::notify(&event_name, &event_data);
+    }
+    
+    // Helper function to emit a Voted event
+    pub fn emit_voted(proposal_id: Int256, voter: H160, amount: Int256) {
+        let event_name = ByteString::from("Voted");
+        
+        let mut event_data = Array::<Any>::new();
+        event_data.push(Any::from(proposal_id));
+        event_data.push(Any::from(voter));
+        event_data.push(Any::from(amount));
+        
+        runtime::notify(&event_name, &event_data);
+    }
+    
+    // Helper function to emit a ProposalFinalized event
+    pub fn emit_proposal_finalized(proposal_id: Int256, status: Int256) {
+        let event_name = ByteString::from("ProposalFinalized");
+        
+        let mut event_data = Array::<Any>::new();
+        event_data.push(Any::from(proposal_id));
+        event_data.push(Any::from(status));
+        
+        runtime::notify(&event_name, &event_data);
+    }
 
     /// GovernanceToken is a contract that manages the governance of the BurgerNEO ecosystem
     #[storage]
@@ -33,13 +91,13 @@ mod burger_governance {
         /// Total supply of the token
         total_supply: Int256,
         /// Balances of the token
-        balances: builtin::Map,
+        balances: Map<H160, Int256>,
         /// Proposals
-        proposals: builtin::Map,
+        proposals: Map<Int256, ByteString>,
         /// Proposal votes
-        proposal_votes: builtin::Map,
+        proposal_votes: Map<Int256, Int256>,
         /// Proposal status (0 = pending, 1 = approved, 2 = rejected)
-        proposal_status: builtin::Map,
+        proposal_status: Map<Int256, Int256>,
         /// Next proposal ID
         next_proposal_id: Int256,
     }
@@ -52,10 +110,10 @@ mod burger_governance {
             let mut instance = Self {
                 owner: owner.clone(),
                 total_supply: Int256::zero(),
-                balances: builtin::Map::new(),
-                proposals: builtin::Map::new(),
-                proposal_votes: builtin::Map::new(),
-                proposal_status: builtin::Map::new(),
+                balances: Map::new(),
+                proposals: Map::new(),
+                proposal_votes: Map::new(),
+                proposal_status: Map::new(),
                 next_proposal_id: Int256::from(1),
             };
 
@@ -66,33 +124,38 @@ mod burger_governance {
 
         /// Get the name of the token
         #[message]
+        #[safe]
         pub fn name(&self) -> ByteString {
             ByteString::from("BurgerGovernance")
         }
 
         /// Get the symbol of the token
         #[message]
+        #[safe]
         pub fn symbol(&self) -> ByteString {
             ByteString::from("bGOV")
         }
 
         /// Get the decimals of the token
         #[message]
+        #[safe]
         pub fn decimals(&self) -> u8 {
             8
         }
 
         /// Get the total supply of the token
         #[message]
+        #[safe]
         pub fn total_supply(&self) -> Int256 {
             self.total_supply.clone()
         }
 
         /// Get the balance of an account
         #[message]
+        #[safe]
         pub fn balance_of(&self, account: H160) -> Int256 {
             match self.balances.get(&account) {
-                Some(balance) => balance,
+                Some(balance) => balance.clone(),
                 None => Int256::zero(),
             }
         }
@@ -119,13 +182,13 @@ mod burger_governance {
             if from_new_balance.is_zero() {
                 self.balances.delete(&from);
             } else {
-                self.balances.put(&from, &from_new_balance);
+                self.balances.put(from.clone(), from_new_balance);
             }
             
             let to_new_balance = to_balance + amount.clone();
-            self.balances.put(&to, &to_new_balance);
+            self.balances.put(to.clone(), to_new_balance);
 
-            self.transfer_event(from, to, amount);
+            emit_transfer(from, to, amount);
 
             true
         }
@@ -139,13 +202,13 @@ mod burger_governance {
 
             let proposal_id = self.next_proposal_id.clone();
             
-            self.proposals.put(&proposal_id, &description);
-            self.proposal_votes.put(&proposal_id, &Int256::zero());
-            self.proposal_status.put(&proposal_id, &Int256::zero()); // Pending
+            self.proposals.put(proposal_id.clone(), description.clone());
+            self.proposal_votes.put(proposal_id.clone(), Int256::zero());
+            self.proposal_status.put(proposal_id.clone(), Int256::zero()); // Pending
 
             self.next_proposal_id = self.next_proposal_id.clone() + Int256::from(1);
 
-            self.proposal_created_event(proposal_id.clone(), description);
+            emit_proposal_created(proposal_id.clone(), description);
 
             proposal_id
         }
@@ -166,7 +229,7 @@ mod burger_governance {
 
             // Get proposal status
             let status = match self.proposal_status.get(&proposal_id) {
-                Some(s) => s,
+                Some(s) => s.clone(),
                 None => return false, // Proposal doesn't exist
             };
             
@@ -176,17 +239,17 @@ mod burger_governance {
 
             // Get current votes
             let current_votes = match self.proposal_votes.get(&proposal_id) {
-                Some(v) => v,
+                Some(v) => v.clone(),
                 None => Int256::zero(),
             };
 
             let new_votes = current_votes + amount.clone();
-            self.proposal_votes.put(&proposal_id, &new_votes);
+            self.proposal_votes.put(proposal_id.clone(), new_votes);
 
             // Lock the tokens by transferring them to the contract
             self.transfer(voter.clone(), runtime::executing_script_hash(), amount.clone());
 
-            self.voted_event(proposal_id, voter, amount);
+            emit_voted(proposal_id, voter, amount);
 
             true
         }
@@ -200,7 +263,7 @@ mod burger_governance {
 
             // Get proposal status
             let status = match self.proposal_status.get(&proposal_id) {
-                Some(s) => s,
+                Some(s) => s.clone(),
                 None => return false, // Proposal doesn't exist
             };
             
@@ -208,25 +271,18 @@ mod burger_governance {
                 return false; // Proposal is not pending
             }
 
-            let new_status = if approve { Int256::from(1) } else { Int256::from(2) };
-            self.proposal_status.put(&proposal_id, &new_status);
+            let new_status = if approve {
+                Int256::from(1) // Approved
+            } else {
+                Int256::from(2) // Rejected
+            };
 
-            self.proposal_finalized_event(proposal_id, new_status);
+            self.proposal_status.put(proposal_id.clone(), new_status.clone());
+
+            emit_proposal_finalized(proposal_id, new_status);
 
             true
         }
-
-        #[event]
-        pub fn transfer_event(&self, from: H160, to: H160, amount: Int256) {}
-
-        #[event]
-        pub fn proposal_created_event(&self, proposal_id: Int256, description: ByteString) {}
-
-        #[event]
-        pub fn voted_event(&self, proposal_id: Int256, voter: H160, amount: Int256) {}
-
-        #[event]
-        pub fn proposal_finalized_event(&self, proposal_id: Int256, status: Int256) {}
 
         /// Mint new tokens (internal function)
         fn mint(&mut self, to: H160, amount: Int256) -> bool {
@@ -234,21 +290,16 @@ mod burger_governance {
                 return false;
             }
 
-            let to_balance = self.balance_of(to.clone());
-            let new_balance = to_balance + amount.clone();
-            self.balances.put(&to, &new_balance);
+            let balance = self.balance_of(to.clone());
+            let new_balance = balance + amount.clone();
             
+            self.balances.put(to.clone(), new_balance);
             self.total_supply = self.total_supply.clone() + amount.clone();
-
-            self.transfer_event(H160::zero(), to, amount);
-
+            
+            // Emit transfer from null address to mint destination
+            emit_transfer(H160::zero(), to, amount);
+            
             true
         }
     }
-}
-
-// Required for no_std
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {}
 }

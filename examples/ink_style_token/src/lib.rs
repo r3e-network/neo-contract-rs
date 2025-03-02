@@ -5,22 +5,59 @@
 #![no_main]
 
 extern crate alloc;
+extern crate wee_alloc;
 
 use neo_contract::{
     builtin::{H160, Int256, ByteString, Map, Any, Array},
     Runtime,
-    contract, storage, constructor, message, event,
+    contract, storage, constructor, message, safe,
 };
 use alloc::vec::Vec;
+use core::panic::PanicInfo;
+
+// Use wee_alloc as the global allocator
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+// Define a panic handler
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
 
 #[contract]
 mod token {
     use super::*;
     
+    // Helper function to emit a Transfer event
+    pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: Int256) {
+        // Create event name as ByteString
+        let event_name = ByteString::from("Transfer");
+        
+        // Create an Array to hold parameters
+        let mut event_data = Array::<Any>::new();
+        
+        // Add parameters as Any values
+        match from {
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
+        }
+        
+        match to {
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
+        }
+        
+        event_data.push(Any::from(amount));
+        
+        // Emit the event
+        Runtime::notify(&event_name, &event_data);
+    }
+    
     #[storage]
     pub struct Token {
-        total_supply: Int256,
-        balances: Map,
+        total: Int256, 
+        balances: Map<H160, Int256>,
     }
     
     impl Token {
@@ -31,34 +68,60 @@ mod token {
             
             balances.put(owner.clone(), initial_supply.clone());
             
+            // Emit transfer event from null address to owner
+            emit_transfer(None, Some(owner), initial_supply.clone());
+            
             Self {
-                total_supply: initial_supply,
+                total: initial_supply,
                 balances,
             }
         }
         
         #[message]
+        #[safe]
         pub fn total_supply(&self) -> Int256 {
-            self.total_supply.clone()
+            self.total.clone() 
         }
         
         #[message]
+        #[safe]
         pub fn balance_of(&self, account: H160) -> Int256 {
-            // Map doesn't have a get method in the current implementation
-            // We need to iterate through the keys and values
-            for i in 0..self.balances.len() {
-                if let Some(key) = self.balances.keys.get(i) {
-                    if *key == account {
-                        if let Some(value) = self.balances.values.get(i) {
-                            return value.clone();
-                        }
-                    }
-                }
+            match self.balances.get(&account) {
+                Some(balance) => balance.clone(),
+                None => Int256::zero(),
             }
-            Int256::zero()
         }
         
-        #[event]
-        pub fn transfer(from: Option<H160>, to: Option<H160>, amount: Int256) {}
+        #[message]
+        pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
+            if !Runtime::check_witness(from.clone()) {
+                return false;
+            }
+            
+            if amount <= Int256::zero() {
+                return false;
+            }
+            
+            let from_balance = self.balance_of(from.clone());
+            if from_balance < amount {
+                return false;
+            }
+            
+            let from_new_balance = from_balance - amount.clone();
+            if from_new_balance.is_zero() {
+                self.balances.delete(&from);
+            } else {
+                self.balances.put(from.clone(), from_new_balance);
+            }
+            
+            let to_balance = self.balance_of(to.clone());
+            let to_new_balance = to_balance + amount.clone();
+            self.balances.put(to.clone(), to_new_balance);
+            
+            // Emit transfer event
+            emit_transfer(Some(from), Some(to), amount);
+            
+            true
+        }
     }
 }

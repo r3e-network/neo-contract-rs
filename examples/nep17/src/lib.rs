@@ -10,78 +10,121 @@ extern crate wee_alloc;
 use neo_contract::{
     builtin::{H160, Int256, ByteString, Map, Array, Any},
     Runtime,
-    contract, contract_author, contract_description,
-    contract_version, supported_standards,
-    storage, constructor, message, event,
+    contract, contract_author, contract_email, contract_description,
+    contract_version,
+    storage, constructor, message, safe,
 };
 use alloc::vec::Vec;
+use core::panic::PanicInfo;
 
-// Add global allocator
+// Use wee_alloc as the global allocator
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-// Add panic handler
+// Define a panic handler
 #[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
 #[contract]
 #[contract_author("R3E Network")]
-#[contract_description("NEP-17 Standard Implementation")]
+#[contract_email("dev@r3e.network")]
+#[contract_description("NEP-17 token example")]
 #[contract_version("0.1.0")]
-#[supported_standards("NEP-17")]
-mod nep17_contract {
+mod token {
     use super::*;
 
-    #[storage]
-    pub struct Nep17Token {
-        total_supply: Int256,
-        balances: Map<H160, Int256>,
+    // Helper function to emit a Transfer event
+    pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: Int256) {
+        // Create event name as ByteString
+        let event_name = ByteString::from("Transfer");
+        
+        // Create an Array to hold parameters
+        let mut event_data = Array::<Any>::new();
+        
+        // Add parameters as Any values
+        match from {
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
+        }
+        
+        match to {
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
+        }
+        
+        event_data.push(Any::from(amount));
+        
+        // Emit the event
+        Runtime::notify(&event_name, &event_data);
     }
 
-    impl Nep17Token {
+    #[storage]
+    pub struct Token {
+        total: Int256,  
+        balances: Map<H160, Int256>,
+        token_name: ByteString,      
+        token_symbol: ByteString,    
+        token_decimals: Int256,      
+    }
+
+    impl Token {
         #[constructor]
-        pub fn new(initial_supply: Int256) -> Self {
+        pub fn new(owner: H160, total_supply: Int256) -> Self {
             let mut balances = Map::new();
-            let owner = Runtime::calling_script_hash();
             
-            balances.put(owner.clone(), initial_supply.clone());
+            // Store the total_supply to owner's balance
+            balances.put(owner.clone(), total_supply.clone());
             
-            // Emit transfer event for minting
-            Self::transfer_event(None, Some(owner), initial_supply.clone());
+            // Emit transfer event from null address to owner
+            emit_transfer(None, Some(owner), total_supply.clone());
             
             Self {
-                total_supply: initial_supply,
+                total: total_supply,  
                 balances,
+                token_name: ByteString::from("NEP17 Token"),
+                token_symbol: ByteString::from("NEP"),
+                token_decimals: Int256::from(8),
             }
         }
-        
+
+        // NEP-17 methods
         #[message]
+        #[safe]
+        pub fn name(&self) -> ByteString {
+            self.token_name.clone()
+        }
+
+        #[message]
+        #[safe]
         pub fn symbol(&self) -> ByteString {
-            ByteString::from("NEP17")
+            self.token_symbol.clone()
         }
-        
+
         #[message]
-        pub fn decimals(&self) -> u8 {
-            8
+        #[safe]
+        pub fn decimals(&self) -> Int256 {
+            self.token_decimals.clone()
         }
-        
+
         #[message]
+        #[safe]
         pub fn total_supply(&self) -> Int256 {
-            self.total_supply.clone()
+            self.total.clone()  
         }
-        
+
         #[message]
+        #[safe]
         pub fn balance_of(&self, account: H160) -> Int256 {
             match self.balances.get(&account) {
                 Some(balance) => balance.clone(),
                 None => Int256::zero(),
             }
         }
-        
+
         #[message]
-        pub fn transfer(&mut self, from: H160, to: H160, amount: Int256, data: Option<Any>) -> bool {
+        pub fn transfer(&mut self, from: H160, to: H160, amount: Int256, _data: ByteString) -> bool {
             if !Runtime::check_witness(from.clone()) {
                 return false;
             }
@@ -109,35 +152,9 @@ mod nep17_contract {
             }
             
             // Emit transfer event
-            Self::transfer_event(Some(from), Some(to), amount);
+            emit_transfer(Some(from), Some(to), amount);
             
             true
         }
-        
-        #[event]
-        pub fn transfer_event(from: Option<H160>, to: Option<H160>, amount: Int256) {}
-    }
-}
-
-// NEP-17 Trait Implementation
-impl neo_contract::nep17::NEP17 for nep17_contract::Nep17Token {
-    fn symbol(&self) -> ByteString {
-        self.symbol()
-    }
-
-    fn decimals(&self) -> u8 {
-        self.decimals()
-    }
-
-    fn total_supply(&self) -> Int256 {
-        self.total_supply()
-    }
-
-    fn balance_of(&self, account: H160) -> Int256 {
-        self.balance_of(account)
-    }
-
-    fn transfer(&mut self, from: H160, to: H160, amount: Int256, data: ByteString) -> bool {
-        self.transfer(from, to, amount, Some(Any::from(data)))
     }
 }

@@ -9,13 +9,11 @@ extern crate wee_alloc;
 
 use neo_contract::{
     builtin::{H160, Int256, ByteString, Array, Any},
-    CallFlags,
     Runtime,
     contract, contract_author, contract_description,
     contract_version,
-    storage, constructor, message, event,
+    storage, constructor, message,
 };
-use alloc::vec::Vec;
 use core::panic::PanicInfo;
 
 // Use wee_alloc as the global allocator
@@ -40,17 +38,22 @@ mod contract_call {
     
     #[storage]
     pub struct ContractCall {
-        // No storage needed for this example
+        // Storage for last received payment data
+        last_sender: Option<H160>,
+        last_amount: Int256,
     }
     
     impl ContractCall {
         #[constructor]
         pub fn new() -> Self {
-            Self {}
+            Self {
+                last_sender: None,
+                last_amount: Int256::zero(),
+            }
         }
         
         #[message]
-        pub fn on_nep17_payment(&mut self, from: H160, amount: Int256, data: Int256) -> bool {
+        pub fn on_nep17_payment(&mut self, _from: H160, _amount: Int256, data: Int256) -> bool {
             // Check if the data is valid
             if data != Int256::from(123i32) {
                 return false;
@@ -81,19 +84,31 @@ mod contract_call {
                 None => return false,
             };
             
-            // Call the target contract
+            // Store the payment information
+            self.last_sender = Some(token_hash);
+            self.last_amount = balance.clone();
+            
+            // Call the target contract with a real method name (transfer instead of dummyMethod)
             let mut args = Array::new();
             args.push(Any::from(this));
-            args.push(Any::from(token_hash));
-            args.push(Any::from(balance));
+            args.push(Any::from(target_contract)); // Send tokens to target_contract
+            args.push(Any::from(Int256::from(1i32))); // Send a small amount (1 token)
+            args.push(Any::from(ByteString::from("example data"))); // Data parameter
             
             Runtime::call_contract(
-                target_contract,
-                ByteString::from("dummyMethod"),
+                token_hash,
+                ByteString::from("transfer"),
                 args
             );
             
             true
+        }
+        
+        // New method to get the last payment info
+        #[message]
+        #[safe]
+        pub fn get_last_payment(&self) -> (Option<H160>, Int256) {
+            (self.last_sender, self.last_amount.clone())
         }
     }
 }

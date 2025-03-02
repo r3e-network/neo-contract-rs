@@ -5,7 +5,7 @@ extern crate alloc;
 extern crate wee_alloc;
 
 use neo_contract::{
-    builtin::{H160, Int256, ByteString, Map},
+    builtin::{H160, Int256, ByteString, Map, Array, Any},
     Runtime,
     contract, contract_author, contract_description,
     contract_version, supported_standards,
@@ -34,6 +34,31 @@ const OWNER_ADDRESS: &str = "0x13a83e059c2eedd5157b766d3357bc826810905e";
 mod token_contract {
     use super::*;
 
+    // Helper function to emit a Transfer event
+    pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: Int256) {
+        // Create event name as ByteString
+        let event_name = ByteString::from("Transfer");
+        
+        // Create an Array to hold our parameters
+        let mut event_data = Array::<Any>::new();
+        
+        // Add the parameters as Any values (new() for None, H160 for Some)
+        match from {
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
+        }
+        
+        match to {
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
+        }
+        
+        event_data.push(Any::from(amount));
+        
+        // Emit the event
+        Runtime::notify(&event_name, &event_data);
+    }
+
     #[storage]
     pub struct Token {
         token_supply: Int256,
@@ -54,6 +79,9 @@ mod token_contract {
             // Mint initial supply to owner
             let token_supply = Int256::from(100_000_000_00000000i64);
             balances.put(owner.clone(), token_supply.clone());
+            
+            // Emit transfer event for initial minting (from null address)
+            emit_transfer(None, Some(owner), token_supply.clone());
             
             Self {
                 token_supply,
@@ -146,6 +174,9 @@ mod token_contract {
             
             let new_to_balance = to_balance + amount.clone();
             self.balances.put(to.clone(), new_to_balance);
+            
+            // Emit transfer event
+            emit_transfer(Some(from), Some(to), amount);
             
             true
         }
