@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: recursive
+          submodules: false  # Don't try to clone submodules recursively
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
@@ -40,10 +40,10 @@ jobs:
       - name: Create bin directory
         run: mkdir -p bin
 
-      - name: Build neo-wasm
+      - name: Download neo-wasm
         run: |
-          chmod +x scripts/build/build_neo_wasm.sh
-          scripts/build/build_neo_wasm.sh || scripts/build/download_neo_wasm.sh
+          chmod +x scripts/build/download_neo_wasm.sh
+          scripts/build/download_neo_wasm.sh
 
       - name: Build examples
         run: |
