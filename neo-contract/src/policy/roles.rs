@@ -5,6 +5,7 @@
 //! This module provides a framework for assigning roles to addresses
 //! and implementing role-based access control.
 
+use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use crate::builtin::{H160, ByteString};
@@ -81,11 +82,12 @@ impl RoleManager {
         let role_map = self.get_role_map(role);
         let mut members = Vec::new();
         
-        for item in role_map.iter() {
-            if let Some((key, value)) = item {
-                if value {
-                    members.push(key);
-                }
+        for item in role_map.find(&H160::zero()) {
+            let (key_bytes, value_bytes) = item;
+            let key = H160::try_from(key_bytes.0.as_slice()).unwrap();
+            let value = value_bytes.len() > 0 && value_bytes[0] != 0;
+            if value {
+                members.push(key);
             }
         }
         
@@ -103,7 +105,7 @@ impl RoleManager {
     /// Helper method to get the storage map for a role
     fn get_role_map(&self, role: &Role) -> StorageMap<H160, bool> {
         let key = format!("{}:{}", self.prefix, role.name());
-        StorageMap::new(key.as_bytes())
+        StorageMap::new(key)
     }
 }
 

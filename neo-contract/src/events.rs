@@ -87,6 +87,7 @@ pub trait Event {
 }
 
 /// Helper struct for creating typed events
+#[derive(Debug, Clone)]
 pub struct EventBuilder<T> {
     name: ByteString,
     _phantom: PhantomData<T>,

@@ -16,7 +16,11 @@ impl Policy {
     #[rustfmt::skip]
     pub fn hash() -> H160 {
         #[cfg(target_family = "wasm")]
-        unsafe { env::contract::native_policy_contract_hash() }
+        unsafe { 
+            let h160 = env::contract::native_policy_contract_hash();
+            // Convert from types::builtin::H160 to builtin::H160
+            H160::try_from(h160.0.as_slice()).unwrap()
+        }
 
         #[cfg(not(target_family = "wasm"))]
         H160::hex_decode("0xcc5e4edd9f5f8dba8bb65734541df7a1c081c67b").unwrap_or_else(H160::zero)

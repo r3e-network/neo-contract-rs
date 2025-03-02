@@ -11,12 +11,15 @@ use neo_contract_proc_macros::safe;
 pub struct Neo;
 
 /// NEO script hash
-pub const SCRIPT_HASH: H160 = H160([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+// Define a function to get the script hash instead of using a constant
+pub fn script_hash() -> H160 {
+    H160::zero()
+}
 
 impl Neo {
     /// Get the NEO contract hash
     pub fn hash() -> H160 {
-        SCRIPT_HASH
+        script_hash()
     }
     
     /// Transfer NEO from one account to another
@@ -215,7 +218,7 @@ impl Neo {
         let method = ByteString::from("unclaimedGas");
         let mut args = Array::<Any>::new();
         args.push(Any::from(account));
-        args.push(Any::from(Runtime::get_time()));
+        args.push(Any::from(Runtime::time()));
         
         let result = Runtime::call_contract(
             Neo::hash(),

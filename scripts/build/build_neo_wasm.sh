@@ -15,10 +15,10 @@ build_neo_wasm() {
     # Navigate to the neo-wasm directory
     cd "$(dirname "$0")/../../tools/neo-wasm"
     
-    # Check if we're on the main branch
-    if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then
-        echo -e "${RED}Warning: Not on main branch. Switching to main branch...${NC}"
-        git checkout main
+    # Check if we're on the jimmy branch
+    if [ "$(git rev-parse --abbrev-ref HEAD)" != "jimmy" ]; then
+        echo -e "${RED}Warning: Not on jimmy branch. Switching to jimmy branch...${NC}"
+        git checkout jimmy
     fi
     
     # Build the neo-wasm compiler
