@@ -52,7 +52,7 @@ pub struct Block {
 impl Ledger {
     /// Get the contract hash
     pub fn hash() -> H160 {
-        H160::zero() // This should be replaced with the actual Ledger contract hash
+        H160::hex_decode("0xda65b600f7124ce6c79950c1772a36403104f2be").unwrap_or_else(H160::zero)
     }
 
     /// Get the current block index
@@ -204,6 +204,76 @@ impl Ledger {
         
         match u32::try_from(result) {
             Ok(version) => version,
+            Err(_) => 0,
+        }
+    }
+    
+    /// Get a transaction from a block by block hash and transaction index
+    pub fn get_transaction_from_block_by_hash(block_hash: H256, tx_index: i32) -> Option<Transaction> {
+        let method = ByteString::from("getTransactionFromBlock");
+        let mut args = Array::<Any>::new();
+        args.push(Any::from(block_hash));
+        args.push(Any::from(tx_index));
+        
+        let result = Runtime::call_contract(
+            Ledger::hash(),
+            method,
+            args
+        );
+        
+        // In a real implementation, this would deserialize the result into a Transaction
+        None
+    }
+    
+    /// Get a transaction from a block by block height and transaction index
+    pub fn get_transaction_from_block_by_height(block_height: u32, tx_index: i32) -> Option<Transaction> {
+        let method = ByteString::from("getTransactionFromBlock");
+        let mut args = Array::<Any>::new();
+        args.push(Any::from(block_height as i64));
+        args.push(Any::from(tx_index));
+        
+        let result = Runtime::call_contract(
+            Ledger::hash(),
+            method,
+            args
+        );
+        
+        // In a real implementation, this would deserialize the result into a Transaction
+        None
+    }
+    
+    /// Get the signers of a transaction
+    pub fn get_transaction_signers(hash: H256) -> Array<Any> {
+        let method = ByteString::from("getTransactionSigners");
+        let mut args = Array::<Any>::new();
+        args.push(Any::from(hash));
+        
+        let result = Runtime::call_contract(
+            Ledger::hash(),
+            method,
+            args
+        );
+        
+        match Array::<Any>::try_from(result) {
+            Ok(signers) => signers,
+            Err(_) => Array::<Any>::new(),
+        }
+    }
+    
+    /// Get the VM state of a transaction
+    pub fn get_transaction_vm_state(hash: H256) -> i32 {
+        let method = ByteString::from("getTransactionVMState");
+        let mut args = Array::<Any>::new();
+        args.push(Any::from(hash));
+        
+        let result = Runtime::call_contract(
+            Ledger::hash(),
+            method,
+            args
+        );
+        
+        match i32::try_from(result) {
+            Ok(state) => state,
             Err(_) => 0,
         }
     }

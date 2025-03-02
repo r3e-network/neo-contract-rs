@@ -5,6 +5,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use crate::builtin::{H160, ByteString, Int256, Array, Any};
 use crate::Runtime;
+use neo_contract_proc_macros::safe;
 
 /// NEO native contract
 pub struct Neo;
@@ -229,7 +230,6 @@ impl Neo {
     }
     
     /// Get symbol of the NEO token
-    #[safe]
     pub fn symbol() -> ByteString {
         let method = ByteString::from("symbol");
         let args = Array::<Any>::new();
@@ -247,7 +247,6 @@ impl Neo {
     }
     
     /// Get decimals of the NEO token
-    #[safe]
     pub fn decimals() -> u8 {
         let method = ByteString::from("decimals");
         let args = Array::<Any>::new();
@@ -265,7 +264,6 @@ impl Neo {
     }
     
     /// Get total supply of the NEO token
-    #[safe]
     pub fn total_supply() -> Int256 {
         let method = ByteString::from("totalSupply");
         let args = Array::<Any>::new();
@@ -283,7 +281,6 @@ impl Neo {
     }
     
     /// Get balance of NEO for an account
-    #[safe]
     pub fn balance_of(account: H160) -> Int256 {
         let method = ByteString::from("balanceOf");
         let mut args = Array::<Any>::new();
@@ -299,5 +296,71 @@ impl Neo {
             Ok(balance) => balance,
             Err(_) => Int256::zero(),
         }
+    }
+    
+    /// Get gas per block
+    pub fn get_gas_per_block() -> Int256 {
+        let method = ByteString::from("getGasPerBlock");
+        let args = Array::<Any>::new();
+        
+        let result = Runtime::call_contract(
+            Neo::hash(),
+            method,
+            args
+        );
+        
+        match Int256::try_from(result) {
+            Ok(gas_per_block) => gas_per_block,
+            Err(_) => Int256::zero(),
+        }
+    }
+    
+    /// Get register price
+    pub fn get_register_price() -> i64 {
+        let method = ByteString::from("getRegisterPrice");
+        let args = Array::<Any>::new();
+        
+        let result = Runtime::call_contract(
+            Neo::hash(),
+            method,
+            args
+        );
+        
+        match i64::try_from(result) {
+            Ok(price) => price,
+            Err(_) => 0,
+        }
+    }
+    
+    /// Get committee address
+    pub fn get_committee_address() -> H160 {
+        let method = ByteString::from("getCommitteeAddress");
+        let args = Array::<Any>::new();
+        
+        let result = Runtime::call_contract(
+            Neo::hash(),
+            method,
+            args
+        );
+        
+        match H160::try_from(result) {
+            Ok(address) => address,
+            Err(_) => H160::zero(),
+        }
+    }
+    
+    /// Get account state
+    pub fn get_account_state(account: H160) -> Any {
+        let method = ByteString::from("getAccountState");
+        let mut args = Array::<Any>::new();
+        args.push(Any::from(account));
+        
+        let result = Runtime::call_contract(
+            Neo::hash(),
+            method,
+            args
+        );
+        
+        result
     }
 }
