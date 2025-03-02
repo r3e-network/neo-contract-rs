@@ -40,6 +40,7 @@ pub unsafe fn system_storage_delete(_context: StorageContext, _key: ByteString) 
 pub unsafe fn system_storage_find(
     _context: StorageContext,
     _prefix: ByteString,
+    _options: crate::FindOptions,
 ) -> i32 {
     // In a real implementation, this would call the storage find syscall
     // Default to RemovePrefix option

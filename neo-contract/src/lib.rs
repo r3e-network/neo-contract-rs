@@ -23,6 +23,8 @@ pub mod serialize;
 pub mod static_values;
 pub mod storage;
 pub mod token;
+pub mod transaction_attribute_type;
+pub mod find_options;
 pub mod types;
 pub mod utils;
 
@@ -76,6 +78,10 @@ pub mod builtin {
     pub use crate::types::builtin::any::Any;
     pub use crate::types::builtin::map::Map;
 }
+
+// Re-export TransactionAttributeType and FindOptions
+pub use transaction_attribute_type::TransactionAttributeType;
+pub use find_options::FindOptions;
 
 // Add prelude module
 pub mod prelude;
