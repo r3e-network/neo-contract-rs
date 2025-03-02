@@ -10,6 +10,9 @@ use core::marker::PhantomData;
 /// Oracle contract for accessing off-chain data
 pub struct Oracle;
 
+/// Minimum fee for Oracle responses
+pub const MINIMUM_RESPONSE_FEE: u64 = 10_000_000;
+
 /// Callback type that will be invoked when the Oracle request is fulfilled
 pub struct OracleCallback<T> {
     /// URL for the request
@@ -139,6 +142,35 @@ impl Oracle {
     /// Create a builder for an Oracle request
     pub fn build_request<T>(url: &str) -> OracleRequestBuilder<T> {
         OracleRequestBuilder::new(url)
+    }
+    
+    /// Make a request to the Oracle service with simplified parameters
+    pub fn request_simple(url: &str, filter: &str, callback: &str, user_data: Option<Any>, gas_for_response: i64) -> bool {
+        let method = ByteString::from("request");
+        let mut args = Array::<Any>::new();
+        
+        args.push(Any::from(ByteString::from(url)));
+        args.push(Any::from(ByteString::from(filter)));
+        args.push(Any::from(ByteString::from(callback)));
+        
+        if let Some(data) = user_data {
+            args.push(Any::from(data));
+        } else {
+            args.push(Any::new());
+        }
+        
+        args.push(Any::from(gas_for_response));
+        
+        let result = Runtime::call_contract(
+            Oracle::hash(),
+            method,
+            args
+        );
+        
+        match bool::try_from(result) {
+            Ok(success) => success,
+            Err(_) => false,
+        }
     }
 }
 

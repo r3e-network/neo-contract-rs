@@ -9,3 +9,4 @@ pub mod ledger;
 pub mod neo;
 pub mod oracle;
 pub mod policy;
+pub mod role_management;

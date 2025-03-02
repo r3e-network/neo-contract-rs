@@ -19,6 +19,7 @@ pub mod runtime;
 pub mod security;
 pub mod policy;
 pub mod profiling;
+pub mod role;
 pub mod serialize;
 pub mod static_values;
 pub mod storage;
@@ -32,6 +33,8 @@ pub use contract::{nep11, nep17, native};
 pub use crypto::*;
 pub use env::{contract as env_contract, contract_non_wasm, syscall, syscall_non_wasm};
 pub use find_options::FindOptions;
+pub use role::Role;
+pub use contract::native::role_management::RoleManagement;
 // Re-export macros
 pub use macros::*;
 pub use runtime::Runtime;
