@@ -67,7 +67,11 @@ impl Oracle {
     #[rustfmt::skip]
     pub fn hash() -> H160 {
         #[cfg(target_family = "wasm")]
-        unsafe { env::contract::native_oracle_contract_hash() }
+        unsafe { 
+            let h160 = env::contract::native_oracle_contract_hash();
+            // Convert from types::builtin::H160 to builtin::H160
+            H160::try_from(h160.0.as_slice()).unwrap()
+        }
 
         #[cfg(not(target_family = "wasm"))]
         H160::hex_decode("0xfe924b7cfe89ddd271abaf7210a80a7e11178758").unwrap_or_else(H160::zero)

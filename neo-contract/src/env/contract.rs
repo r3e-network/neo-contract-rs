@@ -148,3 +148,9 @@ pub fn native_policy_contract_hash() -> H160 {
     // In the wasm environment, this would call the native policy_contract_hash function
     H160::zero()
 }
+
+#[cfg(target_arch = "wasm32")]
+pub fn native_role_management_contract_hash() -> H160 {
+    // In the wasm environment, this would call the native role_management_contract_hash function
+    H160::zero()
+}

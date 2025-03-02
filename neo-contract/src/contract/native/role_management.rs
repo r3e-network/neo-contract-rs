@@ -13,6 +13,14 @@ impl RoleManagement {
     #[inline(always)]
     #[rustfmt::skip]
     pub fn hash() -> H160 {
+        #[cfg(target_family = "wasm")]
+        unsafe { 
+            let h160 = crate::env::contract::native_role_management_contract_hash();
+            // Convert from types::builtin::H160 to builtin::H160
+            H160::try_from(h160.0.as_slice()).unwrap()
+        }
+
+        #[cfg(not(target_family = "wasm"))]
         H160::hex_decode("0x49cf4e5378ffcd4dec034fd98a174c5491e395e2").unwrap_or_else(H160::zero)
     }
     

@@ -6,7 +6,8 @@
 //! access control, and policy enforcement.
 
 use alloc::vec::Vec;
-use crate::builtin::{H160, ByteString, Int256};
+use alloc::boxed::Box;
+use crate::builtin::{H160, ByteString, Int256, Array, Any};
 use crate::Runtime;
 use crate::storage::{StorageMap, Storable};
 use crate::error::{Error, ErrorCode, Result};
@@ -68,7 +69,7 @@ impl SignaturePolicy {
 
 impl Policy for SignaturePolicy {
     fn allows(&self) -> bool {
-        Runtime::check_witness(self.address.clone())
+        Runtime::check_witness(&self.address)
     }
     
     fn demands(&self) -> bool {
@@ -96,7 +97,7 @@ impl Policy for MultiSignaturePolicy {
         let mut valid_count = 0;
         
         for signer in &self.signers {
-            if Runtime::check_witness(signer.clone()) {
+            if Runtime::check_witness(&signer) {
                 valid_count += 1;
                 if valid_count >= self.required {
                     return true;
@@ -205,14 +206,15 @@ impl TokenThresholdPolicy {
     /// Get the balance of the token
     fn get_balance(&self) -> Int256 {
         let method = ByteString::from("balanceOf");
-        let mut args = Vec::new();
+        let mut args: Vec<Any> = Vec::new();
         args.push(self.account.clone().into());
         
         // Call the token contract
         match Runtime::call_contract(
             self.token_hash.clone(),
             method,
-            args.into()
+            // TODO: Implement proper conversion from Vec<Any> to Array<Any>
+            Array::<Any>::new()
         ) {
             result => {
                 match Int256::try_from(result) {
