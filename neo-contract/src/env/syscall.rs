@@ -43,7 +43,8 @@ pub unsafe fn system_storage_find(
     _options: crate::FindOptions,
 ) -> i32 {
     // In a real implementation, this would call the storage find syscall
-    0
+    // Default to RemovePrefix option
+    system_storage_find_with_options(_context, _prefix, crate::FindOptions::RemovePrefix)
 }
 
 /// Find values in storage with options
