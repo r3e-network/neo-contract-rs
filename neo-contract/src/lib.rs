@@ -13,6 +13,7 @@ pub mod crypto;
 pub mod env;
 pub mod events;
 pub mod error;
+pub mod find_options;
 pub mod macros;
 pub mod runtime;
 pub mod security;
@@ -30,6 +31,7 @@ pub use call_flags::CallFlags;
 pub use contract::{nep11, nep17, native};
 pub use crypto::*;
 pub use env::{contract as env_contract, contract_non_wasm, syscall, syscall_non_wasm};
+pub use find_options::FindOptions;
 // Re-export macros
 pub use macros::*;
 pub use runtime::Runtime;

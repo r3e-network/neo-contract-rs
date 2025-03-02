@@ -334,4 +334,84 @@ impl Runtime {
             crate::env::syscall::system_runtime_get_invocation_counter()
         }
     }
+    
+    /// Find values in storage with options
+    pub fn storage_find_with_options(context: StorageContext, prefix: &[u8], options: crate::FindOptions) -> crate::storage::StorageIterator {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe {
+            let iter = crate::env::syscall_non_wasm::system_storage_find_with_options(context, prefix.into(), options);
+            crate::storage::StorageIterator::new(iter)
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe {
+            let iter = crate::env::syscall::system_storage_find_with_options(context, prefix.into(), options);
+            crate::storage::StorageIterator::new(iter)
+        }
+    }
+
+    /// Get the storage context for the current contract
+    pub fn get_storage_context() -> StorageContext {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_storage_get_context()
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_storage_get_context()
+        }
+    }
+
+    /// Get the storage context for the calling contract
+    pub fn get_read_only_storage_context() -> StorageContext {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_storage_get_read_only_context()
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_storage_get_read_only_context()
+        }
+    }
+
+    /// Verify signature with ECDSA
+    pub fn verify_with_ecdsa(message: &ByteString, pubkey: &ByteString, signature: &ByteString, curve: u32) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_crypto_verify_with_ecdsa(message.clone(), pubkey.clone(), signature.clone(), curve)
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_crypto_verify_with_ecdsa(message.clone(), pubkey.clone(), signature.clone(), curve)
+        }
+    }
+
+    /// Calculate SHA256 hash
+    pub fn sha256(data: &ByteString) -> H256 {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_crypto_sha256(data.clone())
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_crypto_sha256(data.clone())
+        }
+    }
+
+    /// Calculate RIPEMD160 hash
+    pub fn ripemd160(data: &ByteString) -> H160 {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_crypto_ripemd160(data.clone())
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_crypto_ripemd160(data.clone())
+        }
+    }
 }
