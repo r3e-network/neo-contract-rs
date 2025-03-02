@@ -14,58 +14,15 @@ mkdir -p bin
 # Make sure the dist directory exists
 mkdir -p dist
 
-# Build or download the neo-wasm binary if it doesn't exist
+# Build neo-wasm compiler if it doesn't exist
 if [ ! -f "bin/neo-wasm" ]; then
-    echo -e "${GREEN}Creating mock neo-wasm binary...${NC}"
+    echo -e "${GREEN}Building neo-wasm compiler...${NC}"
     
-    cat > bin/neo-wasm << 'MOCKEOF'
-#!/bin/bash
-# Mock neo-wasm binary for testing
-
-# Parse command line arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        translate)
-            shift
-            ;;
-        --input)
-            INPUT=$2
-            shift 2
-            ;;
-        --manifest)
-            MANIFEST=$2
-            shift 2
-            ;;
-        --output)
-            OUTPUT=$2
-            shift 2
-            ;;
-        --save-neo-ops)
-            SAVE_OPS=true
-            shift
-            ;;
-        *)
-            shift
-            ;;
-    esac
-done
-
-# Create a mock NEF file
-echo "{\"magic\":1953787457,\"compiler\":\"neo-wasm-mock\",\"version\":\"0.1.0\",\"script\":\"ABCDEF\"}" > "$OUTPUT"
-
-# Create a mock manifest file if it doesn't exist
-if [ ! -s "$MANIFEST" ]; then
-    echo "{\"name\":\"$(basename "$INPUT" .wasm)\",\"groups\":[],\"features\":{},\"supportedstandards\":[],\"abi\":{\"methods\":[],\"events\":[]},\"permissions\":[{\"contract\":\"*\",\"methods\":\"*\"}],\"trusts\":[],\"extra\":null}" > "$MANIFEST"
-fi
-
-echo "Successfully translated $INPUT to $OUTPUT"
-MOCKEOF
-    
-    # Make the mock binary executable
-    chmod +x bin/neo-wasm
-    
-    echo -e "${GREEN}Successfully created mock neo-wasm binary${NC}"
-    echo ""
+    # Try to build the neo-wasm compiler
+    if ! scripts/build/build_neo_wasm.sh; then
+        echo -e "${RED}Failed to build neo-wasm compiler, trying to download or create a mock...${NC}"
+        scripts/build/download_neo_wasm.sh
+    fi
 fi
 
 # Function to build a specific example
@@ -76,11 +33,21 @@ build_example() {
     # Create output directory if it doesn't exist
     mkdir -p "dist/$example"
     
-    # Create a mock WASM file if it doesn't exist
-    if [ ! -f "dist/$example/$example.wasm" ]; then
-        echo -e "${GREEN}Creating mock WASM file for $example...${NC}"
-        echo "mock wasm binary content" > "dist/$example/$example.wasm"
+    # Check if the example directory exists
+    if [ ! -d "examples/$example" ]; then
+        echo -e "${RED}Example directory not found: examples/$example${NC}"
+        return 1
     fi
+    
+    # Build the example
+    cd "examples/$example"
+    cargo build --target wasm32-unknown-unknown --release
+    
+    # Copy the WASM file
+    cp "../../target/wasm32-unknown-unknown/release/$example.wasm" "../../dist/$example/"
+    
+    # Return to the root directory
+    cd ../..
     
     # Generate manifest and NEF files using neo-wasm
     echo -e "${GREEN}Generating manifest and NEF files for $example...${NC}"
