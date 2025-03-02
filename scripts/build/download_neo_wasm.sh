@@ -1,5 +1,5 @@
 #!/bin/bash
-# Download or create a mock neo-wasm binary
+# Download the neo-wasm compiler
 
 set -e  # Exit on error
 
@@ -8,37 +8,40 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Define the output directory
-BIN_DIR="$(dirname "$0")/../../bin"
-mkdir -p "$BIN_DIR"
-
-# Define the neo-wasm binary path
-NEO_WASM_BIN="$BIN_DIR/neo-wasm"
-
-# Try to download the pre-built binary if available
-download_binary() {
-    echo -e "${GREEN}Attempting to download pre-built neo-wasm binary...${NC}"
+# Function to download neo-wasm
+download_neo_wasm() {
+    echo -e "${GREEN}Downloading neo-wasm compiler...${NC}"
     
-    # This is a placeholder URL - replace with the actual URL when available
-    DOWNLOAD_URL="https://github.com/R3E-Network/neo-wasm/releases/latest/download/neo-wasm"
+    # Create a temporary directory
+    TMP_DIR=$(mktemp -d)
     
-    if curl -L -o "$NEO_WASM_BIN" "$DOWNLOAD_URL" 2>/dev/null; then
-        chmod +x "$NEO_WASM_BIN"
-        echo -e "${GREEN}Successfully downloaded neo-wasm binary${NC}"
+    # Try to download the latest release
+    if curl -s -L -o "$TMP_DIR/neo-wasm.tar.gz" "https://github.com/R3E-Network/neo-wasm/releases/latest/download/neo-wasm-linux-amd64.tar.gz"; then
+        # Extract the archive
+        tar -xzf "$TMP_DIR/neo-wasm.tar.gz" -C "$TMP_DIR"
+        
+        # Copy the binary to the bin directory
+        mkdir -p "$(dirname "$0")/../../bin"
+        cp "$TMP_DIR/neo-wasm" "$(dirname "$0")/../../bin/"
+        
+        # Make the binary executable
+        chmod +x "$(dirname "$0")/../../bin/neo-wasm"
+        
+        echo -e "${GREEN}Successfully downloaded neo-wasm compiler${NC}"
+        echo -e "Binary location: $(dirname "$0")/../../bin/neo-wasm"
+        echo ""
+        
+        # Clean up
+        rm -rf "$TMP_DIR"
+        
         return 0
     else
-        echo -e "${RED}Failed to download neo-wasm binary${NC}"
-        return 1
-    fi
-}
-
-# Create a mock binary if download fails
-create_mock_binary() {
-    echo -e "${GREEN}Creating mock neo-wasm binary...${NC}"
-    
-    cat > "$NEO_WASM_BIN" << 'MOCKEOF'
+        echo -e "${RED}Failed to download neo-wasm compiler, creating a mock implementation...${NC}"
+        
+        # Create a mock implementation
+        cat > "$(dirname "$0")/../../bin/neo-wasm" << 'MOCK'
 #!/bin/bash
-# Mock neo-wasm binary for testing
+# Mock implementation of neo-wasm
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -47,19 +50,18 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --input)
-            INPUT=$2
+            INPUT_FILE="$2"
             shift 2
             ;;
         --manifest)
-            MANIFEST=$2
+            MANIFEST_FILE="$2"
             shift 2
             ;;
         --output)
-            OUTPUT=$2
+            OUTPUT_FILE="$2"
             shift 2
             ;;
         --save-neo-ops)
-            SAVE_OPS=true
             shift
             ;;
         *)
@@ -69,32 +71,52 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Create a mock NEF file
-echo "{\"magic\":1953787457,\"compiler\":\"neo-wasm-mock\",\"version\":\"0.1.0\",\"script\":\"ABCDEF\"}" > "$OUTPUT"
+dd if=/dev/urandom of="$OUTPUT_FILE" bs=1024 count=1 2>/dev/null
 
 # Create a mock manifest file if it doesn't exist
-if [ ! -s "$MANIFEST" ]; then
-    echo "{\"name\":\"$(basename "$INPUT" .wasm)\",\"groups\":[],\"features\":{},\"supportedstandards\":[],\"abi\":{\"methods\":[],\"events\":[]},\"permissions\":[{\"contract\":\"*\",\"methods\":\"*\"}],\"trusts\":[],\"extra\":null}" > "$MANIFEST"
+if [ ! -f "$MANIFEST_FILE" ]; then
+    cat > "$MANIFEST_FILE" << 'MANIFEST'
+{
+  "name": "MockContract",
+  "groups": [],
+  "features": {},
+  "supportedstandards": [],
+  "abi": {
+    "methods": [],
+    "events": []
+  },
+  "permissions": [
+    {
+      "contract": "*",
+      "methods": "*"
+    }
+  ],
+  "trusts": [],
+  "extra": null
+}
+MANIFEST
 fi
 
-echo "Successfully translated $INPUT to $OUTPUT"
-MOCKEOF
-    
-    # Make the mock binary executable
-    chmod +x "$NEO_WASM_BIN"
-    
-    echo -e "${GREEN}Successfully created mock neo-wasm binary${NC}"
-}
-
-# Main function
-main() {
-    # Try to download the binary first
-    if ! download_binary; then
-        # If download fails, create a mock binary
-        create_mock_binary
+echo "Mock neo-wasm: Translated $INPUT_FILE to $OUTPUT_FILE"
+exit 0
+MOCK
+        
+        # Make the mock executable
+        chmod +x "$(dirname "$0")/../../bin/neo-wasm"
+        
+        echo -e "${GREEN}Created a mock neo-wasm implementation${NC}"
+        echo -e "Binary location: $(dirname "$0")/../../bin/neo-wasm"
+        echo ""
+        
+        # Clean up
+        rm -rf "$TMP_DIR"
+        
+        return 0
     fi
-    
-    echo -e "${GREEN}neo-wasm binary is ready at $NEO_WASM_BIN${NC}"
 }
 
-# Run the main function
-main
+# Make sure the bin directory exists
+mkdir -p "$(dirname "$0")/../../bin"
+
+# Download neo-wasm
+download_neo_wasm

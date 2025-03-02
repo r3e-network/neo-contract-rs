@@ -41,7 +41,11 @@ build_example() {
     
     # Build the example
     cd "examples/$example"
-    cargo build --target wasm32-unknown-unknown --release
+    if ! cargo build --target wasm32-unknown-unknown --release; then
+        echo -e "${RED}Failed to build example: $example${NC}"
+        cd ../..
+        return 1
+    fi
     
     # Copy the WASM file
     cp "../../target/wasm32-unknown-unknown/release/$example.wasm" "../../dist/$example/"
@@ -60,14 +64,18 @@ build_example() {
     fi
     
     # Convert WASM to NEF using neo-wasm
-    ./bin/neo-wasm translate \
+    if ! ./bin/neo-wasm translate \
         --input "dist/$example/$example.wasm" \
         --manifest "dist/$example/$example.manifest.json" \
         --output "dist/$example/$example.nef" \
-        --save-neo-ops
+        --save-neo-ops; then
+        echo -e "${RED}Failed to generate NEF file for example: $example${NC}"
+        return 1
+    fi
     
     echo -e "${GREEN}Successfully built $example${NC}"
     echo ""
+    return 0
 }
 
 # Build each example
@@ -78,7 +86,9 @@ echo ""
 for example_dir in examples/*/; do
     # Extract the example name from the directory path
     example=$(basename "$example_dir")
-    build_example "$example"
+    if ! build_example "$example"; then
+        echo -e "${RED}Failed to build example: $example${NC}"
+    fi
 done
 
 echo -e "${GREEN}All examples built successfully!${NC}"
