@@ -8,3 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 neo-contract = { path = "../../neo-contract" }
+wee_alloc = "0.4.5"

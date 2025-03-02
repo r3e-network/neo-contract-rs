@@ -11,96 +11,103 @@ extern crate wee_alloc;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-use neo_contract::Runtime;
-use neo_contract::builtin;
-use neo_contract::builtin::{H160, Int256, ByteString, Array, Map, Any};
+use neo_contract as neo;
 
-// Implement IntoAny for the types we need
-trait IntoAny {
-    fn into_any(self) -> Any;
-}
-
-impl IntoAny for H160 {
-    fn into_any(self) -> Any {
-        Any::from(self)
-    }
-}
-
-impl IntoAny for Int256 {
-    fn into_any(self) -> Any {
-        Any::from(self)
-    }
-}
-
-impl IntoAny for ByteString {
-    fn into_any(self) -> Any {
-        Any::from(self)
-    }
-}
-
+#[contract]
+#[contract_author("R3E Network")]
+#[contract_email("dev@r3e.network")]
+#[contract_description("BurgerNEO Token")]
+#[contract_version("0.1.0")]
+#[contract_source_code("https://github.com/R3E-Network/neo-contract-rs")]
+#[supported_standards("NEP-17")]
 mod burger_neo {
-    use super::*;
+    use neo::prelude::*;
+    use neo::runtime;
+    use neo::types::*;
+    use neo::storage::StorageMap;
     use alloc::string::ToString;
-    use super::IntoAny;
 
-    pub struct BurgerStorage {
-        pub owner: H160,
-        pub agent: H160,
-        pub strategist: H160,
-        pub total_supply: Int256,
-        pub balances: Map<H160, Int256>,
+    // Implement IntoAny for the types we need
+    trait IntoAny {
+        fn into_any(self) -> Any;
     }
 
-    impl BurgerStorage {
+    impl IntoAny for H160 {
+        fn into_any(self) -> Any {
+            Any::from(self)
+        }
+    }
+
+    impl IntoAny for Int256 {
+        fn into_any(self) -> Any {
+            Any::from(self)
+        }
+    }
+
+    impl IntoAny for ByteString {
+        fn into_any(self) -> Any {
+            Any::from(self)
+        }
+    }
+
+    #[storage]
+    pub struct Burger {
+        owner: H160,
+        agent: H160,
+        strategist: H160,
+        total_supply: Int256,
+        balances: builtin::Map,
+    }
+
+    impl Burger {
+        #[constructor]
         pub fn new() -> Self {
-            let owner = Runtime::calling_script_hash();
+            let owner = runtime::calling_script_hash();
             
             Self {
                 owner: owner.clone(),
                 agent: owner.clone(),
                 strategist: owner.clone(),
                 total_supply: Int256::zero(),
-                balances: Map::new(),
+                balances: builtin::Map::new(),
             }
         }
         
+        #[message]
         pub fn name(&self) -> ByteString {
             ByteString::from("BurgerNEO")
         }
 
+        #[message]
         pub fn symbol(&self) -> ByteString {
             ByteString::from("bNEO")
         }
 
+        #[message]
         pub fn decimals(&self) -> u8 {
             8
         }
 
+        #[message]
         pub fn total_supply(&self) -> Int256 {
             self.total_supply.clone()
         }
 
+        #[message]
         pub fn balance_of(&self, account: H160) -> Int256 {
-            // Map doesn't have a get method in the current implementation
-            // We need to iterate through the keys and values
-            for i in 0..self.balances.len() {
-                if let Some(key) = self.balances.keys.get(i) {
-                    if *key == account {
-                        if let Some(value) = self.balances.values.get(i) {
-                            return value.clone();
-                        }
-                    }
-                }
+            match self.balances.get(&account) {
+                Some(balance) => balance,
+                None => Int256::zero(),
             }
-            Int256::zero()
         }
 
+        #[message]
         pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
             if amount <= Int256::zero() {
                 return false;
             }
 
-            if !Runtime::check_witness(from.clone()) {
+            if !runtime::check_witness(from.clone()) {
                 return false;
             }
             
@@ -114,28 +121,22 @@ mod burger_neo {
                 if from_new_balance.is_zero() {
                     self.balances.delete(&from);
                 } else {
-                    self.balances.put(from.clone(), from_new_balance);
+                    self.balances.put(&from, &from_new_balance);
                 }
                 
                 let to_balance = self.balance_of(to.clone());
                 let to_new_balance = to_balance + amount.clone();
-                self.balances.put(to.clone(), to_new_balance);
+                self.balances.put(&to, &to_new_balance);
             }
             
-            // Emit transfer event
-            let mut args = Array::new();
-            args.push(from.into_any());
-            args.push(to.into_any());
-            args.push(amount.into_any());
-            
-            let event_name = ByteString::from("Transfer");
-            Runtime::notify(&event_name, &args);
+            self.transfer_event(from, to, amount);
             
             true
         }
         
+        #[message]
         pub fn set_agent(&mut self, new_agent: H160) -> bool {
-            if !Runtime::check_witness(self.owner.clone()) {
+            if !runtime::check_witness(self.owner.clone()) {
                 return false;
             }
             
@@ -143,8 +144,9 @@ mod burger_neo {
             true
         }
         
+        #[message]
         pub fn set_strategist(&mut self, new_strategist: H160) -> bool {
-            if !Runtime::check_witness(self.owner.clone()) {
+            if !runtime::check_witness(self.owner.clone()) {
                 return false;
             }
             
@@ -152,8 +154,9 @@ mod burger_neo {
             true
         }
         
+        #[message]
         pub fn mint(&mut self, to: H160, amount: Int256) -> bool {
-            if !Runtime::check_witness(self.agent.clone()) {
+            if !runtime::check_witness(self.agent.clone()) {
                 return false;
             }
             
@@ -163,24 +166,18 @@ mod burger_neo {
             
             let to_balance = self.balance_of(to.clone());
             let new_balance = to_balance + amount.clone();
-            self.balances.put(to.clone(), new_balance);
+            self.balances.put(&to, &new_balance);
             
             self.total_supply = self.total_supply.clone() + amount.clone();
             
-            // Emit transfer event (mint from null address)
-            let mut args = Array::new();
-            args.push(H160::zero().into_any());
-            args.push(to.into_any());
-            args.push(amount.into_any());
-            
-            let event_name = ByteString::from("Transfer");
-            Runtime::notify(&event_name, &args);
+            self.transfer_event(H160::zero(), to, amount);
             
             true
         }
         
+        #[message]
         pub fn burn(&mut self, from: H160, amount: Int256) -> bool {
-            if !Runtime::check_witness(from.clone()) {
+            if !runtime::check_witness(from.clone()) {
                 return false;
             }
             
@@ -197,21 +194,25 @@ mod burger_neo {
             if new_balance.is_zero() {
                 self.balances.delete(&from);
             } else {
-                self.balances.put(from.clone(), new_balance);
+                self.balances.put(&from, &new_balance);
             }
             
             self.total_supply = self.total_supply.clone() - amount.clone();
             
-            // Emit transfer event (burn to null address)
+            self.transfer_event(from, H160::zero(), amount);
+            
+            true
+        }
+
+        #[event]
+        pub fn transfer_event(&self, from: H160, to: H160, amount: Int256) {
             let mut args = Array::new();
             args.push(from.into_any());
-            args.push(H160::zero().into_any());
+            args.push(to.into_any());
             args.push(amount.into_any());
             
             let event_name = ByteString::from("Transfer");
-            Runtime::notify(&event_name, &args);
-            
-            true
+            runtime::notify(&event_name, &args);
         }
     }
 }

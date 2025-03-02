@@ -148,16 +148,89 @@ pub fn no_reentrant_method(attr: TokenStream, item: TokenStream) -> TokenStream 
     security::no_reentrant_method::generate(attr, item)
 }
 
-/// Attribute macro for adding storage functionality to a struct
+/// Attribute macro for marking a struct as storage
 #[proc_macro_attribute]
-pub fn stored(attr: TokenStream, item: TokenStream) -> TokenStream {
-    structure::stored::generate(attr, item)
+pub fn stored(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as syn::DeriveInput);
+    
+    // Get the struct fields
+    let fields = match &input.data {
+        syn::Data::Struct(data) => &data.fields,
+        _ => {
+            return TokenStream::from(
+                quote! {
+                    compile_error!("stored attribute can only be applied to structs");
+                    #input
+                }
+            );
+        }
+    };
+    
+    // If there are no fields, simply return the original input
+    if fields.is_empty() {
+        return TokenStream::from(
+            quote! {
+                #input
+            }
+        );
+    }
+    
+    // Generate the getter and setter methods for each field
+    let field_methods = generate_field_methods(fields);
+    
+    // Create a new implementation block with the getter and setter methods
+    let struct_name = &input.ident;
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            #field_methods
+        }
+    };
+    
+    TokenStream::from(expanded)
 }
 
-/// Alias for stored attribute macro
+/// Generate the getter and setter methods for struct fields
+fn generate_field_methods(fields: &syn::Fields) -> proc_macro2::TokenStream {
+    let mut methods = quote! {};
+    
+    for field in fields.iter() {
+        if let Some(ident) = &field.ident {
+            let field_type = &field.ty;
+            let getter_name = ident;
+            let setter_name = quote::format_ident!("set_{}", ident);
+            
+            // Generate getter method
+            let getter = quote! {
+                pub fn #getter_name(&self) -> &#field_type {
+                    &self.#ident
+                }
+            };
+            
+            // Generate setter method
+            let setter = quote! {
+                pub fn #setter_name(&mut self, value: #field_type) {
+                    self.#ident = value;
+                }
+            };
+            
+            methods = quote! {
+                #methods
+                #getter
+                #setter
+            };
+        }
+    }
+    
+    methods
+}
+
+/// Attribute macro for marking a struct field as storage
 #[proc_macro_attribute]
 pub fn storage(attr: TokenStream, item: TokenStream) -> TokenStream {
-    structure::stored::generate(attr, item)
+    // Just pass the item through, the storage implementation is in the stored attribute
+    stored(attr, item)
 }
 
 /// Attribute macro for creating a function modifier
@@ -192,14 +265,135 @@ pub fn contract(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 /// Attribute macro for marking a function as a constructor
 #[proc_macro_attribute]
-pub fn constructor(attr: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the item as is
-    item
+pub fn constructor(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as syn::ItemFn);
+    let fn_name = &input.sig.ident;
+    let fn_inputs = &input.sig.inputs;
+    let fn_output = &input.sig.output;
+    let fn_body = &input.block;
+    
+    // For constructors, we leave them as-is but might need special handling for initialization
+    let expanded = quote! {
+        #[no_mangle]
+        pub fn #fn_name(#fn_inputs) #fn_output #fn_body
+    };
+    
+    expanded.into()
 }
 
 /// Attribute macro for marking a function as a message
 #[proc_macro_attribute]
-pub fn message(attr: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the item as is
+pub fn message(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as syn::ItemFn);
+    let fn_name = &input.sig.ident;
+    let fn_inputs = &input.sig.inputs;
+    let fn_output = &input.sig.output;
+    let fn_body = &input.block;
+    
+    let expanded = quote! {
+        #[no_mangle]
+        pub extern "C" fn #fn_name(#fn_inputs) #fn_output #fn_body
+    };
+    
+    expanded.into()
+}
+
+/// Attribute macro for marking a function as an event
+#[proc_macro_attribute]
+pub fn event(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as syn::ItemFn);
+    let fn_name = &input.sig.ident;
+    let fn_inputs = &input.sig.inputs;
+    
+    // Extract argument names
+    let mut arg_names = Vec::new();
+    for input in fn_inputs.iter() {
+        if let syn::FnArg::Typed(pat_type) = input {
+            if let syn::Pat::Ident(pat_ident) = &*pat_type.pat {
+                arg_names.push(&pat_ident.ident);
+            }
+        }
+    }
+    
+    // Create a new identifier by concatenating "__notify_" with the function name
+    let notify_fn_name = syn::Ident::new(
+        &format!("__notify_{}", fn_name),
+        fn_name.span()
+    );
+    
+    // Generate a notification function with the same parameters but with a notification body
+    let output = quote! {
+        #input
+        
+        // Define a separate notification function to avoid duplicate definition errors
+        // The original #[no_mangle] extern "C" function is what causes the duplication
+        // so we'll use a private function that won't be exported
+        fn #notify_fn_name(#fn_inputs) {
+            use alloc::format;
+            use neo_contract::types::builtin::array::Array;
+            use neo_contract::types::builtin::string::ByteString;
+            use neo_contract::types::builtin::any::Any;
+            use neo_contract::env::syscall;
+            
+            let mut args = Array::<Any>::new();
+            #(
+                let arg_str = format!("{:?}", #arg_names);
+                args.push(Any::from(ByteString::from(arg_str)));
+            )*
+            
+            let event_name = ByteString::from(stringify!(#fn_name));
+            unsafe {
+                syscall::system_runtime_notify(event_name, args);
+            }
+        }
+        
+        // This is the function that will actually be called
+        #[no_mangle]
+        pub extern "C" fn #fn_name(#fn_inputs) {
+            #notify_fn_name(#(#arg_names),*);
+        }
+    };
+    
+    output.into()
+}
+
+/// Attribute macro for specifying the contract author
+#[proc_macro_attribute]
+pub fn contract_author(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    // Store the author info for manifest generation
+    let _author = parse_macro_input!(_attr as syn::LitStr);
+    
+    // For now, pass through the item without modification
+    // In a more complete implementation, this would modify the contract manifest
+    item
+}
+
+/// Attribute macro for specifying the contract email
+#[proc_macro_attribute]
+pub fn contract_email(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    // Store the email info for manifest generation
+    let _email = parse_macro_input!(_attr as syn::LitStr);
+    
+    // For now, pass through the item without modification
+    item
+}
+
+/// Attribute macro for specifying the contract description
+#[proc_macro_attribute]
+pub fn contract_description(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    // Store the description info for manifest generation
+    let _description = parse_macro_input!(_attr as syn::LitStr);
+    
+    // For now, pass through the item without modification
+    item
+}
+
+/// Attribute macro for specifying the contract version
+#[proc_macro_attribute]
+pub fn contract_version(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    // Store the version info for manifest generation
+    let _version = parse_macro_input!(_attr as syn::LitStr);
+    
+    // For now, pass through the item without modification
     item
 }

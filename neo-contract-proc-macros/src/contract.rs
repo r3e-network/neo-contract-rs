@@ -14,10 +14,10 @@ pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
     let module = parse_macro_input!(item as Item);
     
     // Parse attribute arguments (if any)
-    let args = parse_macro_input!(attr as AttributeArgs);
+    let _args = parse_macro_input!(attr as AttributeArgs);
     
     // Process the module and generate the contract code
-    match process_contract_module(module, args) {
+    match process_contract_module(module, _args) {
         Ok(output) => output.into(),
         Err(err) => err.to_compile_error().into(),
     }
@@ -46,7 +46,7 @@ fn process_contract_module(module: Item, _args: AttributeArgs) -> syn::Result<pr
     for item in module_items {
         match item {
             Item::Struct(s) => {
-                // Check if this is the storage struct (has #[neo(storage)] attribute)
+                // Check if this is the storage struct (has #[storage] attribute)
                 if has_neo_attribute(&s.attrs, "storage") {
                     if storage_struct.is_some() {
                         return Err(syn::Error::new_spanned(
@@ -68,20 +68,36 @@ fn process_contract_module(module: Item, _args: AttributeArgs) -> syn::Result<pr
     let storage_struct = storage_struct.ok_or_else(|| {
         syn::Error::new_spanned(
             module.to_token_stream(),
-            "No storage struct found. Add #[neo(storage)] to your contract's storage struct",
+            "No storage struct found. Add #[storage] to your contract's storage struct",
         )
     })?;
     
     // Process implementation blocks
-    let processed_impls = process_impl_blocks(impl_blocks)?;
+    let _processed_impls = process_impl_blocks(impl_blocks)?;
+    
+    // Generate contract entry points
+    let _contract_name = &storage_struct.ident;
+    let entry_points = quote! {
+        #[no_mangle]
+        pub extern "C" fn _deploy(data: bool) -> bool {
+            // Default implementation
+            true
+        }
+        
+        #[no_mangle]
+        pub extern "C" fn _initialize() -> bool {
+            // Default implementation
+            true
+        }
+    };
     
     // Generate the final output
     let output = quote! {
-        // Original storage struct
-        #storage_struct
+        // Re-export the original module for clean organization
+        #module
         
-        // Processed implementation blocks
-        #(#processed_impls)*
+        // Add contract entry points outside the module
+        #entry_points
     };
     
     Ok(output)
@@ -221,6 +237,10 @@ fn has_neo_attribute(attrs: &[syn::Attribute], name: &str) -> bool {
             if let Ok(Meta::Path(path)) = attr.parse_meta() {
                 return path.segments.last().map_or(false, |seg| seg.ident == name);
             }
+        }
+        // Check for ink! style #[storage] format
+        else if attr.path.is_ident(name) {
+            return true;
         }
         false
     })

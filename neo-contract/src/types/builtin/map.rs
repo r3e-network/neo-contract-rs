@@ -50,6 +50,22 @@ impl<K, V> Map<K, V> {
             self.values.remove(index);
         }
     }
+
+    /// Get a value by key
+    pub fn get(&self, key: &K) -> Option<&V> where K: PartialEq {
+        if let Some(index) = self.keys.iter().position(|k| k == key) {
+            return Some(&self.values[index]);
+        }
+        None
+    }
+
+    /// Get a mutable value by key
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> where K: PartialEq {
+        if let Some(index) = self.keys.iter().position(|k| k == key) {
+            return Some(&mut self.values[index]);
+        }
+        None
+    }
 }
 
 impl<K, V> Default for Map<K, V> {

@@ -2,9 +2,16 @@
 name = "neo-contract"
 version = "0.1.0"
 edition = "2021"
+description = "A Rust framework for Neo N3 smart contract development"
+license = "MIT"
+repository = "https://github.com/R3E-Network/neo-contract-rs"
+documentation = "https://github.com/R3E-Network/neo-contract-rs/tree/main/docs"
+readme = "../README.md"
+keywords = ["neo", "blockchain", "smart-contract", "wasm", "neo3"]
+categories = ["cryptography::cryptocurrencies", "wasm"]
 
 [dependencies]
-neo-contract-proc-macros = { path = "../neo-contract-proc-macros" }
+neo-contract-proc-macros = { path = "../neo-contract-proc-macros", version = "0.1.0" }
 bitflags = "1.3.2"
 
 [features]

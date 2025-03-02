@@ -34,10 +34,18 @@ pub use utils::*;
 
 // Re-export proc macros
 pub use neo_contract_proc_macros::{
-    export_trait, smart_contract, contract, manifest_extra, contract_permission,
-    contract_trust, supported_standards, byte_array, hash160, integer, public_key,
-    string, contract_hash, safe, no_reentrant, no_reentrant_method, stored, storage,
-    constructor, message, modifier, calling_convention, op_code, syscall
+    export_trait, smart_contract, 
+    // Core ink!-style attributes
+    contract, storage, constructor, message, event,
+    // Metadata attributes
+    contract_author, contract_email, contract_description, contract_version,
+    manifest_extra, contract_permission, contract_trust, supported_standards,
+    // Static field attributes
+    byte_array, hash160, integer, public_key, string, contract_hash,
+    // Security attributes
+    safe, no_reentrant, no_reentrant_method, stored,
+    // Function attributes
+    modifier, calling_convention, op_code, syscall
 };
 
 // Re-export builtin types for easier access

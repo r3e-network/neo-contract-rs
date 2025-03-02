@@ -4,75 +4,70 @@
 #![no_std]
 #![no_main]
 
-use neo_contract as neo;
+extern crate alloc;
+extern crate wee_alloc;
 
-#[neo::contract]
-#[neo::contract_author("R3E Network")]
-#[neo::contract_email("dev@r3e.network")]
-#[neo::contract_description("An example contract using C# features")]
-#[neo::contract_version("0.1.0")]
-#[neo::contract_source_code("https://github.com/R3E-Network/neo-contract-rs")]
-#[neo::contract_permission("*", "*")]
-#[neo::contract_trust("*")]
-#[neo::supported_standards("NEP-17")]
-mod token {
-    use neo::prelude::*;
-    use neo::types::*;
-    use neo::runtime;
-    use neo::storage::StorageMap;
-    use neo::call_flags::CallFlags;
+use neo_contract::{
+    builtin::{H160, Int256, ByteString, Map, Array, Any},
+    Runtime,
+    contract, contract_author, contract_description,
+    contract_version, contract_email,
+    storage, constructor, message, event,
+};
+use core::panic::PanicInfo;
 
-    // Static field initialization
-    #[neo::byte_array("0123456789ABCDEF")]
-    static BYTE_ARRAY: [u8; 8] = [0; 8];
+// Use wee_alloc as the global allocator
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-    #[neo::hash160("0x0123456789abcdef0123456789abcdef01234567")]
-    static HASH160: H160 = H160::zero();
+// Define a panic handler
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
 
-    #[neo::integer("1000000")]
-    static AMOUNT: Int256 = Int256::zero();
-
-    #[neo::public_key("03b209fd4f53a7170ea4444e0cb0a6bb6a53c2bd016926989cf85f9b0fba17a70c")]
-    static PUBLIC_KEY: [u8; 33] = [0; 33];
-
-    #[neo::string("Hello, NEO!")]
-    static GREETING: &str = "";
-
-    #[neo::contract_hash("0x0123456789abcdef0123456789abcdef01234567")]
-    static CONTRACT_HASH: H160 = H160::zero();
-
-    #[neo(storage)]
+#[contract]
+#[contract_author("R3E Network")]
+#[contract_email("dev@r3e.network")]
+#[contract_description("An example contract using C# features")]
+#[contract_version("0.1.0")]
+mod token_contract {
+    use super::*;
+    
+    #[storage]
     pub struct Token {
-        total_supply: Int256,
-        balances: builtin::Map,
+        // Total supply of tokens
+        token_supply: Int256,
+        // Map of account balances
+        balances: Map<H160, Int256>,
     }
 
     impl Token {
-        #[neo(constructor)]
+        // Constructor
+        #[constructor]
         pub fn new(initial_supply: Int256) -> Self {
-            let mut balances = builtin::Map::new();
-            let owner = runtime::calling_script_hash();
+            let owner = Runtime::executing_script_hash();
             
-            balances.put(&owner, &initial_supply);
+            let mut balances = Map::new();
+            balances.put(owner, initial_supply);
             
             Self {
-                total_supply: initial_supply,
+                token_supply: initial_supply,
                 balances,
             }
         }
-
+        
         // Safe method that doesn't modify state
-        #[neo::safe]
-        #[neo(message)]
+        #[message]
+        #[safe]
         pub fn total_supply(&self) -> Int256 {
-            self.total_supply
+            self.token_supply
         }
-
-        // Method with reentrancy protection
-        #[neo::no_reentrant]
-        #[neo(message)]
+        
+        // Method with transfer functionality
+        #[message]
         pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
-            if !runtime::check_witness_with_account(from) {
+            if !Runtime::check_witness(from) {
                 return false;
             }
             
@@ -90,24 +85,27 @@ mod token {
                 if from_new_balance.is_zero() {
                     self.balances.delete(&from);
                 } else {
-                    self.balances.put(&from, &from_new_balance);
+                    self.balances.put(from, from_new_balance);
                 }
                 
                 let to_balance = self.balance_of(to);
                 let to_new_balance = to_balance + amount;
-                self.balances.put(&to, &to_new_balance);
+                self.balances.put(to, to_new_balance);
             }
             
-            self.transfer_event(from, to, amount);
+            // Log transfer event but don't actually emit it in this simplified example
             
             true
         }
-
-        // Method with specific reentrancy protection
-        #[neo::no_reentrant_method]
-        #[neo(message)]
+        
+        // Method with withdraw functionality
+        #[message]
         pub fn withdraw(&mut self, account: H160, amount: Int256) -> bool {
-            if !runtime::check_witness_with_account(account) {
+            if !Runtime::check_witness(account) {
+                return false;
+            }
+            
+            if amount <= Int256::zero() {
                 return false;
             }
             
@@ -120,29 +118,28 @@ mod token {
             if new_balance.is_zero() {
                 self.balances.delete(&account);
             } else {
-                self.balances.put(&account, &new_balance);
+                self.balances.put(account, new_balance);
             }
             
             true
         }
-
-        // Method with call flags
-        #[neo(message)]
-        pub fn call_other_contract(&self, contract_hash: H160, method: &str, args: &[Any]) -> Any {
-            // Use call flags
-            let flags = CallFlags::ReadStates.add(CallFlags::AllowCall);
-            runtime::call_contract(contract_hash, method, args, flags)
+        
+        // Call other contract
+        #[message]
+        #[safe]
+        pub fn call_other_contract(&self, contract_hash: H160, method: ByteString, args: Array<Any>) -> Any {
+            // Call contract without flags
+            Runtime::call_contract(contract_hash, method, args)
         }
-
-        #[neo(message)]
+        
+        // Safe method to check balance
+        #[message]
+        #[safe]
         pub fn balance_of(&self, account: H160) -> Int256 {
             match self.balances.get(&account) {
-                Some(balance) => balance,
+                Some(balance) => *balance,
                 None => Int256::zero(),
             }
         }
-
-        #[neo(event)]
-        pub fn transfer_event(&self, from: H160, to: H160, amount: Int256) {}
     }
 }

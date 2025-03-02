@@ -1,42 +1,134 @@
-# neo-contract-rs
-Writing Neo-Smart-Contract with Rust
+# Neo Contract RS
 
-## Attribute Macros
+A comprehensive Rust framework for developing Neo N3 smart contracts. This framework allows developers to write Neo smart contracts using Rust, targeting the Neo N3 blockchain.
 
-Neo Contract RS now supports ink!-style attribute macros for defining smart contracts.
-This provides a more unified approach to contract development.
+## Features
 
-### Example
+- **Native Rust Development**: Write Neo N3 smart contracts using Rust
+- **Ink!-Style Contract Definition**: Modern, declarative approach to contract development inspired by ink!
+- **Extensive Standard Library**: Built-in types and utilities for Neo N3 smart contract development
+- **NEP-17 Support**: First-class support for the NEP-17 fungible token standard
+- **Contract-to-Contract Calls**: Easy-to-use API for contract interaction
+- **Deploy & Test Tools**: Tools for deploying and testing smart contracts (coming soon)
+
+## Getting Started
+
+### Prerequisites
+
+- Rust toolchain (install via [rustup](https://rustup.rs/))
+- Wasm target: `rustup target add wasm32-unknown-unknown`
+
+### Installation
+
+Add the framework to your project:
+
+```toml
+[dependencies]
+neo-contract = { git = "https://github.com/R3E-Network/neo-contract-rs" }
+```
+
+### Creating a New Contract
+
+Create a new library project with the cdylib crate type:
+
+```toml
+[package]
+name = "my-contract"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+neo-contract = { git = "https://github.com/R3E-Network/neo-contract-rs" }
+wee_alloc = "0.4.5"  # Lightweight memory allocator for WebAssembly
+```
+
+## Contract Development Approaches
+
+### Ink!-Style Attribute Macros (Recommended)
+
+Neo Contract RS now fully supports the ink!-style attribute macros for contract definition. This approach provides a more declarative and intuitive way to write smart contracts:
 
 ```rust
-#[neo_contract::contract]
-#[neo_contract::contract_author("R3E Network")]
-#[neo_contract::contract_email("dev@r3e.network")]
-#[neo_contract::contract_description("An example token contract")]
-#[neo_contract::contract_version("0.1.0")]
-#[neo_contract::supported_standards("NEP-17")]
-mod my_contract {
-    #[neo(storage)]
-    pub struct MyContract {
-        value: bool,
+use neo_contract::prelude::ink_style::*;
+
+#[contract]
+#[contract_author("Your Name")]
+#[contract_description("A description of your contract")]
+mod token_contract {
+    use super::*;
+    
+    #[storage]
+    pub struct Token {
+        total_supply: Int256,
+        balances: Map,
     }
     
-    impl MyContract {
-        #[neo(constructor)]
-        pub fn new(initial_value: bool) -> Self {
-            Self { value: initial_value }
+    impl Token {
+        #[constructor]
+        pub fn new(initial_supply: Int256) -> Self {
+            // Implementation...
         }
         
-        #[neo(message)]
-        pub fn get(&self) -> bool {
-            self.value
+        #[message]
+        pub fn balance_of(&self, account: H160) -> Int256 {
+            // Implementation...
         }
         
-        #[neo(event)]
-        pub fn value_changed(old_value: bool, new_value: bool) {}
+        #[event]
+        pub fn transfer_event(from: H160, to: H160, amount: Int256) {}
     }
 }
 ```
+
+This approach is similar to the ink! framework for Substrate but tailored for Neo N3 smart contracts. See the [ink! style guide](docs/ink_style_guide.md) for more details.
+
+### Traditional Style (Legacy Support)
+
+The framework also supports a more traditional approach to contract development for backward compatibility:
+
+```rust
+#![no_std]
+#![no_main]
+
+extern crate alloc;
+extern crate wee_alloc;
+
+use neo_contract::{
+    builtin::{H160, Int256, ByteString},
+    Runtime,
+    contract_method, smart_contract,
+};
+
+// Global allocator
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+// Panic handler
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
+
+pub struct Counter;
+
+#[smart_contract]
+impl Counter {
+    contract_method!(pub fn increment() -> u32 {
+        // Implementation
+        42
+    });
+    
+    contract_method!(pub fn get() -> u32 {
+        // Implementation
+        42
+    });
+}
+```
+
+## Contract Attributes Reference
 
 ### Contract Structure Attributes
 
@@ -55,118 +147,21 @@ mod my_contract {
 - `#[neo_contract::contract_version("1.0.0")]` - Specifies the contract version
 - `#[neo_contract::contract_source_code("https://github.com/...")]` - Links to the source code
 
-### Contract Permission and Standards Attributes
+## Building and Deploying
 
-- `#[neo_contract::contract_permission("contract_hash", "method1", "method2")]` - Specifies which contracts and methods can be called
-- `#[neo_contract::contract_trust("contract_hash")]` - Specifies which contracts are trusted
-- `#[neo_contract::supported_standards("NEP-17", "NEP-11")]` - Declares supported standards
+### Building
 
-The traditional macro approach is still supported for backward compatibility.
+Build your contract with the WebAssembly target:
 
-## C# Framework Features
-
-Neo Contract RS now supports additional features from the C# Neo framework:
-
-### Static Field Initialization Attributes
-
-```rust
-// Initialize a byte array with a hex string
-#[neo::byte_array("0123456789ABCDEF")]
-static BYTE_ARRAY: [u8; 8] = [0; 8];
-
-// Initialize a Hash160 with a hex string
-#[neo::hash160("0x0123456789abcdef0123456789abcdef01234567")]
-static HASH160: H160 = H160::zero();
-
-// Initialize an integer with a value
-#[neo::integer("1000000")]
-static AMOUNT: Int256 = Int256::zero();
-
-// Initialize a public key with a hex string
-#[neo::public_key("03b209fd4f53a7170ea4444e0cb0a6bb6a53c2bd016926989cf85f9b0fba17a70c")]
-static PUBLIC_KEY: [u8; 33] = [0; 33];
-
-// Initialize a string with a value
-#[neo::string("Hello, NEO!")]
-static GREETING: &str = "";
-
-// Initialize a contract hash with a hex string
-#[neo::contract_hash("0x0123456789abcdef0123456789abcdef01234567")]
-static CONTRACT_HASH: H160 = H160::zero();
+```bash
+cargo build --target wasm32-unknown-unknown --release
 ```
 
-### Contract Safety and Security Attributes
+This will generate a WebAssembly binary in `target/wasm32-unknown-unknown/release/`.
 
-```rust
-// Safe method that doesn't modify state
-#[neo::safe]
-#[neo(message)]
-pub fn total_supply(&self) -> Int256 {
-    self.total_supply
-}
+### Deploying (Coming Soon)
 
-// Method with reentrancy protection
-#[neo::no_reentrant]
-#[neo(message)]
-pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
-    // Implementation
-}
-
-// Method with specific reentrancy protection
-#[neo::no_reentrant_method]
-#[neo(message)]
-pub fn withdraw(&mut self, account: H160, amount: Int256) -> bool {
-    // Implementation
-}
-```
-
-### Call Flags
-
-```rust
-use neo::call_flags::CallFlags;
-
-// Method with call flags
-#[neo(message)]
-pub fn call_other_contract(&self, contract_hash: H160, method: &str, args: &[Any]) -> Any {
-    // Use call flags
-    let flags = CallFlags::ReadStates.add(CallFlags::AllowCall);
-    runtime::call_contract(contract_hash, method, args, flags)
-}
-```
-
-### Contract Structure Attributes
-
-```rust
-// Mark a struct as stored in the contract storage
-#[neo::stored]
-pub struct StoredData {
-    // Fields
-}
-
-// Define a modifier method
-#[neo::modifier]
-pub fn only_owner() {
-    // Implementation
-}
-
-// Specify the calling convention of a method
-#[neo::calling_convention(Cdecl)]
-pub fn external_function() {
-    // Implementation
-}
-
-// Specify the opcode of a method
-#[neo::op_code(SYSCALL, "System.Runtime.GetTime")]
-pub fn get_time() -> u64 {
-    // Implementation
-}
-
-// Specify the syscall of a method
-#[neo::syscall("System.Runtime.GetTime")]
-pub fn get_time_syscall() -> u64 {
-    // Implementation
-}
-```
+We are working on deployment tools to make it easy to deploy your contracts to the Neo N3 blockchain.
 
 ## Examples
 
@@ -175,7 +170,41 @@ Check the `examples` directory for complete contract examples:
 - `ink_style_token_with_attributes` - A token contract using the ink!-style attribute macros
 - `nep17_token` - A NEP-17 token implementation
 - `contract_call` - Example of contract-to-contract calls
-- `csharp_features` - Example showcasing C# framework features
+- `csharp_features` - Examples of C# framework features in Rust
+
+## Advanced Features
+
+### Static Field Initialization
+
+```rust
+// Initialize a Hash160 with a hex string
+#[neo::hash160("0x0123456789abcdef0123456789abcdef01234567")]
+static CONTRACT_HASH: H160 = H160::zero();
+
+// Initialize an integer with a value
+#[neo::integer("1000000")]
+static AMOUNT: Int256 = Int256::zero();
+```
+
+### Contract-to-Contract Calls
+
+```rust
+// Call another contract
+let result = Runtime::call_contract(
+    &target_contract_hash,
+    "method_name",
+    &args,
+    CallFlags::All
+);
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## NeoBurger Example
 
@@ -221,6 +250,7 @@ cargo build --release
 - **Reward Distribution**: GAS reward distribution to token holders
 - **Agent Contract System**: Delegation of NEO management to agent contracts
 - **Governance Functionality**: Proposal submission and execution system
+
 ## Neoburger Example Contracts
 
 The repository includes example contracts for the Neoburger ecosystem:

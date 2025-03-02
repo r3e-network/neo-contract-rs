@@ -14,6 +14,7 @@ use crate::types::bytes::Bytes;
 use crate::types::context::StorageContext;
 use crate::types::notification::Notification;
 use crate::types::placeholder::Placeholder;
+use crate::types::builtin::any::Any;
 
 /// Put a value in storage
 pub unsafe fn system_storage_put(
@@ -60,4 +61,9 @@ pub unsafe fn system_iterator_key(_iterator: i32) -> ByteString {
 pub unsafe fn system_iterator_value(_iterator: i32) -> ByteString {
     // In a real implementation, this would call the iterator value syscall
     ByteString::empty()
+}
+
+/// Emit a notification from the contract
+pub unsafe fn system_runtime_notify(event_name: ByteString, args: Array<Any>) {
+    // In a real implementation, this would call the runtime notify syscall
 }

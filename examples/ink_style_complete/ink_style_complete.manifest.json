@@ -1,0 +1,133 @@
+{
+  "name": "InkStyleToken",
+  "groups": [],
+  "features": {},
+  "supportedstandards": ["NEP-17"],
+  "abi": {
+    "methods": [
+      {
+        "name": "get_name",
+        "parameters": [],
+        "returntype": "String",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "get_symbol",
+        "parameters": [],
+        "returntype": "String",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "get_decimals",
+        "parameters": [],
+        "returntype": "Integer",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "get_total_supply",
+        "parameters": [],
+        "returntype": "Integer",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "balance_of",
+        "parameters": [
+          {
+            "name": "account",
+            "type": "Hash160"
+          }
+        ],
+        "returntype": "Integer",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "transfer",
+        "parameters": [
+          {
+            "name": "from",
+            "type": "Hash160"
+          },
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "returntype": "Boolean",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "mint",
+        "parameters": [
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "returntype": "Boolean",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "burn",
+        "parameters": [
+          {
+            "name": "from",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "returntype": "Boolean",
+        "offset": 0,
+        "safe": false
+      }
+    ],
+    "events": [
+      {
+        "name": "Transfer",
+        "parameters": [
+          {
+            "name": "from",
+            "type": "Hash160"
+          },
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": [
+    {
+      "contract": "*",
+      "methods": "*"
+    }
+  ],
+  "trusts": [],
+  "extra": {
+    "Author": "Ink Style Example",
+    "Email": "example@neo-contract-rs.dev",
+    "Description": "NEP-17 token using ink!-style contract definition"
+  }
+}
