@@ -19,4 +19,10 @@ Cargo.lock
 # macos
 **/.DS_Store
 settings.json
-bin/
+
+# Build artifacts
+/bin/
+/dist/
+
+# Temporary files
+*.tmp

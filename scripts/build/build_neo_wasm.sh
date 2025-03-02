@@ -15,11 +15,24 @@ build_neo_wasm() {
     # Navigate to the neo-wasm directory
     cd "$(dirname "$0")/../../tools/neo-wasm"
     
+    # Check if we're on the main branch
+    if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then
+        echo -e "${RED}Warning: Not on main branch. Switching to main branch...${NC}"
+        git checkout main
+    fi
+    
     # Build the neo-wasm compiler
     go build -o ../../bin/neo-wasm
     
-    echo -e "${GREEN}Successfully built neo-wasm compiler${NC}"
-    echo ""
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Successfully built neo-wasm compiler${NC}"
+        echo -e "Binary location: $(dirname "$0")/../../bin/neo-wasm"
+        echo ""
+        return 0
+    else
+        echo -e "${RED}Failed to build neo-wasm compiler${NC}"
+        return 1
+    fi
 }
 
 # Make sure the bin directory exists
