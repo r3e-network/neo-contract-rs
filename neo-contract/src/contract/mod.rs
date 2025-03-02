@@ -3,13 +3,14 @@
 
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::types::builtin::h160::H160;
-use crate::types::builtin::string::ByteString;
+use crate::builtin::{H160, ByteString, Array, Any};
+use crate::Runtime;
 
 pub mod native;
 pub mod nep11;
 pub mod nep17;
 pub mod nep5;
+pub mod upgrade;
 
 /// Contract represents a Neo N3 smart contract
 #[derive(Debug, Clone)]
@@ -34,5 +35,38 @@ impl Contract {
     /// Get the name of the contract
     pub fn name(&self) -> ByteString {
         self.name.clone()
+    }
+    
+    /// Call a method on this contract
+    pub fn call<T>(&self, method: &str, args: Array<Any>) -> Option<T> 
+    where
+        T: TryFrom<Any>,
+    {
+        let method_bs = ByteString::from(method);
+        let result = Runtime::call_contract(
+            self.script_hash.clone(),
+            method_bs,
+            args
+        );
+        
+        T::try_from(result).ok()
+    }
+    
+    /// Get the current executing contract
+    pub fn executing() -> Self {
+        let script_hash = Runtime::executing_script_hash();
+        Self {
+            script_hash,
+            name: ByteString::from("Executing"),
+        }
+    }
+    
+    /// Get the current calling contract
+    pub fn calling() -> Self {
+        let script_hash = Runtime::calling_script_hash();
+        Self {
+            script_hash,
+            name: ByteString::from("Calling"),
+        }
     }
 }

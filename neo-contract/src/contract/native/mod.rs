@@ -5,7 +5,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 pub mod gas;
-pub mod legder;
+pub mod ledger;
 pub mod neo;
 pub mod oracle;
 pub mod policy;

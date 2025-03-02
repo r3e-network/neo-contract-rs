@@ -10,6 +10,13 @@ use crate::types::context::StorageContext;
 pub mod context;
 pub mod iter;
 pub mod map;
+pub mod pagination;
+pub mod versioned;
+
+pub use map::*;
+pub use iter::*;
+pub use pagination::*;
+pub use versioned::*;
 
 /// Get the storage context
 pub fn get_context() -> StorageContext {

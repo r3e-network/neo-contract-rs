@@ -11,11 +11,17 @@ pub mod call_flags;
 pub mod contract;
 pub mod crypto;
 pub mod env;
+pub mod events;
+pub mod error;
 pub mod macros;
 pub mod runtime;
+pub mod security;
+pub mod policy;
+pub mod profiling;
 pub mod serialize;
 pub mod static_values;
 pub mod storage;
+pub mod token;
 pub mod types;
 pub mod utils;
 
@@ -31,6 +37,16 @@ pub use static_values::*;
 pub use storage::*;
 pub use types::{block, builtin as types_builtin, bytes, context, key, notification, signer, storage as types_storage, tx};
 pub use utils::*;
+pub use events::*;
+pub use error::*;
+pub use security::*;
+
+// Re-export the reentrancy guard macro
+pub use reentrancy_guard;
+pub use no_reentrant_method;
+pub use ensure;
+pub use require_witness;
+pub use define_event;
 
 // Re-export proc macros
 pub use neo_contract_proc_macros::{
