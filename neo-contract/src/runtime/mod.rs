@@ -2,7 +2,7 @@
 // All Rights Reserved
 
 use alloc::vec::Vec;
-use crate::builtin::{H160, ByteString, Array, Any};
+use crate::builtin::{H160, ByteString, Array, Any, Int256};
 use crate::CallFlags;
 use crate::types::context::StorageContext;
 
@@ -29,12 +29,12 @@ impl Runtime {
     }
 
     /// Check if the witness is valid
-    pub fn check_witness(hash: H160) -> bool {
+    pub fn check_witness(hash: &H160) -> bool {
         #[cfg(not(target_arch = "wasm32"))]
-        unsafe { crate::env::syscall_non_wasm::system_runtime_check_witness(hash) }
+        unsafe { crate::env::syscall_non_wasm::system_runtime_check_witness(hash.clone()) }
         
         #[cfg(target_arch = "wasm32")]
-        unsafe { crate::env::contract::native_check_witness(hash) }
+        unsafe { crate::env::contract::native_check_witness(hash.clone()) }
     }
 
     /// Notify an event
@@ -64,6 +64,29 @@ impl Runtime {
                 hash, 
                 method, 
                 CallFlags::All, 
+                args
+            )
+        }
+    }
+    
+    /// Call a contract with specific flags
+    pub fn call_contract_with_flags(hash: H160, method: ByteString, flags: CallFlags, args: Array<Any>) -> Any {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_contract_call(
+                hash, 
+                method, 
+                flags, 
+                args
+            )
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::contract::native_contract_call(
+                hash, 
+                method, 
+                flags, 
                 args
             )
         }
@@ -117,10 +140,198 @@ impl Runtime {
         }
     }
     
+    /// Find values in storage
+    pub fn storage_find(context: StorageContext, prefix: &[u8]) -> crate::storage::StorageIterator {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe {
+            let iter = crate::env::syscall_non_wasm::system_storage_find(context, prefix.into(), crate::FindOptions::RemovePrefix);
+            crate::storage::StorageIterator::new(iter)
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe {
+            let iter = crate::env::syscall::system_storage_find(context, prefix.into(), crate::FindOptions::RemovePrefix);
+            crate::storage::StorageIterator::new(iter)
+        }
+    }
+    
     /// Assert a condition
-    pub fn assert(condition: bool) {
+    pub fn assert(condition: bool, msg: Option<&str>) {
         if !condition {
-            panic!("Assertion failed");
+            if let Some(message) = msg {
+                panic!("Assertion failed: {}", message);
+            } else {
+                panic!("Assertion failed");
+            }
+        }
+    }
+    
+    /// Get the current platform
+    pub fn platform() -> ByteString {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_runtime_platform()
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_runtime_platform()
+        }
+    }
+    
+    /// Get the current trigger type
+    pub fn trigger() -> u32 {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_runtime_trigger()
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_runtime_trigger()
+        }
+    }
+    
+    /// Get the current timestamp
+    pub fn time() -> u64 {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_runtime_time()
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_runtime_time()
+        }
+    }
+    
+    /// Get the gas left
+    pub fn gas_left() -> Int256 {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_runtime_gas_left()
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_runtime_gas_left()
+        }
+    }
+    
+    /// Get the current network ID
+    pub fn network_id() -> i32 {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_runtime_get_network()
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_runtime_get_network()
+        }
+    }
+    
+    /// Get random number
+    pub fn get_random() -> u64 {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_runtime_get_random()
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_runtime_get_random()
+        }
+    }
+    
+    /// Check if the hash is a contract
+    pub fn is_contract(hash: &H160) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_contract_is_contract(hash.clone())
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_contract_is_contract(hash.clone())
+        }
+    }
+    
+    /// Update the contract
+    pub fn update(script: ByteString, manifest: ByteString, data: Any) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_contract_update(script, manifest, data)
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_contract_update(script, manifest, data)
+        }
+    }
+    
+    /// Destroy the contract
+    pub fn destroy() {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_contract_destroy()
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_contract_destroy()
+        }
+    }
+    
+    /// Log a message to the VM
+    pub fn log(message: &ByteString) {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_runtime_log(message.clone())
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_runtime_log(message.clone())
+        }
+    }
+    
+    /// Get the notification from a transaction
+    pub fn get_notifications(hash: &H160) -> Array<Any> {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_runtime_get_notifications(hash.clone())
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_runtime_get_notifications(hash.clone())
+        }
+    }
+    
+    /// Enter the native contract context
+    pub fn enter_script(script_hash: &H160) {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_runtime_enter_script(script_hash.clone())
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_runtime_enter_script(script_hash.clone())
+        }
+    }
+    
+    /// Get the invocation counter
+    pub fn get_invocation_counter() -> i32 {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe { 
+            crate::env::syscall_non_wasm::system_runtime_get_invocation_counter()
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe { 
+            crate::env::syscall::system_runtime_get_invocation_counter()
         }
     }
 }
