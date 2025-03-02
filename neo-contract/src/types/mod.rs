@@ -8,12 +8,11 @@ pub(crate) mod consts;
 pub(crate) mod contract;
 pub(crate) mod key;
 pub(crate) mod notification;
-pub(crate) mod placeholder;
 pub(crate) mod signer;
 pub(crate) mod storage;
 pub(crate) mod tx;
 
+pub mod placeholder;
+
 pub use {block::*, builtin::*, consts::*, contract::*, key::*};
 pub use {notification::*, signer::*, storage::*, tx::*};
-
-pub(crate) use placeholder::*;

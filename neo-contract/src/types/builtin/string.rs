@@ -2,7 +2,7 @@
 // All Rights Reserved.
 
 #[allow(unused_imports)]
-use crate::{env, types::*};
+use crate::{env, types::{placeholder::*, *}};
 
 /// ByteString is a non utf-8 string
 #[cfg(not(target_family = "wasm"))]

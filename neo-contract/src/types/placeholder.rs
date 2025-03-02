@@ -2,7 +2,7 @@
 // All Rights Reserved.
 
 #[repr(C)]
-pub(crate) struct Placeholder(i32);
+pub struct Placeholder(i32);
 
 impl Placeholder {
     #[cfg(not(target_family = "wasm"))]
@@ -20,18 +20,19 @@ impl Clone for Placeholder {
 
 impl Copy for Placeholder {}
 
-pub(crate) trait FromPlaceholder {
+pub trait FromPlaceholder {
     fn from_placeholder(placeholder: Placeholder) -> Self;
 }
 
-pub(crate) trait IntoPlaceholder {
+pub trait IntoPlaceholder {
     fn into_placeholder(self) -> Placeholder;
 }
 
-#[cfg(target_family = "wasm")]
+// It for internal use, don't use it directly
 #[macro_export]
 macro_rules! impl_placeholder {
     ($type:ty) => {
+        #[cfg(target_family = "wasm")]
         impl IntoPlaceholder for $type {
             #[inline(always)]
             fn into_placeholder(self) -> Placeholder {
@@ -39,6 +40,7 @@ macro_rules! impl_placeholder {
             }
         }
 
+        #[cfg(target_family = "wasm")]
         impl FromPlaceholder for $type {
             #[inline(always)]
             fn from_placeholder(placeholder: Placeholder) -> Self {
@@ -46,4 +48,18 @@ macro_rules! impl_placeholder {
             }
         }
     };
+}
+
+impl FromPlaceholder for Placeholder {
+    #[inline(always)]
+    fn from_placeholder(placeholder: Placeholder) -> Self {
+        placeholder
+    }
+}
+
+impl IntoPlaceholder for Placeholder {
+    #[inline(always)]
+    fn into_placeholder(self) -> Placeholder {
+        self
+    }
 }

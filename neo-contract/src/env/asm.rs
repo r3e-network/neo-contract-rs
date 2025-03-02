@@ -4,7 +4,7 @@
 #![allow(unused)]
 
 #[cfg(target_family = "wasm")]
-use crate::types::*;
+use crate::types::{placeholder::*, *};
 
 #[link(wasm_import_module = "neo.asm")]
 #[allow(improper_ctypes)]
@@ -116,4 +116,16 @@ extern "C" {
 
     /// `abort_with_message` aborts the execution with the given message.
     pub(crate) fn abort_with_message(message: ByteString) -> !;
+
+    /// `throw` for throw opcode
+    pub(crate) fn throw();
+
+    /// `try` for try or try-l opcode
+    pub(crate) fn r#try();
+
+    /// `end_try` for end-try opcode
+    pub(crate) fn end_try();
+
+    /// `end_finally` for end-finally opcode
+    pub(crate) fn end_finally();
 }

@@ -38,3 +38,11 @@ pub fn abort_with_message(message: ByteString) {
     #[cfg(not(target_family = "wasm"))]
     panic!("{}", message.to_string());
 }
+
+pub fn throw(/*message: ByteString*/) {
+    #[cfg(target_family = "wasm")]
+    unsafe { crate::env::asm::throw() };
+
+    #[cfg(not(target_family = "wasm"))]
+    panic!("TODO: add message");
+}

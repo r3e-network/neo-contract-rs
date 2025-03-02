@@ -1,27 +1,45 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
-use crate::types::*;
+use crate::types::{placeholder::*, *};
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct Signer {
+    #[get(pub)]
     account: H160,
-    scopes: WitnessScope,
+
+    #[get(pub)]
+    scopes: Int256, // WitnessScope
+
+    #[get(pub)]
     allowed_contracts: Array<H160>,
+
+    #[get(pub)]
     allowed_groups: Array<PublicKey>,
+
+    #[get(pub)]
     rules: Array<WitnessRule>,
 }
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct WitnessRule {
-    action: WitnessRuleAction,
+    #[get(pub)]
+    action: Int256, // WitnessRuleAction
+
+    #[get(pub)]
     condition: WitnessCondition,
 }
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct WitnessCondition {
-    condition_type: WitnessConditionType,
-    condition: i32, // placeholder, and cannot use directly
+    #[get(pub)]
+    condition_type: Int256, // WitnessConditionType
+
+    #[get(pub)]
+    condition: Placeholder, // placeholder, and cannot use directly
 }
 
 #[repr(C)]

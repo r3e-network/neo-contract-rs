@@ -9,14 +9,9 @@ pub(crate) mod nep11;
 pub(crate) mod nep17;
 pub(crate) mod token;
 
-pub use {event::*, nep::*, nep11::*, nep17::*, token::*};
+pub use {event::*, nep::*, nep11::*, nep17::*};
 
 use crate::{env, types::*};
-
-pub trait SmartContract {
-    #[inline(always)]
-    fn _initialize() {}
-}
 
 #[inline(always)]
 pub fn call(contract: H160, method: ByteString, call_flags: CallFlags, args: Array<Any>) -> Any {

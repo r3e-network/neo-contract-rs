@@ -6,12 +6,12 @@ use crate::types::*;
 #[repr(C)]
 pub struct Tx {
     hash: H256,
-    version: u32,
-    nonce: u32,
+    version: Int256,
+    nonce: Int256,
     sender: H160,
     system_fee: Int256,
     network_fee: Int256,
-    valid_until_block: u32,
+    valid_until_block: Int256,
     script: ByteString,
 }
 
@@ -23,12 +23,12 @@ impl Tx {
     }
 
     #[inline(always)]
-    pub fn version(&self) -> u32 {
+    pub fn version(&self) -> Int256 {
         self.version
     }
 
     #[inline(always)]
-    pub fn nonce(&self) -> u32 {
+    pub fn nonce(&self) -> Int256 {
         self.nonce
     }
 
@@ -48,7 +48,7 @@ impl Tx {
     }
 
     #[inline(always)]
-    pub fn valid_until_block(&self) -> u32 {
+    pub fn valid_until_block(&self) -> Int256 {
         self.valid_until_block
     }
 

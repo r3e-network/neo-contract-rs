@@ -2,7 +2,7 @@
 // All Rights Reserved.
 
 #[allow(unused_imports)]
-use crate::{env, types::*};
+use crate::{env, types::{placeholder::*, *}};
 
 #[cfg(target_family = "wasm")]
 #[repr(C)]

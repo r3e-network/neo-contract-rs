@@ -1,8 +1,11 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
-#[cfg(target_family = "wasm")]
-use crate::{env, types::*};
+#[allow(unused_imports)]
+use crate::{
+    env,
+    types::{placeholder::*, *},
+};
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]

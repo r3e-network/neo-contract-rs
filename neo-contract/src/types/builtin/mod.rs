@@ -11,6 +11,7 @@ pub mod interop;
 pub mod map;
 pub mod nullable;
 pub mod string;
+pub mod structs;
 
 pub use {any::*, array::*, buffer::*, interop::*, map::*};
 pub use {h160::*, h256::*, int256::*, nullable::*, string::*};

@@ -1,7 +1,8 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
-use crate::types::*;
+#[allow(unused_imports)]
+use crate::types::{placeholder::*, *};
 
 /// Interop is an opaque type that can be used to neo interop interface.
 #[cfg(target_family = "wasm")]
