@@ -4,7 +4,10 @@
 pub mod contract;
 pub mod crypto;
 pub mod env;
+pub mod event;
 pub mod runtime;
 pub mod serialize;
 pub mod storage;
 pub mod types;
+
+pub use neo_contract_proc_macros::{contract, structs};

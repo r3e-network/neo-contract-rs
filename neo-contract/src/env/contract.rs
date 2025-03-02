@@ -3,9 +3,8 @@
 
 #![allow(unused)]
 
-use crate::types::{Any, Placeholder};
 #[cfg(target_family = "wasm")]
-use crate::types::*;
+use crate::types::{placeholder::*, *};
 
 #[link(wasm_import_module = "neo.contract")]
 #[allow(improper_ctypes)]

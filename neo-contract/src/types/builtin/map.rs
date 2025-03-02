@@ -2,7 +2,7 @@
 // All Rights Reserved.
 
 #[allow(unused_imports)]
-use crate::{env, types::*};
+use crate::{env, types::{placeholder::*, *}};
 
 #[cfg(not(target_family = "wasm"))]
 use std::collections::HashMap;

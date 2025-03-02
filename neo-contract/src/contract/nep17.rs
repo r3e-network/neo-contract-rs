@@ -8,10 +8,29 @@ use crate::{contract::*, runtime, storage::StorageMap, types::*};
 pub const TOTAL_SUPPLY_KEY: u8 = 0x00;
 
 /// Default balance key prefix.
-/// Do not change the default BALANCE_KEY value if really necessary.
-pub const BALANCE_KEY: u8 = 0x01;
+/// Do not change the default PREFIX_BALANCE value if really necessary.
+pub const PREFIX_BALANCE: u8 = 0x01;
 
-pub trait Nep17Token: TokenContract {
+// NOTE: neo-contract-proc-macros must be updated
+//if any method definition changed(add, remove, modify) in this trait
+pub trait Nep17Token {
+    #[inline(always)]
+    fn _initialize() {}
+
+    fn symbol() -> ByteString;
+
+    fn decimals() -> u32;
+
+    #[inline(always)]
+    fn total_supply() -> Int256 {
+        token::total_supply()
+    }
+
+    #[inline(always)]
+    fn balance_of(owner: H160) -> Int256 {
+        token::balance_of(owner)
+    }
+
     fn transfer(from: H160, to: H160, amount: Int256) -> bool {
         if amount.is_negative() {
             runtime::abort();
@@ -23,10 +42,10 @@ pub trait Nep17Token: TokenContract {
         }
 
         if amount.is_positive() {
-            if !update_nep17_balance::<BALANCE_KEY>(from, amount.checked_neg()) {
+            if !update_nep17_balance::<PREFIX_BALANCE>(from, amount.checked_neg()) {
                 return false;
             }
-            let _ = update_nep17_balance::<BALANCE_KEY>(to, amount);
+            let _ = update_nep17_balance::<PREFIX_BALANCE>(to, amount);
         }
 
         return true;
@@ -44,7 +63,7 @@ pub trait Nep17Token: TokenContract {
             return;
         }
 
-        let _ = update_nep17_balance::<BALANCE_KEY>(account, amount);
+        let _ = update_nep17_balance::<PREFIX_BALANCE>(account, amount);
         update_nep17_total_supply::<TOTAL_SUPPLY_KEY>(amount);
     }
 
@@ -59,37 +78,14 @@ pub trait Nep17Token: TokenContract {
         }
 
         let burned = amount.checked_neg();
-        let _ = update_nep17_balance::<BALANCE_KEY>(account, burned);
+        let _ = update_nep17_balance::<PREFIX_BALANCE>(account, burned);
         update_nep17_total_supply::<TOTAL_SUPPLY_KEY>(burned);
     }
 }
 
 pub fn update_nep17_balance<const PREFIX: u8>(account: H160, amount: Int256) -> bool {
-    #[cfg(target_family = "wasm")]
-    let key = unsafe { env::extension::concat_u8_byte_string(PREFIX, account.into_byte_string()) };
-
-    #[cfg(not(target_family = "wasm"))]
-    let key = ByteString::with_bytes(&[PREFIX]).concat(&account.into_byte_string());
-
     let mut storage = StorageMap::new();
-    let value = storage.get(key.clone());
-    let balance = if value.is_null() {
-        Int256::zero()
-    } else {
-        Int256::from_byte_string(value.unwrap())
-    };
-
-    let new_balance = balance.checked_add(&amount);
-    if new_balance.is_negative() {
-        return false;
-    }
-
-    if new_balance.is_zero() {
-        storage.delete(key);
-    } else {
-        storage.put(key, new_balance.into_byte_string());
-    }
-    true
+    token::update_balance::<PREFIX>(&mut storage, account, amount)
 }
 
 pub fn update_nep17_total_supply<const KEY: u8>(amount: Int256) {

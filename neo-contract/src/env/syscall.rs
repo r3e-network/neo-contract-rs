@@ -4,7 +4,10 @@
 #![allow(unused)]
 
 #[cfg(target_family = "wasm")]
-use crate::{storage::*, types::*};
+use crate::{
+    storage::*,
+    types::{placeholder::*, *},
+};
 
 #[link(wasm_import_module = "neo.syscall")]
 #[allow(improper_ctypes)]
@@ -62,11 +65,7 @@ extern "C" {
     pub(crate) fn system_runtime_get_network() -> u32;
 
     /// System.Runtime.LoadScript
-    pub(crate) fn system_runtime_load_script(
-        script_hash: H160,
-        call_flags: CallFlags,
-        args: Array<Any>,
-    ) -> Any;
+    pub(crate) fn system_runtime_load_script(script_hash: H160, call_flags: CallFlags, args: Array<Any>) -> Any;
 
     /// System.Runtime.CurrentSigners
     pub(crate) fn system_runtime_current_signers() -> Array<Signer>;
@@ -88,19 +87,13 @@ extern "C" {
     /// System.Contract.CreateMultisigAccount
     /// m: The number of correct signatures that need to be provided in order for the verification to pass.
     /// public_keys: The public keys
-    pub(crate) fn system_contract_create_multi_signs_account(
-        m: u32,
-        public_keys: Array<PublicKey>,
-    ) -> H160;
+    pub(crate) fn system_contract_create_multi_signs_account(m: u32, public_keys: Array<PublicKey>) -> H160;
 
     /// System.Crypto.CheckSig
     pub(crate) fn system_crypto_check_sign(public_key: PublicKey, sign: ByteString) -> bool;
 
     /// System.Crypto.CheckMultisig
-    pub(crate) fn system_crypto_check_multi_signs(
-        public_keys: Array<PublicKey>,
-        signs: Array<ByteString>,
-    ) -> bool;
+    pub(crate) fn system_crypto_check_multi_signs(public_keys: Array<PublicKey>, signs: Array<ByteString>) -> bool;
 
     /// System.Iterator.Next
     pub(crate) fn system_iterator_next(iterator: Placeholder) -> bool;
@@ -118,27 +111,16 @@ extern "C" {
     pub(crate) fn system_storage_as_readonly(cx: StorageContext) -> ReadOnlyStorageContext;
 
     /// System.Storage.Get
-    pub(crate) fn system_storage_string_key_get(
-        context: StorageContext,
-        key: ByteString,
-    ) -> Placeholder;
+    pub(crate) fn system_storage_string_key_get(context: StorageContext, key: ByteString) -> Placeholder;
 
     /// System.Storage.Get
     pub(crate) fn system_storage_bytes_key_get(context: StorageContext, key: Bytes) -> Placeholder;
 
     /// System.Storage.Put
-    pub(crate) fn system_storage_string_key_put(
-        context: StorageContext,
-        key: ByteString,
-        value: ByteString,
-    );
+    pub(crate) fn system_storage_string_key_put(context: StorageContext, key: ByteString, value: ByteString);
 
     /// System.Storage.Put
-    pub(crate) fn system_storage_bytes_key_put(
-        context: StorageContext,
-        key: Bytes,
-        value: ByteString,
-    );
+    pub(crate) fn system_storage_bytes_key_put(context: StorageContext, key: Bytes, value: ByteString);
 
     /// System.Storage.Delete
     pub(crate) fn system_storage_string_key_delete(context: StorageContext, key: ByteString);

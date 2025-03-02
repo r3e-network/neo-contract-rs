@@ -6,7 +6,10 @@ pub(crate) mod map;
 pub use map::*;
 
 #[allow(unused_imports)]
-use crate::{env, types::*};
+use crate::{
+    env,
+    types::{placeholder::*, *},
+};
 
 #[repr(C)]
 pub struct StorageContext(Placeholder);

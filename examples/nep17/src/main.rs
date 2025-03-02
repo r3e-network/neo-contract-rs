@@ -10,11 +10,8 @@ use neo::{contract::*, types::*};
 
 pub struct DemoNep17Token;
 
-impl SmartContract for DemoNep17Token {}
-
-impl Nep17Token for DemoNep17Token {}
-
-impl TokenContract for DemoNep17Token {
+#[neo::contract]
+impl Nep17Token for DemoNep17Token {
     fn symbol() -> ByteString {
         ByteString::empty()
     }
@@ -22,9 +19,4 @@ impl TokenContract for DemoNep17Token {
     fn decimals() -> u32 {
         8
     }
-}
-
-#[no_mangle]
-pub fn transfer(from: H160, to: H160, amount: Int256) {
-    DemoNep17Token::transfer(from, to, amount);
 }
