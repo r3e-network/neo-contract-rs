@@ -3,8 +3,8 @@
 
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::builtin::{H160, ByteString, Array, Any};
-use crate::Runtime;
+use crate::prelude::{H160, ByteString, Array, Any};
+use crate::runtime::Runtime;
 
 pub mod native;
 pub mod nep11;
@@ -38,7 +38,7 @@ impl Contract {
     }
     
     /// Call a method on this contract
-    pub fn call<T>(&self, method: &str, args: Array<Any>) -> Option<T> 
+    pub fn call<T>(&self, method: &str, args: Array) -> Option<T> 
     where
         T: TryFrom<Any>,
     {

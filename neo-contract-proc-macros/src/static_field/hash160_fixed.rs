@@ -7,7 +7,12 @@ use syn::{
     parse_macro_input, AttributeArgs, Lit, NestedMeta, ItemStatic,
 };
 
-/// Process the hash160 attribute macro
+/// Public interface for the hash160_fixed attribute macro
+pub fn hash160_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
+    generate(attr, item)
+}
+
+/// Process the hash160_fixed attribute macro
 pub fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse the static item
     let item_static = parse_macro_input!(item as ItemStatic);

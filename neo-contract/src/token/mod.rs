@@ -3,10 +3,13 @@
 
 //! Token interfaces and implementations for the Neo blockchain
 
+use alloc::vec::Vec;
 use alloc::string::String;
-use crate::builtin::{H160, ByteString, Int256, Array, Any};
-use crate::Runtime;
-use crate::env;
+
+// Update to use prelude
+use crate::prelude::{H160, ByteString, Int256, Array, Any};
+// use crate::env;
+use crate::runtime::Runtime;  // Use the correct import for Runtime
 
 /// Standard token interface
 pub trait Token {
@@ -42,16 +45,16 @@ pub trait TokenEvents {
 impl TokenEvents for () {
     fn emit_transfer(&self, from: Option<H160>, to: Option<H160>, amount: Int256) {
         let event_name = ByteString::from("Transfer");
-        let mut event_data = Array::<Any>::new();
+        let mut event_data = Array::new();
         
         match from {
             Some(addr) => event_data.push(Any::from(addr)),
-            None => event_data.push(Any::new()),
+            None => event_data.push(Any::from(ByteString::from(""))),
         }
         
         match to {
             Some(addr) => event_data.push(Any::from(addr)),
-            None => event_data.push(Any::new()),
+            None => event_data.push(Any::from(ByteString::from(""))),
         }
         
         event_data.push(Any::from(amount));

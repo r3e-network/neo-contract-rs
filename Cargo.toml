@@ -2,23 +2,18 @@
 members = [
     "neo-contract",
     "neo-contract-proc-macros",
-    "examples/*",
+    "neo-compiler",
+    "examples/dao",
 ]
+
 resolver = "2"
 
-[workspace.package]
-version = "0.1.0"
-authors = ["R3E Network <dev@r3e.network>"]
-description = "A Rust framework for Neo N3 smart contract development"
-license = "MIT"
-repository = "https://github.com/R3E-Network/neo-contract-rs"
-documentation = "https://github.com/R3E-Network/neo-contract-rs/tree/main/docs"
-readme = "README.md"
-keywords = ["neo", "blockchain", "smart-contract", "wasm", "neo3"]
-categories = ["cryptography::cryptocurrencies", "wasm"]
-
-[profile.dev]
-panic = "abort"
-
 [profile.release]
-panic = "abort"
+lto = true
+opt-level = 's' # Optimize for size
+codegen-units = 1
+panic = 'abort'
+
+# Special configuration for WASM compilation
+[profile.release.package.neo-contract]
+opt-level = 'z' # Optimize aggressively for size

@@ -4,11 +4,13 @@
 //! Contract upgrade pattern implementation
 //! This module provides a standard way to make contracts upgradeable
 
-use crate::builtin::{H160, ByteString, Array, Any};
-use crate::Runtime;
-use crate::types::context::StorageContext;
-use crate::storage::{StorageMap, Storable};
-use crate::contract::native::neo;
+// use crate::builtin::{H160, ByteString, Array, Any};
+use crate::prelude::{H160, ByteString, Array, Any};
+use crate::runtime::Runtime;
+// use crate::types::context::StorageContext;
+// use crate::storage::{StorageMap, Storable};
+use crate::policy::voting::Storable;
+// use crate::contract::native::neo;
 use crate::error::{Error, ErrorCode, Result};
 
 /// Keys for the upgrade pattern
@@ -50,47 +52,68 @@ pub struct ContractUpgrade;
 
 impl Upgradeable for ContractUpgrade {
     fn set_admin(address: H160) -> Result<()> {
-        let context = Runtime::storage_context();
-        let admin_map = StorageMap::<ByteString, H160>::new(b"");
-        let admin_key = ByteString::from_bytes(keys::ADMIN);
-        
         // Check if current caller is the current admin
         if let Some(current_admin) = Self::get_admin() {
-            if !Runtime::check_witness(current_admin) {
-                return Err(Error::new(ErrorCode::Unauthorized, "Only current admin can set a new admin"));
+            if !Runtime::check_witness(&current_admin) {
+                return Err(Error::with_message(ErrorCode::Unauthorized, "Only current admin can set a new admin"));
             }
         }
         
-        admin_map.put(&admin_key, &address);
+        // Use storage module directly instead of context methods
+        let admin_key = keys::ADMIN;
+        let bytes = address.as_bytes();
+        
+        // Store the admin address in storage
+        crate::storage::put(admin_key, bytes);
+        
         Ok(())
     }
     
     fn get_admin() -> Option<H160> {
-        let context = Runtime::storage_context();
-        let admin_map = StorageMap::<ByteString, H160>::new(b"");
-        let admin_key = ByteString::from_bytes(keys::ADMIN);
+        let admin_key = keys::ADMIN;
         
-        admin_map.get(&admin_key)
+        // Get the admin address from storage
+        if let Some(bytes) = crate::storage::get(admin_key) {
+            if bytes.len() == 20 { // H160 is 20 bytes
+                let mut array = [0u8; 20];
+                array.copy_from_slice(&bytes);
+                Some(H160::from_slice(&array))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
     
     fn set_owner(address: H160) -> Result<()> {
-        let context = Runtime::storage_context();
-        let owner_map = StorageMap::<ByteString, H160>::new(b"");
-        let owner_key = ByteString::from_bytes(keys::OWNER);
-        
         // Check if current caller is the admin
         Self::check_admin()?;
         
-        owner_map.put(&owner_key, &address);
+        let owner_key = keys::OWNER;
+        let bytes = address.as_bytes();
+        
+        // Store the owner address in storage
+        crate::storage::put(owner_key, bytes);
+        
         Ok(())
     }
     
     fn get_owner() -> Option<H160> {
-        let context = Runtime::storage_context();
-        let owner_map = StorageMap::<ByteString, H160>::new(b"");
-        let owner_key = ByteString::from_bytes(keys::OWNER);
+        let owner_key = keys::OWNER;
         
-        owner_map.get(&owner_key)
+        // Get the owner address from storage
+        if let Some(bytes) = crate::storage::get(owner_key) {
+            if bytes.len() == 20 { // H160 is 20 bytes
+                let mut array = [0u8; 20];
+                array.copy_from_slice(&bytes);
+                Some(H160::from_slice(&array))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
     
     fn upgrade(script: ByteString, manifest: ByteString) -> Result<()> {
@@ -98,47 +121,50 @@ impl Upgradeable for ContractUpgrade {
         Self::check_admin()?;
         
         // Store the upgrade script for history tracking
-        let context = Runtime::storage_context();
-        let script_map = StorageMap::<ByteString, ByteString>::new(b"");
-        let script_key = ByteString::from_bytes(keys::UPGRADE_SCRIPT);
+        let script_key = keys::UPGRADE_SCRIPT;
         
-        script_map.put(&script_key, &script);
+        // Store the script in storage
+        crate::storage::put(script_key, script.as_bytes());
         
-        // Call the Neo.Contract.Update system call
-        let method = ByteString::from("update");
-        let mut args = Array::<Any>::new();
-        args.push(Any::from(script));
-        args.push(Any::from(manifest));
+        // Call the deploy method on the new contract
+        let script_hash = H160::from_slice(script.as_bytes());
+        let mut args = Array::new();
+        args.push(Any::byte_string("deploy"));
         
-        let contract_hash = Runtime::executing_script_hash();
-        let result = Runtime::call_contract(contract_hash, method, args);
+        // Call the contract
+        let result = Runtime::call_contract(
+            script_hash, 
+            ByteString::from("deploy"), 
+            args
+        );
         
-        // Check if the upgrade was successful
-        match bool::try_from(result) {
-            Ok(true) => Ok(()),
-            _ => Err(Error::new(ErrorCode::ContractCallError, "Contract upgrade failed")),
+        // Check if the call was successful
+        if result.is_null() {
+            Err(Error::with_message(ErrorCode::ExecutionError, "Contract upgrade failed"))
+        } else {
+            Ok(())
         }
     }
     
     fn check_admin() -> Result<()> {
         if let Some(admin) = Self::get_admin() {
-            if !Runtime::check_witness(admin) {
-                return Err(Error::new(ErrorCode::Unauthorized, "Admin signature required"));
+            if !Runtime::check_witness(&admin) {
+                return Err(Error::with_message(ErrorCode::Unauthorized, "Admin signature required"));
             }
             Ok(())
         } else {
-            Err(Error::new(ErrorCode::InvalidState, "Admin not set"))
+            Err(Error::with_message(ErrorCode::InvalidState, "Admin not set"))
         }
     }
     
     fn check_owner() -> Result<()> {
         if let Some(owner) = Self::get_owner() {
-            if !Runtime::check_witness(owner) {
-                return Err(Error::new(ErrorCode::Unauthorized, "Owner signature required"));
+            if !Runtime::check_witness(&owner) {
+                return Err(Error::with_message(ErrorCode::Unauthorized, "Owner signature required"));
             }
             Ok(())
         } else {
-            Err(Error::new(ErrorCode::InvalidState, "Owner not set"))
+            Err(Error::with_message(ErrorCode::InvalidState, "Owner not set"))
         }
     }
 }
@@ -199,7 +225,7 @@ impl UpgradeableContractBuilder {
     pub fn initialize(self) -> Result<()> {
         // Admin is required
         let admin = self.admin.ok_or_else(|| 
-            Error::new(ErrorCode::InvalidArgument, "Admin address is required")
+            Error::with_message(ErrorCode::InvalidArgument, "Admin address is required")
         )?;
         
         // Set the admin

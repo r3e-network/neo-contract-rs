@@ -1,8 +1,17 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
+//! Types module for Neo Contract RS
+//!
+//! This module defines the common types used throughout the framework.
+
+// Re-export core types
+pub use self::builtin::h160::H160;
+pub use self::builtin::h256::H256;
+pub use self::builtin::string::ByteString;
+pub use self::builtin::int256::Int256;
+pub use self::builtin::array::Array;
+pub use self::builtin::map::Map;
+pub use self::builtin::any::Any;
 
 pub mod block;
-pub mod builtin;
 pub mod bytes;
 pub mod consts;
 pub mod context;
@@ -14,9 +23,13 @@ pub mod signer;
 pub mod storage;
 pub mod tx;
 
-// Re-exports
-// Only export what's actually used
-pub use contract::*;
-pub use key::*;
-pub use placeholder::Placeholder;
-pub use tx::*;
+// Builtin types for Neo N3
+pub mod builtin {
+    pub mod any;
+    pub mod array;
+    pub mod h160;
+    pub mod h256;
+    pub mod int256;
+    pub mod map;
+    pub mod string;
+}

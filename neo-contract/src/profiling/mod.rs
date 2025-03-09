@@ -5,11 +5,14 @@
 //! Helps measure execution time and gas costs for contract operations
 //! Only available in debug mode or with PROFILING feature enabled
 
+use alloc::vec::Vec;
 use alloc::string::String;
 use alloc::format;
+
+// Update imports to use prelude
+use crate::prelude::{ByteString, Array, Any, Int256, StorageMap};
+// use crate::contract::Contract;
 use crate::runtime::Runtime;
-use crate::builtin::{ByteString, Array, Any, Int256};
-use crate::contract::Contract;
 
 /// Debug mode configuration
 #[cfg(any(debug_assertions, feature = "profiling"))]
@@ -80,10 +83,14 @@ impl Profiler {
         }
         
         let event_name = ByteString::from("Profiling");
-        let mut event_data = Array::<Any>::new();
+        let mut event_data = Array::new();
         
         event_data.push(Any::from(ByteString::from(self.name.as_str())));
-        event_data.push(Any::from(elapsed_time));
+        
+        // Convert u64 to ByteString for compatibility with Any
+        let elapsed_time_str = ByteString::from(alloc::format!("{}", elapsed_time));
+        event_data.push(Any::from(elapsed_time_str));
+        
         event_data.push(Any::from(gas_used));
         
         Runtime::notify(&event_name, &event_data);
@@ -201,20 +208,29 @@ impl Benchmark {
         }
         
         let event_name = ByteString::from("Benchmark");
-        let mut event_data = Array::<Any>::new();
+        let mut event_data = Array::new();
         
         event_data.push(Any::from(ByteString::from(self.name.as_str())));
-        event_data.push(Any::from(self.iterations as i64));
-        event_data.push(Any::from(self.total_time));
+        
+        // Convert numeric values to ByteString for compatibility with Any
+        let iterations_str = ByteString::from(alloc::format!("{}", self.iterations));
+        event_data.push(Any::from(iterations_str));
+        
+        let total_time_str = ByteString::from(alloc::format!("{}", self.total_time));
+        event_data.push(Any::from(total_time_str));
+        
         event_data.push(Any::from(self.total_gas.clone()));
         
         if self.iterations > 0 {
             let avg_time = self.total_time / (self.iterations as u64);
             let avg_gas = self.total_gas.clone() / Int256::from_i64(self.iterations as i64);
-            event_data.push(Any::from(avg_time));
+            
+            let avg_time_str = ByteString::from(alloc::format!("{}", avg_time));
+            event_data.push(Any::from(avg_time_str));
+            
             event_data.push(Any::from(avg_gas));
         } else {
-            event_data.push(Any::from(0u64));
+            event_data.push(Any::from(ByteString::from("0")));
             event_data.push(Any::from(Int256::zero()));
         }
         
@@ -246,21 +262,21 @@ impl GasStats {
         // Measure put operation
         let mut put_benchmark = Benchmark::new("storage_put", 10);
         let put_gas = put_benchmark.run(|| {
-            let storage_map = crate::storage::StorageMap::<ByteString, Int256>::new(b"benchmark");
+            let storage_map = StorageMap::<ByteString, Int256>::new(b"benchmark");
             storage_map.put(&ByteString::from("test_key"), &Int256::from_i64(100));
         });
         
         // Measure get operation
         let mut get_benchmark = Benchmark::new("storage_get", 10);
         let get_gas = get_benchmark.run(|| {
-            let storage_map = crate::storage::StorageMap::<ByteString, Int256>::new(b"benchmark");
+            let storage_map = StorageMap::<ByteString, Int256>::new(b"benchmark");
             storage_map.get(&ByteString::from("test_key"));
         });
         
         // Measure delete operation
         let mut delete_benchmark = Benchmark::new("storage_delete", 10);
         let delete_gas = delete_benchmark.run(|| {
-            let storage_map = crate::storage::StorageMap::<ByteString, Int256>::new(b"benchmark");
+            let storage_map = StorageMap::<ByteString, Int256>::new(b"benchmark");
             storage_map.delete(&ByteString::from("test_key"));
         });
         

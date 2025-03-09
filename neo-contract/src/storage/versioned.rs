@@ -1,218 +1,183 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
+//! Versioned Storage for Neo Contract RS
+//!
+//! This module provides versioned storage for Neo smart contracts.
 
-//! Versioned storage module for maintaining data versions and migrations
-//! This helps contracts to maintain backward compatibility when storage
-//! schema changes
-
-use alloc::string::String;
 use alloc::vec::Vec;
-use crate::builtin::{H160, ByteString, Int256};
-use crate::storage::{StorageMap, Storable, Storage};
+use core::marker::PhantomData;
 use crate::error::{Error, ErrorCode, Result};
-use crate::Runtime;
+use super::context::Context;
+use super::item::{Item, Codec};
 
-/// Represents a version of the contract storage
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StorageVersion {
-    /// Major version number
-    pub major: u16,
-    /// Minor version number
-    pub minor: u16,
-    /// Patch version number
-    pub patch: u16,
-}
-
-impl StorageVersion {
-    /// Create a new storage version
-    pub fn new(major: u16, minor: u16, patch: u16) -> Self {
-        Self { major, minor, patch }
-    }
-    
-    /// Create a version from a semver string
-    pub fn from_semver(version_str: &str) -> Option<Self> {
-        let parts: Vec<&str> = version_str.split('.').collect();
-        if parts.len() != 3 {
-            return None;
-        }
-        
-        let major = parts[0].parse::<u16>().ok()?;
-        let minor = parts[1].parse::<u16>().ok()?;
-        let patch = parts[2].parse::<u16>().ok()?;
-        
-        Some(Self { major, minor, patch })
-    }
-    
-    /// Convert to semver string
-    pub fn to_semver(&self) -> String {
-        format!("{}.{}.{}", self.major, self.minor, self.patch)
-    }
-    
-    /// Check if this version is greater than another
-    pub fn is_greater_than(&self, other: &Self) -> bool {
-        self.major > other.major || 
-        (self.major == other.major && self.minor > other.minor) ||
-        (self.major == other.major && self.minor == other.minor && self.patch > other.patch)
-    }
-    
-    /// Check if this version is compatible with another
-    /// (same major version, same or greater minor version)
-    pub fn is_compatible_with(&self, other: &Self) -> bool {
-        self.major == other.major && 
-        (self.minor > other.minor || 
-         (self.minor == other.minor && self.patch >= other.patch))
-    }
-}
-
-impl Storable for StorageVersion {
-    fn to_storage(&self) -> ByteString {
-        ByteString::from(self.to_semver())
-    }
-    
-    fn from_storage(data: &ByteString) -> Option<Self> {
-        StorageVersion::from_semver(&data.as_string())
-    }
-}
-
-/// Storage version manager
-pub struct VersionedStorage {
-    /// Prefix for version keys
-    prefix: ByteString,
-    /// Current version of the contract
-    current_version: StorageVersion,
-}
-
-impl VersionedStorage {
-    /// Create a new versioned storage manager
-    pub fn new(prefix: &[u8], current_version: StorageVersion) -> Self {
-        Self {
-            prefix: ByteString::from_bytes(prefix),
-            current_version,
-        }
-    }
-    
-    /// Initialize or migrate storage
-    pub fn initialize_or_migrate(&self) -> Result<()> {
-        // Get the stored version
-        let stored_version = self.get_stored_version();
-        
-        // If no stored version, initialize
-        if stored_version.is_none() {
-            return self.initialize();
-        }
-        
-        let stored_version = stored_version.unwrap();
-        
-        // If stored version is same as current, do nothing
-        if stored_version == self.current_version {
-            return Ok(());
-        }
-        
-        // If stored version is greater than current, error
-        if stored_version.is_greater_than(&self.current_version) {
-            return Err(Error::new(
-                ErrorCode::InvalidState,
-                "Stored version is newer than current version"
-            ));
-        }
-        
-        // Perform migration
-        self.migrate(stored_version)
-    }
-    
-    /// Initialize the storage
-    pub fn initialize(&self) -> Result<()> {
-        // Store the current version
-        self.store_version()?;
-        
-        // Emit initialization event
-        self.emit_storage_initialized();
-        
-        Ok(())
-    }
-    
-    /// Migrate from one version to another
-    pub fn migrate(&self, from_version: StorageVersion) -> Result<()> {
-        // Store the new version
-        self.store_version()?;
-        
-        // Emit migration event
-        self.emit_storage_migrated(from_version.clone(), self.current_version.clone());
-        
-        Ok(())
-    }
-    
-    /// Register a migration handler
-    pub fn register_migration_handler<F>(&self, from_version: StorageVersion, handler: F) -> Result<()>
+/// A trait for types that can be migrated between versions
+pub trait Migrate {
+    /// Migrates a value from the given version to the current version
+    fn migrate(bytes: &[u8], version: u32) -> Result<Self>
     where
-        F: FnOnce() -> Result<()>
-    {
-        // Get the stored version
-        let stored_version = self.get_stored_version();
+        Self: Sized;
+}
+
+/// A versioned storage item
+pub struct VersionedItem<T> {
+    /// The key used to store the value in storage
+    key: Vec<u8>,
+    
+    /// The key used to store the version in storage
+    version_key: Vec<u8>,
+    
+    /// The current version
+    current_version: u32,
+    
+    /// The storage context
+    context: Option<Context>,
+    
+    /// The type of value stored in this item
+    _marker: PhantomData<T>,
+}
+
+impl<T> VersionedItem<T>
+where
+    T: Codec + Migrate,
+{
+    /// Creates a new versioned storage item with the given key and current version
+    pub fn new(key: impl AsRef<[u8]>, current_version: u32) -> Self {
+        let mut version_key = key.as_ref().to_vec();
+        version_key.extend_from_slice(b".version");
         
-        // If no stored version or not matching, do nothing
-        if stored_version.is_none() || stored_version.unwrap() != from_version {
-            return Ok(());
+        VersionedItem {
+            key: key.as_ref().to_vec(),
+            version_key,
+            current_version,
+            context: None,
+            _marker: PhantomData,
+        }
+    }
+    
+    /// Creates a new versioned storage item with the given key, current version, and context
+    pub fn with_context(key: impl AsRef<[u8]>, current_version: u32, context: Context) -> Self {
+        let mut version_key = key.as_ref().to_vec();
+        version_key.extend_from_slice(b".version");
+        
+        VersionedItem {
+            key: key.as_ref().to_vec(),
+            version_key,
+            current_version,
+            context: Some(context),
+            _marker: PhantomData,
+        }
+    }
+    
+    /// Gets the version from storage
+    fn get_version(&self) -> Result<Option<u32>> {
+        let mut version_item = Item::<u32>::new(&self.version_key);
+        if let Some(context) = &self.context {
+            version_item.set_context(context.clone());
+        }
+        version_item.get()
+    }
+    
+    /// Sets the version in storage
+    fn set_version(&self, version: u32) -> Result<()> {
+        let mut version_item = Item::<u32>::new(&self.version_key);
+        if let Some(context) = &self.context {
+            version_item.set_context(context.clone());
+        }
+        version_item.set(&version)
+    }
+    
+    /// Gets the value from storage
+    pub fn get(&self) -> Result<Option<T>> {
+        // Get the stored version
+        let stored_version = match self.get_version()? {
+            Some(version) => version,
+            None => return Ok(None), // No version means no value
+        };
+        
+        // Get the raw value
+        let value = if let Some(context) = &self.context {
+            context.get(&self.key)
+        } else {
+            super::get(&self.key)
+        };
+        
+        match value {
+            Some(bytes) => {
+                if stored_version == self.current_version {
+                    // Versions match, decode normally
+                    Ok(Some(T::decode(&bytes)?))
+                } else {
+                    // Versions don't match, migrate
+                    Ok(Some(T::migrate(&bytes, stored_version)?))
+                }
+            },
+            None => Ok(None),
+        }
+    }
+    
+    /// Sets the value in storage
+    pub fn set(&self, value: &T) -> Result<()> {
+        let bytes = value.encode();
+        
+        // Store the value
+        if let Some(context) = &self.context {
+            context.put(&self.key, &bytes);
+        } else {
+            super::put(&self.key, &bytes);
         }
         
-        // Execute the handler
-        handler()
+        // Store the version
+        self.set_version(self.current_version)
     }
     
-    /// Get the stored version
-    pub fn get_stored_version(&self) -> Option<StorageVersion> {
-        let version_key = self.get_version_key();
-        let version_map = StorageMap::<ByteString, StorageVersion>::new(b"");
-        
-        version_map.get(&version_key)
-    }
-    
-    /// Store the current version
-    fn store_version(&self) -> Result<()> {
-        let version_key = self.get_version_key();
-        let version_map = StorageMap::<ByteString, StorageVersion>::new(b"");
-        
-        version_map.put(&version_key, &self.current_version);
+    /// Removes the value from storage
+    pub fn clear(&self) -> Result<()> {
+        // Remove the value
+        if let Some(context) = &self.context {
+            context.delete(&self.key);
+            context.delete(&self.version_key);
+        } else {
+            super::delete(&self.key);
+            super::delete(&self.version_key);
+        }
         
         Ok(())
     }
     
-    /// Helper to get the version key
-    fn get_version_key(&self) -> ByteString {
-        let key = format!("{}:version", self.prefix);
-        ByteString::from(key)
+    /// Checks if the item exists in storage
+    pub fn exists(&self) -> bool {
+        if let Some(context) = &self.context {
+            context.has(&self.version_key)
+        } else {
+            super::has(&self.version_key)
+        }
     }
     
-    /// Emit storage initialized event
-    fn emit_storage_initialized(&self) {
-        let event_name = ByteString::from("StorageInitialized");
-        let mut event_data = crate::builtin::Array::<crate::builtin::Any>::new();
-        
-        event_data.push(crate::builtin::Any::from(self.current_version.to_storage()));
-        
-        Runtime::notify(&event_name, &event_data);
+    /// Gets the key of this item
+    pub fn key(&self) -> &[u8] {
+        &self.key
     }
     
-    /// Emit storage migrated event
-    fn emit_storage_migrated(&self, from_version: StorageVersion, to_version: StorageVersion) {
-        let event_name = ByteString::from("StorageMigrated");
-        let mut event_data = crate::builtin::Array::<crate::builtin::Any>::new();
-        
-        event_data.push(crate::builtin::Any::from(from_version.to_storage()));
-        event_data.push(crate::builtin::Any::from(to_version.to_storage()));
-        
-        Runtime::notify(&event_name, &event_data);
+    /// Gets the version key of this item
+    pub fn version_key(&self) -> &[u8] {
+        &self.version_key
     }
-}
-
-/// Versioned contract storage trait
-pub trait VersionedContract {
-    /// Get the current storage version
-    fn get_storage_version() -> StorageVersion;
     
-    /// Initialize or migrate storage
-    fn initialize_or_migrate_storage() -> Result<()>;
+    /// Gets the current version of this item
+    pub fn current_version(&self) -> u32 {
+        self.current_version
+    }
     
-    /// Add data migration logic
-    fn register_migrations(versioned_storage: &VersionedStorage) -> Result<()>;
+    /// Gets the context of this item
+    pub fn context(&self) -> Option<&Context> {
+        self.context.as_ref()
+    }
+    
+    /// Sets the context for this item
+    pub fn set_context(&mut self, context: Context) {
+        self.context = Some(context);
+    }
+    
+    /// Clears the context for this item
+    pub fn clear_context(&mut self) {
+        self.context = None;
+    }
 }

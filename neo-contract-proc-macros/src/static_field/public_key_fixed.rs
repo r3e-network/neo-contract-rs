@@ -7,7 +7,12 @@ use syn::{
     parse_macro_input, AttributeArgs, Lit, NestedMeta, ItemStatic,
 };
 
-/// Process the public_key attribute macro
+/// Public interface for the public_key_fixed attribute macro
+pub fn public_key_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
+    generate(attr, item)
+}
+
+/// Process the public_key_fixed attribute macro
 pub fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse the static item
     let item_static = parse_macro_input!(item as ItemStatic);

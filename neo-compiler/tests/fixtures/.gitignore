@@ -1,0 +1,2 @@
+# Ignore generated test WASM files
+test_contract.wasm

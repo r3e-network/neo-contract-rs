@@ -1,24 +1,35 @@
 #![no_std]
 
-extern crate alloc;
+#[neo_contract::contract]
+mod hello_world {
+    use neo_contract::prelude::*;
 
-use alloc::string::String;
-use alloc::format;
-use neo_contract::prelude::*;
-
-#[contract]
-pub struct HelloWorld;
-
-#[contract_impl]
-impl HelloWorld {
-    pub fn hello() -> ByteString {
-        Runtime::log("Hello, Neo N3!");
-        ByteString::from("Hello, Neo N3!")
+    #[storage]
+    struct HelloWorld {
+        message: Item<String>,
     }
-    
-    pub fn greet(name: ByteString) -> ByteString {
-        let message = format!("Hello, {}!", name);
-        Runtime::log(&message);
-        ByteString::from(message)
+
+    impl HelloWorld {
+        #[constructor]
+        fn new(message: String) -> Self {
+            Self {
+                message: Item::new(message),
+            }
+        }
+
+        #[method]
+        fn set_message(&mut self, message: String) {
+            self.message.set(message);
+        }
+
+        #[safe]
+        fn get_message(&self) -> String {
+            self.message.get().clone()
+        }
+
+        #[safe]
+        fn hello(&self, name: String) -> String {
+            format!("{} {}", self.message.get(), name)
+        }
     }
 }

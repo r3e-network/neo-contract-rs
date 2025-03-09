@@ -2,9 +2,15 @@
 // All Rights Reserved
 
 use alloc::vec::Vec;
-use crate::builtin::{H160, H256, ByteString, Array, Any, Int256};
-use crate::CallFlags;
+use crate::types::builtin::h160::H160;
+use crate::types::builtin::h256::H256;
+use crate::types::builtin::string::ByteString;
+use crate::types::builtin::int256::Int256;
+use crate::types::builtin::array::Array;
+use crate::types::builtin::any::Any;
+use crate::call_flags::CallFlags;
 use crate::types::context::StorageContext;
+use crate::find_options::FindOptions;
 
 /// Runtime provides access to the Neo runtime
 pub struct Runtime;
@@ -62,13 +68,13 @@ impl Runtime {
     }
 
     /// Notify an event
-    pub fn notify(event_name: &ByteString, args: &Array<Any>) {
+    pub fn notify(event_name: &ByteString, args: &Array) {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe { 
             // Convert from builtin::ByteString to types::builtin::ByteString
             let event_name_converted = crate::types::builtin::string::ByteString(event_name.to_vec());
-            // Convert from builtin::Array<Any> to types::builtin::Array<Any>
-            let args_converted = crate::types::builtin::array::Array::<crate::types::builtin::any::Any>::new();
+            // Convert from builtin::Array to types::builtin::Array
+            let args_converted = crate::types::builtin::array::Array::new();
             // TODO: Convert args properly
             crate::env::syscall_non_wasm::system_runtime_notify(event_name_converted, args_converted)
         }
@@ -78,8 +84,8 @@ impl Runtime {
             // Convert from builtin::ByteString to types::builtin::ByteString
             let event_name_converted = crate::types::builtin::string::ByteString(event_name.to_vec());
             
-            // Convert from builtin::Array<Any> to types::builtin::Array<Any>
-            let mut args_converted = crate::types::builtin::array::Array::<crate::types::builtin::any::Any>::new();
+            // Convert from builtin::Array to types::builtin::Array
+            let mut args_converted = crate::types::builtin::array::Array::new();
             // TODO: Implement proper conversion between Array types
             
             crate::env::syscall::system_runtime_notify(event_name_converted, args_converted)
@@ -87,58 +93,60 @@ impl Runtime {
     }
 
     /// Call a contract
-    pub fn call_contract(hash: H160, method: ByteString, args: Array<Any>) -> Any {
+    pub fn call_contract(hash: H160, method: ByteString, args: Array) -> Any {
         #[cfg(not(target_arch = "wasm32"))]
-        unsafe { 
-            // Convert types for system_contract_call
-            let hash_converted = crate::types::builtin::h160::H160(hash.as_bytes().try_into().unwrap());
+        unsafe {
+            // Convert from builtin::H160 to types::builtin::H160
+            let hash_converted = crate::types::builtin::h160::H160(hash.to_vec());
+            // Convert from builtin::ByteString to types::builtin::ByteString
             let method_converted = crate::types::builtin::string::ByteString(method.to_vec());
-            let args_converted = crate::types::builtin::array::Array::<crate::types::builtin::any::Any>::new();
+            // Convert from builtin::Array to types::builtin::Array
+            let args_converted = crate::types::builtin::array::Array::new();
             // TODO: Convert args properly
             
             let result = crate::env::syscall_non_wasm::system_contract_call(
-                hash_converted, 
-                method_converted, 
-                CallFlags::All, 
-                args_converted
-            );
-            
-            // Convert result back to builtin::Any
-            crate::builtin::any::Any::default()
-        }
-        
-        #[cfg(target_arch = "wasm32")]
-        unsafe { 
-            // Convert from builtin::H160 to types::builtin::H160
-            let hash_converted = crate::types::builtin::h160::H160(hash.as_bytes().try_into().unwrap());
-            
-            // Convert from builtin::ByteString to types::builtin::ByteString
-            let method_converted = crate::types::builtin::string::ByteString(method.to_vec());
-            
-            // Convert from builtin::Array<Any> to types::builtin::Array<Any>
-            let args_converted = crate::types::builtin::array::Array::<crate::types::builtin::any::Any>::new();
-            // TODO: Implement proper conversion between Array types
-            
-            let result = crate::env::contract::native_contract_call(
-                hash_converted, 
-                method_converted, 
-                CallFlags::All, 
+                hash_converted,
+                method_converted,
+                CallFlags::All,  // Default to All flags
                 args_converted
             );
             
             // Convert from types::builtin::Any to builtin::Any
-            crate::builtin::any::Any::default()
+            Any::default()
+            // TODO: Convert result properly
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe {
+            // Convert from builtin::H160 to types::builtin::H160
+            let hash_converted = crate::types::builtin::h160::H160(hash.to_vec());
+            // Convert from builtin::ByteString to types::builtin::ByteString
+            let method_converted = crate::types::builtin::string::ByteString(method.to_vec());
+            // Convert from builtin::Array to types::builtin::Array
+            let args_converted = crate::types::builtin::array::Array::new();
+            // TODO: Convert args properly
+            
+            let result = crate::env::syscall::system_contract_call(
+                hash_converted,
+                method_converted,
+                CallFlags::All,  // Default to All flags
+                args_converted
+            );
+            
+            // Convert from types::builtin::Any to builtin::Any
+            Any::default()
+            // TODO: Convert result properly
         }
     }
     
     /// Call a contract with specific flags
-    pub fn call_contract_with_flags(hash: H160, method: ByteString, flags: CallFlags, args: Array<Any>) -> Any {
+    pub fn call_contract_with_flags(hash: H160, method: ByteString, flags: CallFlags, args: Array) -> Any {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe { 
-            // Convert types for system_contract_call
-            let hash_converted = crate::types::builtin::h160::H160(hash.as_bytes().try_into().unwrap());
+            // Convert from builtin::H160 to types::builtin::H160
+            let hash_converted = crate::types::builtin::h160::H160(hash.to_vec());
             let method_converted = crate::types::builtin::string::ByteString(method.to_vec());
-            let args_converted = crate::types::builtin::array::Array::<crate::types::builtin::any::Any>::new();
+            let args_converted = crate::types::builtin::array::Array::new();
             // TODO: Convert args properly
             
             let result = crate::env::syscall_non_wasm::system_contract_call(
@@ -148,20 +156,20 @@ impl Runtime {
                 args_converted
             );
             
-            // Convert result back to builtin::Any
-            crate::builtin::any::Any::default()
+            // Convert from types::builtin::Any to builtin::Any
+            Any::default()
         }
         
         #[cfg(target_arch = "wasm32")]
         unsafe { 
             // Convert from builtin::H160 to types::builtin::H160
-            let hash_converted = crate::types::builtin::h160::H160(hash.as_bytes().try_into().unwrap());
+            let hash_converted = crate::types::builtin::h160::H160(hash.to_vec());
             
             // Convert from builtin::ByteString to types::builtin::ByteString
             let method_converted = crate::types::builtin::string::ByteString(method.to_vec());
             
-            // Convert from builtin::Array<Any> to types::builtin::Array<Any>
-            let args_converted = crate::types::builtin::array::Array::<crate::types::builtin::any::Any>::new();
+            // Convert from builtin::Array to types::builtin::Array
+            let args_converted = crate::types::builtin::array::Array::new();
             // TODO: Implement proper conversion between Array types
             
             let result = crate::env::contract::native_contract_call(
@@ -172,7 +180,7 @@ impl Runtime {
             );
             
             // Convert from types::builtin::Any to builtin::Any
-            crate::builtin::any::Any::default()
+            Any::default()
         }
     }
     
@@ -228,14 +236,16 @@ impl Runtime {
     pub fn storage_find(context: StorageContext, prefix: &[u8]) -> crate::storage::StorageIterator {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
+            let context_clone = context.clone();
             let iter = crate::env::syscall_non_wasm::system_storage_find(context, prefix.into());
-            crate::storage::StorageIterator::new(iter)
+            // Create a new StorageIterator with the iterator ID
+            crate::storage::StorageIterator::from_id(iter, context_clone)
         }
         
         #[cfg(target_arch = "wasm32")]
         unsafe {
-            let iter = crate::env::syscall::system_storage_find(context, prefix.into(), crate::FindOptions::RemovePrefix);
-            crate::storage::StorageIterator::new(iter)
+            let iter = crate::env::syscall::system_storage_find(context, prefix.into());
+            crate::storage::StorageIterator::from_id(iter, context)
         }
     }
     
@@ -405,13 +415,13 @@ impl Runtime {
     }
     
     /// Get the notification from a transaction
-    pub fn get_notifications(hash: &H160) -> Array<Any> {
+    pub fn get_notifications(hash: &H160) -> Array {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe { 
             let hash_converted = crate::types::builtin::h160::H160(hash.as_bytes().try_into().unwrap());
             let result = crate::env::syscall_non_wasm::system_runtime_get_notifications(hash_converted);
             // Convert from types::builtin::Array to builtin::Array
-            let mut converted_array = Array::<Any>::new();
+            let mut converted_array = Array::new();
             // TODO: Implement proper conversion between Array types
             converted_array
         }
@@ -423,8 +433,8 @@ impl Runtime {
             
             let result = crate::env::syscall::system_runtime_get_notifications(hash_converted);
             
-            // Convert from types::builtin::Array<Any> to builtin::Array<Any>
-            let mut converted_array = Array::<Any>::new();
+            // Convert from types::builtin::Array to builtin::Array
+            let mut converted_array = Array::new();
             // TODO: Implement proper conversion between Array types
             
             converted_array
@@ -461,17 +471,19 @@ impl Runtime {
     }
     
     /// Find values in storage with options
-    pub fn storage_find_with_options(context: StorageContext, prefix: &[u8], options: crate::FindOptions) -> crate::storage::StorageIterator {
+    pub fn storage_find_with_options(context: StorageContext, prefix: &[u8], options: FindOptions) -> crate::storage::StorageIterator {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
+            let context_clone = context.clone();
             let iter = crate::env::syscall_non_wasm::system_storage_find_with_options(context, prefix.into(), options);
-            crate::storage::StorageIterator::new(iter)
+            // Create a new StorageIterator with the iterator ID
+            crate::storage::StorageIterator::from_id(iter, context_clone)
         }
         
         #[cfg(target_arch = "wasm32")]
         unsafe {
             let iter = crate::env::syscall::system_storage_find_with_options(context, prefix.into(), options);
-            crate::storage::StorageIterator::new(iter)
+            crate::storage::StorageIterator::from_id(iter, context)
         }
     }
 

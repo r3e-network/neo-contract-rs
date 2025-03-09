@@ -6,10 +6,13 @@
 //! access control, and policy enforcement.
 
 use alloc::vec::Vec;
+use alloc::string::String;
 use alloc::boxed::Box;
-use crate::builtin::{H160, ByteString, Int256, Array, Any};
-use crate::Runtime;
-use crate::storage::{StorageMap, Storable};
+
+// Import from prelude instead
+use crate::prelude::{H160, ByteString, Int256, Array, Any, StorageMap};
+use crate::runtime::Runtime;  // Use correct path
+use crate::storage::{Context, StorageIterator};
 use crate::error::{Error, ErrorCode, Result};
 
 pub mod roles;

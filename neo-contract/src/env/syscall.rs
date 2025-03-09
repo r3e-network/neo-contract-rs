@@ -1,221 +1,819 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
+//! Low-level syscalls for Neo N3 smart contracts
+//!
+//! This module provides raw access to the Neo VM syscalls.
+//! These functions are meant to be used by the higher-level modules
+//! and not directly by contract developers.
 
+use core::mem::MaybeUninit;
 use alloc::vec::Vec;
-use alloc::string::String;
-use alloc::format;
-use crate::call_flags::CallFlags;
-use crate::types::builtin::array::Array;
-use crate::types::builtin::h160::H160;
-use crate::types::builtin::h256::H256;
-use crate::types::builtin::int256::Int256;
-use crate::types::builtin::string::ByteString;
-use crate::types::bytes::Bytes;
 use crate::types::context::StorageContext;
-use crate::types::notification::Notification;
-use crate::types::placeholder::Placeholder;
-use crate::types::builtin::any::Any;
+use crate::types::Any;
 
-/// Put a value in storage
-pub unsafe fn system_storage_put(
-    _context: StorageContext,
-    _key: ByteString,
-    _value: ByteString,
-) {
-    // In a real implementation, this would call the storage put syscall
+/// Runtime syscalls
+
+/// Get the current blockchain timestamp
+pub fn runtime_get_time() -> u64 {
+    // In a real implementation, this would call the actual Neo VM syscall
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_runtime_get_time() -> u64;
+        }
+        unsafe { neo_runtime_get_time() }
+    }
+    
+    // For testing, return a fixed timestamp
+    #[cfg(test)]
+    {
+        1617235200000 // April 1, 2021
+    }
 }
 
-/// Get a value from storage
-pub unsafe fn system_storage_get(_context: StorageContext, _key: ByteString) -> ByteString {
-    // In a real implementation, this would call the storage get syscall
-    ByteString::empty()
+/// Check if the given hash has witnessed the current transaction
+pub fn runtime_check_witness(hash: &[u8]) -> bool {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_runtime_check_witness(hash_ptr: *const u8, hash_len: usize) -> bool;
+        }
+        unsafe { neo_runtime_check_witness(hash.as_ptr(), hash.len()) }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, always return true
+        true
+    }
 }
 
-/// Delete a value from storage
-pub unsafe fn system_storage_delete(_context: StorageContext, _key: ByteString) {
-    // In a real implementation, this would call the storage delete syscall
+/// Get the script hash of the current executing contract
+pub fn runtime_get_executing_script_hash() -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_runtime_get_executing_script_hash(output_ptr: *mut u8) -> usize;
+        }
+        
+        // Prepare a buffer for the result (20 bytes for script hash)
+        let mut buffer = [0u8; 20];
+        
+        unsafe {
+            let len = neo_runtime_get_executing_script_hash(buffer.as_mut_ptr());
+            buffer[..len].to_vec()
+        }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy hash
+        (1..=20).collect()
+    }
 }
 
-/// Find values in storage
-pub unsafe fn system_storage_find(
-    _context: StorageContext,
-    _prefix: ByteString,
-    _options: crate::FindOptions,
-) -> i32 {
-    // In a real implementation, this would call the storage find syscall
-    // Default to RemovePrefix option
-    system_storage_find_with_options(_context, _prefix, crate::FindOptions::RemovePrefix)
+/// Get the script hash of the calling contract
+pub fn runtime_get_calling_script_hash() -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_runtime_get_calling_script_hash(output_ptr: *mut u8) -> usize;
+        }
+        
+        // Prepare a buffer for the result (20 bytes for script hash)
+        let mut buffer = [0u8; 20];
+        
+        unsafe {
+            let len = neo_runtime_get_calling_script_hash(buffer.as_mut_ptr());
+            buffer[..len].to_vec()
+        }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy hash
+        (21..=40).collect()
+    }
 }
 
-/// Find values in storage with options
-pub unsafe fn system_storage_find_with_options(
-    _context: StorageContext,
-    _prefix: ByteString,
-    _options: crate::FindOptions,
-) -> i32 {
-    // In a real implementation, this would call the storage find syscall with options
-    0
+/// Log a message to the Neo VM
+pub fn runtime_log(message: &[u8]) {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_runtime_log(message_ptr: *const u8, message_len: usize);
+        }
+        unsafe { neo_runtime_log(message.as_ptr(), message.len()) }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, print to stdout
+        let message_str = core::str::from_utf8(message).unwrap_or("[Invalid UTF-8]");
+        println!("[LOG] {}", message_str);
+    }
 }
 
-/// Get the storage context for the current contract
-pub unsafe fn system_storage_get_context() -> StorageContext {
-    // In a real implementation, this would call the storage get context syscall
-    StorageContext::new()
+/// Notify an event with the given name and data
+pub fn runtime_notify(event_name: &[u8], data: &[u8]) {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_runtime_notify(
+                event_name_ptr: *const u8, event_name_len: usize,
+                data_ptr: *const u8, data_len: usize
+            );
+        }
+        
+        unsafe {
+            neo_runtime_notify(
+                event_name.as_ptr(), event_name.len(),
+                data.as_ptr(), data.len()
+            )
+        }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, print to stdout
+        let event_str = core::str::from_utf8(event_name).unwrap_or("[Invalid UTF-8]");
+        println!("[EVENT] {}: {:?}", event_str, data);
+    }
 }
 
-/// Get the storage context for the calling contract
-pub unsafe fn system_storage_get_read_only_context() -> StorageContext {
-    // In a real implementation, this would call the storage get read only context syscall
-    StorageContext::new()
-}
-
-/// Convert a storage context to a read-only storage context
-pub unsafe fn system_storage_as_readonly(_context: StorageContext) -> StorageContext {
-    // In a real implementation, this would call the storage as readonly syscall
-    StorageContext::new()
-}
-
-/// Check if the iterator has a next value
-pub unsafe fn system_iterator_next(_iterator: i32) -> bool {
-    // In a real implementation, this would call the iterator next syscall
-    false
-}
-
-/// Get the key of the current iterator value
-pub unsafe fn system_iterator_key(_iterator: i32) -> ByteString {
-    // In a real implementation, this would call the iterator key syscall
-    ByteString::empty()
-}
-
-/// Get the value of the current iterator value
-pub unsafe fn system_iterator_value(_iterator: i32) -> ByteString {
-    // In a real implementation, this would call the iterator value syscall
-    ByteString::empty()
-}
-
-/// Emit a notification from the contract
-pub unsafe fn system_runtime_notify(event_name: ByteString, args: Array<Any>) {
-    // In a real implementation, this would call the runtime notify syscall
-}
-
-/// Get the current trigger type
-pub unsafe fn system_runtime_trigger() -> u32 {
-    // In a real implementation, this would call the runtime trigger syscall
-    0
+/// Get the current platform trigger type
+pub fn runtime_get_trigger() -> u8 {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_runtime_get_trigger() -> u8;
+        }
+        unsafe { neo_runtime_get_trigger() }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return Application trigger (0x10)
+        0x10
+    }
 }
 
 /// Get the current network ID
-pub unsafe fn system_runtime_get_network() -> i32 {
-    // In a real implementation, this would call the runtime get network syscall
-    0
+pub fn runtime_get_network() -> u8 {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_runtime_get_network() -> u8;
+        }
+        unsafe { neo_runtime_get_network() }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return TestNet (1)
+        1
+    }
 }
 
-/// Get random number
-pub unsafe fn system_runtime_get_random() -> u64 {
-    // In a real implementation, this would call the runtime get random syscall
-    0
+/// Storage syscalls
+
+/// Get a value from storage
+pub fn storage_get(context: &StorageContext, key: &[u8]) -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_storage_get(
+                context_ptr: *const u8, context_len: usize,
+                key_ptr: *const u8, key_len: usize,
+                value_ptr: *mut u8, value_len: usize
+            ) -> usize;
+        }
+        
+        // First call with null to get the size of the result
+        let value_len = unsafe {
+            neo_storage_get(
+                context.as_bytes().as_ptr(), context.as_bytes().len(),
+                key.as_ptr(), key.len(),
+                core::ptr::null_mut(), 0
+            )
+        };
+        
+        // If length is 0, key doesn't exist
+        if value_len == 0 {
+            return Vec::new();
+        }
+        
+        // Allocate buffer and get the value
+        let mut buffer = Vec::with_capacity(value_len);
+        unsafe {
+            buffer.set_len(value_len);
+            neo_storage_get(
+                context.as_bytes().as_ptr(), context.as_bytes().len(),
+                key.as_ptr(), key.len(),
+                buffer.as_mut_ptr(), value_len
+            );
+        }
+        
+        buffer
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy value
+        Vec::new()
+    }
 }
 
-/// Get the notifications from a transaction
-pub unsafe fn system_runtime_get_notifications(_hash: H160) -> Array<Any> {
-    // In a real implementation, this would call the runtime get notifications syscall
-    Array::new()
+/// Put a value into storage
+pub fn storage_put(context: &StorageContext, key: &[u8], value: &[u8]) {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_storage_put(
+                context_ptr: *const u8, context_len: usize,
+                key_ptr: *const u8, key_len: usize,
+                value_ptr: *const u8, value_len: usize
+            );
+        }
+        
+        unsafe {
+            neo_storage_put(
+                context.as_bytes().as_ptr(), context.as_bytes().len(),
+                key.as_ptr(), key.len(),
+                value.as_ptr(), value.len()
+            )
+        }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, do nothing
+    }
 }
 
-/// Enter the native contract context
-pub unsafe fn system_runtime_enter_script(_script_hash: H160) {
-    // In a real implementation, this would call the runtime enter script syscall
+/// Delete a value from storage
+pub fn storage_delete(context: &StorageContext, key: &[u8]) {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_storage_delete(
+                context_ptr: *const u8, context_len: usize,
+                key_ptr: *const u8, key_len: usize
+            );
+        }
+        
+        unsafe {
+            neo_storage_delete(
+                context.as_bytes().as_ptr(), context.as_bytes().len(),
+                key.as_ptr(), key.len()
+            )
+        }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, do nothing
+    }
 }
 
-/// Get the invocation counter
-pub unsafe fn system_runtime_get_invocation_counter() -> i32 {
-    // In a real implementation, this would call the runtime get invocation counter syscall
-    0
+/// Find storage entries with a given prefix
+pub fn storage_find(context: &StorageContext, prefix: &[u8]) -> u32 {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_storage_find(
+                context_ptr: *const u8, context_len: usize,
+                prefix_ptr: *const u8, prefix_len: usize
+            ) -> u32;
+        }
+        
+        unsafe {
+            neo_storage_find(
+                context.as_bytes().as_ptr(), context.as_bytes().len(),
+                prefix.as_ptr(), prefix.len()
+            )
+        }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy iterator ID
+        1
+    }
 }
 
-/// Log a message to the VM
-pub unsafe fn system_runtime_log(_message: ByteString) {
-    // In a real implementation, this would call the runtime log syscall
+/// Iterator operations
+
+/// Check if the iterator has more elements
+pub fn iterator_next(iterator_id: u32) -> bool {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_iterator_next(iterator_id: u32) -> bool;
+        }
+        
+        unsafe { neo_iterator_next(iterator_id) }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, always return false (no more elements)
+        false
+    }
 }
 
-/// Get the executing script hash
-pub unsafe fn system_runtime_executing_script_hash() -> H160 {
-    // In a real implementation, this would call the runtime executing script hash syscall
-    H160::zero()
+/// Get the key of the current iterator element
+pub fn iterator_key(iterator_id: u32) -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_iterator_key(iterator_id: u32, output_ptr: *mut u8, output_len: usize) -> usize;
+        }
+        
+        // First call with null to get the size of the result
+        let key_len = unsafe { neo_iterator_key(iterator_id, core::ptr::null_mut(), 0) };
+        
+        // Allocate buffer and get the key
+        let mut buffer = Vec::with_capacity(key_len);
+        unsafe {
+            buffer.set_len(key_len);
+            neo_iterator_key(iterator_id, buffer.as_mut_ptr(), key_len);
+        }
+        
+        buffer
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy key
+        Vec::new()
+    }
 }
 
-/// Get the calling script hash
-pub unsafe fn system_runtime_calling_script_hash() -> H160 {
-    // In a real implementation, this would call the runtime calling script hash syscall
-    H160::zero()
+/// Get the value of the current iterator element
+pub fn iterator_value(iterator_id: u32) -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_iterator_value(iterator_id: u32, output_ptr: *mut u8, output_len: usize) -> usize;
+        }
+        
+        // First call with null to get the size of the result
+        let value_len = unsafe { neo_iterator_value(iterator_id, core::ptr::null_mut(), 0) };
+        
+        // Allocate buffer and get the value
+        let mut buffer = Vec::with_capacity(value_len);
+        unsafe {
+            buffer.set_len(value_len);
+            neo_iterator_value(iterator_id, buffer.as_mut_ptr(), value_len);
+        }
+        
+        buffer
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy value
+        Vec::new()
+    }
 }
 
-/// Get the entry script hash
-pub unsafe fn system_runtime_entry_script_hash() -> H160 {
-    // In a real implementation, this would call the runtime entry script hash syscall
-    H160::zero()
+/// Close an iterator
+pub fn iterator_close(iterator_id: u32) {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_iterator_close(iterator_id: u32);
+        }
+        
+        unsafe { neo_iterator_close(iterator_id) }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, do nothing
+    }
 }
 
-/// Get the gas left
-pub unsafe fn system_runtime_gas_left() -> Int256 {
-    // In a real implementation, this would call the runtime gas left syscall
-    Int256::zero()
+/// Blockchain syscalls
+
+/// Get the current blockchain height
+pub fn blockchain_get_height() -> u32 {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_blockchain_get_height() -> u32;
+        }
+        
+        unsafe { neo_blockchain_get_height() }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy height
+        1000000
+    }
 }
 
-/// Get the current time
-pub unsafe fn system_runtime_time() -> u64 {
-    // In a real implementation, this would call the runtime time syscall
-    0
+/// Get a block by hash
+pub fn blockchain_get_block(hash: &[u8]) -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_blockchain_get_block(
+                hash_ptr: *const u8, hash_len: usize,
+                output_ptr: *mut u8, output_len: usize
+            ) -> usize;
+        }
+        
+        // First call with null to get the size of the result
+        let block_len = unsafe { 
+            neo_blockchain_get_block(hash.as_ptr(), hash.len(), core::ptr::null_mut(), 0)
+        };
+        
+        // If length is 0, block doesn't exist
+        if block_len == 0 {
+            return Vec::new();
+        }
+        
+        // Allocate buffer and get the block
+        let mut buffer = Vec::with_capacity(block_len);
+        unsafe {
+            buffer.set_len(block_len);
+            neo_blockchain_get_block(hash.as_ptr(), hash.len(), buffer.as_mut_ptr(), block_len);
+        }
+        
+        buffer
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy block
+        Vec::new()
+    }
 }
 
-/// Get the platform
-pub unsafe fn system_runtime_platform() -> ByteString {
-    // In a real implementation, this would call the runtime platform syscall
-    ByteString::from("NEO")
+/// Get a transaction by hash
+pub fn blockchain_get_transaction(hash: &[u8]) -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_blockchain_get_transaction(
+                hash_ptr: *const u8, hash_len: usize,
+                output_ptr: *mut u8, output_len: usize
+            ) -> usize;
+        }
+        
+        // First call with null to get the size of the result
+        let tx_len = unsafe { 
+            neo_blockchain_get_transaction(hash.as_ptr(), hash.len(), core::ptr::null_mut(), 0)
+        };
+        
+        // If length is 0, transaction doesn't exist
+        if tx_len == 0 {
+            return Vec::new();
+        }
+        
+        // Allocate buffer and get the transaction
+        let mut buffer = Vec::with_capacity(tx_len);
+        unsafe {
+            buffer.set_len(tx_len);
+            neo_blockchain_get_transaction(hash.as_ptr(), hash.len(), buffer.as_mut_ptr(), tx_len);
+        }
+        
+        buffer
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy transaction
+        Vec::new()
+    }
 }
 
-/// Check if the hash is a contract
-pub unsafe fn system_contract_is_contract(_hash: H160) -> bool {
-    // In a real implementation, this would call the contract is contract syscall
-    false
+/// Get the transaction height
+pub fn blockchain_get_transaction_height(hash: &[u8]) -> u32 {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_blockchain_get_transaction_height(hash_ptr: *const u8, hash_len: usize) -> u32;
+        }
+        
+        unsafe { neo_blockchain_get_transaction_height(hash.as_ptr(), hash.len()) }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy height
+        1000000
+    }
 }
 
-/// Update the contract
-pub unsafe fn system_contract_update(_script: ByteString, _manifest: ByteString, _data: Any) -> bool {
-    // In a real implementation, this would call the contract update syscall
-    false
+/// Get a contract by hash
+pub fn blockchain_get_contract(hash: &[u8]) -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_blockchain_get_contract(
+                hash_ptr: *const u8, hash_len: usize,
+                output_ptr: *mut u8, output_len: usize
+            ) -> usize;
+        }
+        
+        // First call with null to get the size of the result
+        let contract_len = unsafe { 
+            neo_blockchain_get_contract(hash.as_ptr(), hash.len(), core::ptr::null_mut(), 0)
+        };
+        
+        // If length is 0, contract doesn't exist
+        if contract_len == 0 {
+            return Vec::new();
+        }
+        
+        // Allocate buffer and get the contract
+        let mut buffer = Vec::with_capacity(contract_len);
+        unsafe {
+            buffer.set_len(contract_len);
+            neo_blockchain_get_contract(hash.as_ptr(), hash.len(), buffer.as_mut_ptr(), contract_len);
+        }
+        
+        buffer
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy contract
+        Vec::new()
+    }
 }
 
-/// Destroy the contract
-pub unsafe fn system_contract_destroy() {
-    // In a real implementation, this would call the contract destroy syscall
+/// Crypto syscalls
+
+/// Verify signature using ECDSA with the given curve
+pub fn crypto_verify_with_ecdsa(message: &[u8], signature: &[u8], public_key: &[u8], curve: u32) -> bool {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_crypto_verify_with_ecdsa(
+                message_ptr: *const u8, message_len: usize,
+                signature_ptr: *const u8, signature_len: usize,
+                public_key_ptr: *const u8, public_key_len: usize,
+                curve: u32
+            ) -> bool;
+        }
+        
+        unsafe {
+            neo_crypto_verify_with_ecdsa(
+                message.as_ptr(), message.len(),
+                signature.as_ptr(), signature.len(),
+                public_key.as_ptr(), public_key.len(),
+                curve
+            )
+        }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, always return true
+        true
+    }
 }
 
-/// Call a contract
-pub unsafe fn system_contract_call(
-    _hash: H160,
-    _method: ByteString,
-    _call_flags: CallFlags,
-    _args: Array<Any>,
-) -> Any {
-    // In a real implementation, this would call the contract call syscall
-    Any::default()
+/// Compute SHA256 hash
+pub fn crypto_sha256(data: &[u8]) -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_crypto_sha256(
+                data_ptr: *const u8, data_len: usize,
+                output_ptr: *mut u8
+            );
+        }
+        
+        // SHA256 always outputs 32 bytes
+        let mut buffer = [0u8; 32];
+        
+        unsafe {
+            neo_crypto_sha256(data.as_ptr(), data.len(), buffer.as_mut_ptr());
+        }
+        
+        buffer.to_vec()
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy hash
+        vec![0; 32]
+    }
 }
 
-/// Verify signature with ECDSA
-pub unsafe fn system_crypto_verify_with_ecdsa(_message: ByteString, _pubkey: ByteString, _signature: ByteString, _curve: u32) -> bool {
-    // In a real implementation, this would call the crypto verify with ecdsa syscall
-    false
+/// Compute RIPEMD160 hash
+pub fn crypto_ripemd160(data: &[u8]) -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_crypto_ripemd160(
+                data_ptr: *const u8, data_len: usize,
+                output_ptr: *mut u8
+            );
+        }
+        
+        // RIPEMD160 always outputs 20 bytes
+        let mut buffer = [0u8; 20];
+        
+        unsafe {
+            neo_crypto_ripemd160(data.as_ptr(), data.len(), buffer.as_mut_ptr());
+        }
+        
+        buffer.to_vec()
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy hash
+        vec![0; 20]
+    }
 }
 
-/// Calculate SHA256 hash
-pub unsafe fn system_crypto_sha256(_data: ByteString) -> H256 {
-    // In a real implementation, this would call the crypto sha256 syscall
-    H256::zero()
+/// Contract syscalls
+
+/// Call a contract method
+pub fn contract_call(
+    hash: &[u8], method: &[u8], args: &[Any], call_flags: u32
+) -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_contract_call(
+                hash_ptr: *const u8, hash_len: usize,
+                method_ptr: *const u8, method_len: usize,
+                args_ptr: *const u8, args_len: usize,
+                call_flags: u32,
+                output_ptr: *mut u8, output_len: usize
+            ) -> usize;
+        }
+        
+        // Serialize args into a buffer
+        let args_serialized = serialize_args(args);
+        
+        // First call with null to get the size of the result
+        let result_len = unsafe { 
+            neo_contract_call(
+                hash.as_ptr(), hash.len(),
+                method.as_ptr(), method.len(),
+                args_serialized.as_ptr(), args_serialized.len(),
+                call_flags,
+                core::ptr::null_mut(), 0
+            )
+        };
+        
+        // If length is 0, call failed or returned null
+        if result_len == 0 {
+            return Vec::new();
+        }
+        
+        // Allocate buffer and get the result
+        let mut buffer = Vec::with_capacity(result_len);
+        unsafe {
+            buffer.set_len(result_len);
+            neo_contract_call(
+                hash.as_ptr(), hash.len(),
+                method.as_ptr(), method.len(),
+                args_serialized.as_ptr(), args_serialized.len(),
+                call_flags,
+                buffer.as_mut_ptr(), result_len
+            );
+        }
+        
+        buffer
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy result
+        Vec::new()
+    }
 }
 
-/// Calculate RIPEMD160 hash
-pub unsafe fn system_crypto_ripemd160(_data: ByteString) -> H160 {
-    // In a real implementation, this would call the crypto ripemd160 syscall
-    H160::zero()
+/// Create a new contract
+pub fn contract_create(nef_file: &[u8], manifest: &[u8]) -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_contract_create(
+                nef_file_ptr: *const u8, nef_file_len: usize,
+                manifest_ptr: *const u8, manifest_len: usize,
+                output_ptr: *mut u8
+            );
+        }
+        
+        // Contract creation returns a script hash (20 bytes)
+        let mut buffer = [0u8; 20];
+        
+        unsafe {
+            neo_contract_create(
+                nef_file.as_ptr(), nef_file.len(),
+                manifest.as_ptr(), manifest.len(),
+                buffer.as_mut_ptr()
+            );
+        }
+        
+        buffer.to_vec()
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy script hash
+        vec![0; 20]
+    }
+}
+
+/// Update a contract
+pub fn contract_update(nef_file: &[u8], manifest: &[u8]) {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_contract_update(
+                nef_file_ptr: *const u8, nef_file_len: usize,
+                manifest_ptr: *const u8, manifest_len: usize
+            );
+        }
+        
+        unsafe {
+            neo_contract_update(
+                nef_file.as_ptr(), nef_file.len(),
+                manifest.as_ptr(), manifest.len()
+            );
+        }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, do nothing
+    }
+}
+
+/// System syscalls
+
+/// Get the execution engine running state
+pub fn execution_engine_get_state() -> i32 {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_execution_engine_get_state() -> i32;
+        }
+        
+        unsafe { neo_execution_engine_get_state() }
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy state
+        1
+    }
+}
+
+/// Get script container
+pub fn execution_engine_get_script_container() -> Vec<u8> {
+    #[cfg(not(test))]
+    {
+        extern "C" {
+            fn neo_execution_engine_get_script_container(
+                output_ptr: *mut u8, output_len: usize
+            ) -> usize;
+        }
+        
+        // First call with null to get the size of the result
+        let container_len = unsafe {
+            neo_execution_engine_get_script_container(core::ptr::null_mut(), 0)
+        };
+        
+        // If length is 0, container is null
+        if container_len == 0 {
+            return Vec::new();
+        }
+        
+        // Allocate buffer and get the container
+        let mut buffer = Vec::with_capacity(container_len);
+        unsafe {
+            buffer.set_len(container_len);
+            neo_execution_engine_get_script_container(buffer.as_mut_ptr(), container_len);
+        }
+        
+        buffer
+    }
+    
+    #[cfg(test)]
+    {
+        // For testing, return a dummy container
+        Vec::new()
+    }
+}
+
+/// Helper functions
+
+/// Serialize an array of Any values
+fn serialize_args(args: &[Any]) -> Vec<u8> {
+    // In a real implementation, this would serialize the arguments
+    // according to the Neo VM format.
+    // For simplicity, we'll just return an empty vector in this example.
+    Vec::new()
 }

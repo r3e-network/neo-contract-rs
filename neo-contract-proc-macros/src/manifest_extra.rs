@@ -6,6 +6,11 @@ use syn::{
     parse_macro_input, AttributeArgs, Lit, NestedMeta,
 };
 
+/// Public interface for the manifest_extra attribute macro
+pub fn manifest_extra(attr: TokenStream, item: TokenStream) -> TokenStream {
+    generate(attr, item)
+}
+
 /// Process the manifest_extra attribute macro
 pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse attribute arguments

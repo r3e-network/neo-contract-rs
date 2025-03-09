@@ -3,8 +3,9 @@
 
 #[allow(unused_imports)]
 use crate::{env, types::*};
-use crate::builtin::{H160, ByteString, Array, Any, Int256};
-use crate::Runtime;
+// use crate::builtin::{H160, ByteString, Array, Any, Int256};
+use crate::prelude::{H160, ByteString, Array, Any, Int256};
+use crate::runtime::Runtime;
 use core::marker::PhantomData;
 
 /// Oracle contract for accessing off-chain data
@@ -74,26 +75,33 @@ impl Oracle {
         }
 
         #[cfg(not(target_family = "wasm"))]
-        H160::hex_decode("0xfe924b7cfe89ddd271abaf7210a80a7e11178758").unwrap_or_else(H160::zero)
+        H160::from_hex("fe924b7cfe89ddd271abaf7210a80a7e11178758").unwrap_or_else(H160::zero)
     }
     
     /// Make a request to the Oracle service
     pub fn request(options: OracleRequestOptions) -> bool {
         let method = ByteString::from("request");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         
         // Add all the parameters
-        args.push(Any::from(options.url));
-        args.push(Any::from(options.filter));
-        args.push(Any::from(options.callback));
-        args.push(Any::from(options.callback_method));
-        args.push(Any::from(options.gas_for_response));
-        args.push(Any::from(options.timeout));
+        args.push(Any::byte_string(options.url));
+        args.push(Any::byte_string(options.filter));
+        
+        // Convert H160 to bytes for callback
+        let callback_bytes = ByteString::from(options.callback.0.as_ref());
+        args.push(Any::byte_string(callback_bytes));
+        
+        args.push(Any::byte_string(options.callback_method));
+        
+        // Need to convert these to integers, but Int256 is the only available integer type
+        // For gas_for_response (i64) and timeout (u64), we'll use integer conversion
+        args.push(Any::integer(options.gas_for_response));
+        args.push(Any::integer(options.timeout));
         
         if let Some(user_data) = options.user_data {
-            args.push(Any::from(user_data));
+            args.push(Any::byte_string(user_data));
         } else {
-            args.push(Any::new());
+            args.push(Any::null());
         }
         
         let result = Runtime::call_contract(
@@ -102,17 +110,18 @@ impl Oracle {
             args
         );
         
-        match bool::try_from(result) {
-            Ok(success) => success,
-            Err(_) => false,
+        if let Any::Boolean(success) = result {
+            success
+        } else {
+            false
         }
     }
     
     /// Set the minimum Oracle response fee
     pub fn set_price(price: Int256) -> bool {
         let method = ByteString::from("setPrice");
-        let mut args = Array::<Any>::new();
-        args.push(Any::from(price));
+        let mut args = Array::new();
+        args.push(Any::integer(price));
         
         let result = Runtime::call_contract(
             Oracle::hash(),
@@ -120,16 +129,17 @@ impl Oracle {
             args
         );
         
-        match bool::try_from(result) {
-            Ok(success) => success,
-            Err(_) => false,
+        if let Any::Boolean(success) = result {
+            success
+        } else {
+            false
         }
     }
     
-    /// Get the current Oracle response fee
+    /// Get the minimum Oracle response fee
     pub fn get_price() -> Int256 {
         let method = ByteString::from("getPrice");
-        let args = Array::<Any>::new();
+        let args = Array::new();
         
         let result = Runtime::call_contract(
             Oracle::hash(),
@@ -137,9 +147,10 @@ impl Oracle {
             args
         );
         
-        match Int256::try_from(result) {
-            Ok(price) => price,
-            Err(_) => Int256::zero(),
+        if let Any::Integer(price) = result {
+            price
+        } else {
+            Int256::from(0)
         }
     }
     
@@ -151,19 +162,19 @@ impl Oracle {
     /// Make a request to the Oracle service with simplified parameters
     pub fn request_simple(url: &str, filter: &str, callback: &str, user_data: Option<Any>, gas_for_response: i64) -> bool {
         let method = ByteString::from("request");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         
-        args.push(Any::from(ByteString::from(url)));
-        args.push(Any::from(ByteString::from(filter)));
-        args.push(Any::from(ByteString::from(callback)));
+        args.push(Any::byte_string(ByteString::from(url)));
+        args.push(Any::byte_string(ByteString::from(filter)));
+        args.push(Any::byte_string(ByteString::from(callback)));
         
         if let Some(data) = user_data {
-            args.push(Any::from(data));
+            args.push(data);
         } else {
-            args.push(Any::new());
+            args.push(Any::null());
         }
         
-        args.push(Any::from(gas_for_response));
+        args.push(Any::integer(gas_for_response));
         
         let result = Runtime::call_contract(
             Oracle::hash(),
@@ -171,9 +182,32 @@ impl Oracle {
             args
         );
         
-        match bool::try_from(result) {
-            Ok(success) => success,
-            Err(_) => false,
+        if let Any::Boolean(success) = result {
+            success
+        } else {
+            false
+        }
+    }
+    
+    /// Add a new URL to the accepted list
+    pub fn add_url(url: ByteString, gas_for_response: i64) -> bool {
+        let method = ByteString::from("addURL");
+        let mut args = Array::new();
+        
+        args.push(Any::byte_string(url));
+        // For gas_for_response (i64), we'll use integer conversion
+        args.push(Any::integer(gas_for_response));
+        
+        let result = Runtime::call_contract(
+            Oracle::hash(),
+            method,
+            args
+        );
+        
+        if let Any::Boolean(success) = result {
+            success
+        } else {
+            false
         }
     }
 }
@@ -206,8 +240,8 @@ impl<T> OracleRequestBuilder<T> {
             filter: None,
             callback: None,
             callback_method: None,
-            gas_for_response: 100_000_000, // Default gas
-            timeout: 10, // Default timeout in seconds
+            gas_for_response: MINIMUM_RESPONSE_FEE as i64,
+            timeout: 0,
             user_data: None,
             _phantom: PhantomData,
         }
@@ -240,22 +274,21 @@ impl<T> OracleRequestBuilder<T> {
     
     /// Set the user data for the request
     pub fn user_data(mut self, data: &[u8]) -> Self {
-        self.user_data = Some(ByteString::from_bytes(data));
+        self.user_data = Some(ByteString::from(data));
         self
     }
     
     /// Send the request
     pub fn send(self) -> bool {
-        // Ensure required fields are set
-        if self.filter.is_none() || self.callback.is_none() || self.callback_method.is_none() {
-            return false;
-        }
+        let callback = self.callback.unwrap_or_else(H160::zero);
+        let filter = self.filter.unwrap_or_else(|| ByteString::from(""));
+        let callback_method = self.callback_method.unwrap_or_else(|| ByteString::from(""));
         
         let options = OracleRequestOptions {
             url: self.url,
-            filter: self.filter.unwrap(),
-            callback: self.callback.unwrap(),
-            callback_method: self.callback_method.unwrap(),
+            filter,
+            callback,
+            callback_method,
             gas_for_response: self.gas_for_response,
             timeout: self.timeout,
             user_data: self.user_data,

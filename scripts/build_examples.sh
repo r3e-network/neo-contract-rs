@@ -1,95 +1,62 @@
 #!/bin/bash
-# Build all Neo N3 smart contract examples
+# Script for building all example contracts
+# This script finds all examples and builds them using the build_contract.sh script
 
-set -e  # Exit on error
+set -e
 
-# Define colors for output
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+EXAMPLES_DIR="$SCRIPT_DIR/../examples"
+BUILD_SCRIPT="$SCRIPT_DIR/build_contract.sh"
 
-# Make sure the bin directory exists
-mkdir -p bin
+# Make the build script executable
+chmod +x "$BUILD_SCRIPT"
 
-# Make sure the dist directory exists
-mkdir -p dist
+# Find all example directories that contain a Cargo.toml file
+echo "Finding examples..."
+EXAMPLES=()
+while IFS= read -r -d '' dir; do
+  if [ -f "$dir/Cargo.toml" ]; then
+    rel_path=$(realpath --relative-to="$SCRIPT_DIR/.." "$dir")
+    EXAMPLES+=("$rel_path")
+  fi
+done < <(find "$EXAMPLES_DIR" -type d -print0)
 
-# Build neo-wasm compiler if it doesn't exist
-if [ ! -f "bin/neo-wasm" ]; then
-    echo -e "${GREEN}Building neo-wasm compiler...${NC}"
-    
-    # Try to build the neo-wasm compiler
-    if ! scripts/build/build_neo_wasm.sh; then
-        echo -e "${RED}Failed to build neo-wasm compiler, trying to download or create a mock...${NC}"
-        scripts/build/download_neo_wasm.sh
-    fi
-fi
-
-# Function to build a specific example
-build_example() {
-    local example=$1
-    echo -e "${GREEN}Building example: $example${NC}"
-    
-    # Create output directory if it doesn't exist
-    mkdir -p "dist/$example"
-    
-    # Check if the example directory exists
-    if [ ! -d "examples/$example" ]; then
-        echo -e "${RED}Example directory not found: examples/$example${NC}"
-        return 1
-    fi
-    
-    # Build the example
-    cd "examples/$example"
-    if ! cargo build --target wasm32-unknown-unknown --release; then
-        echo -e "${RED}Failed to build example: $example${NC}"
-        cd ../..
-        return 1
-    fi
-    
-    # Copy the WASM file
-    cp "../../target/wasm32-unknown-unknown/release/$example.wasm" "../../dist/$example/"
-    
-    # Return to the root directory
-    cd ../..
-    
-    # Generate manifest and NEF files using neo-wasm
-    echo -e "${GREEN}Generating manifest and NEF files for $example...${NC}"
-    
-    # Create a default manifest file if it doesn't exist
-    if [ ! -f "dist/$example/$example.manifest.json" ]; then
-        cp templates/default_manifest.json "dist/$example/$example.manifest.json"
-        # Update the name in the manifest
-        sed -i "s/ExampleContract/$example/g" "dist/$example/$example.manifest.json"
-    fi
-    
-    # Convert WASM to NEF using neo-wasm
-    if ! ./bin/neo-wasm translate \
-        --input "dist/$example/$example.wasm" \
-        --manifest "dist/$example/$example.manifest.json" \
-        --output "dist/$example/$example.nef" \
-        --save-neo-ops; then
-        echo -e "${RED}Failed to generate NEF file for example: $example${NC}"
-        return 1
-    fi
-    
-    echo -e "${GREEN}Successfully built $example${NC}"
-    echo ""
-    return 0
-}
+# Count of successful and failed builds
+SUCCESS_COUNT=0
+FAILED_COUNT=0
+FAILED_EXAMPLES=()
 
 # Build each example
-echo -e "${GREEN}Starting to build all examples...${NC}"
-echo ""
+echo "Found ${#EXAMPLES[@]} examples to build."
+echo "=========================================="
 
-# Get all examples from the examples directory
-for example_dir in examples/*/; do
-    # Extract the example name from the directory path
-    example=$(basename "$example_dir")
-    if ! build_example "$example"; then
-        echo -e "${RED}Failed to build example: $example${NC}"
-    fi
+for example in "${EXAMPLES[@]}"; do
+  echo "Building example: $example"
+  
+  if "$BUILD_SCRIPT" "$example"; then
+    echo "✅ Success: $example"
+    ((SUCCESS_COUNT++))
+  else
+    echo "❌ Failed: $example"
+    FAILED_EXAMPLES+=("$example")
+    ((FAILED_COUNT++))
+  fi
+  
+  echo "------------------------------------------"
 done
 
-echo -e "${GREEN}All examples built successfully!${NC}"
-echo -e "Output files can be found in the dist/ directory."
+# Print summary
+echo "=========================================="
+echo "Build Summary:"
+echo "  ✅ Successful: $SUCCESS_COUNT"
+echo "  ❌ Failed: $FAILED_COUNT"
+
+if [ $FAILED_COUNT -gt 0 ]; then
+  echo "Failed examples:"
+  for failed in "${FAILED_EXAMPLES[@]}"; do
+    echo "  - $failed"
+  done
+  exit 1
+else
+  echo "All examples built successfully!"
+fi

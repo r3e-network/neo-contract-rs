@@ -1,10 +1,49 @@
 {
-  "name": "ExampleContract",
+  "name": "${CONTRACT_NAME}",
   "groups": [],
-  "features": {},
   "supportedstandards": [],
   "abi": {
-    "methods": [],
+    "methods": [
+      {
+        "name": "_deploy",
+        "parameters": [
+          {
+            "name": "data",
+            "type": "ByteArray"
+          },
+          {
+            "name": "update",
+            "type": "Boolean"
+          }
+        ],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "update",
+        "parameters": [
+          {
+            "name": "nefFile",
+            "type": "ByteArray"
+          },
+          {
+            "name": "manifest",
+            "type": "ByteArray"
+          }
+        ],
+        "returntype": "Boolean",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "destroy",
+        "parameters": [],
+        "returntype": "Boolean",
+        "offset": 0,
+        "safe": false
+      }
+    ],
     "events": []
   },
   "permissions": [
@@ -14,5 +53,9 @@
     }
   ],
   "trusts": [],
-  "extra": null
+  "extra": {
+    "Author": "Neo Contract Rust User",
+    "Email": "",
+    "Description": "Contract created with neo-contract-rs"
+  }
 }

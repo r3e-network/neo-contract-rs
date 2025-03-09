@@ -3,9 +3,16 @@
 
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::builtin::{H160, ByteString, Int256, Array, Any};
-use crate::Runtime;
-use neo_contract_proc_macros::safe;
+use crate::types::builtin::h160::H160;
+use crate::types::builtin::string::ByteString;
+use crate::types::builtin::int256::Int256;
+use crate::types::builtin::array::Array;
+use crate::types::builtin::any::Any;
+use crate::runtime::Runtime;
+// Import the prelude which should contain all necessary attributes
+use crate::prelude::*;
+// Import the neo_method attribute directly from the crate root
+use crate::neo_method;
 
 /// NEO native contract
 pub struct Neo;
@@ -25,7 +32,7 @@ impl Neo {
     /// Transfer NEO from one account to another
     pub fn transfer(from: H160, to: H160, amount: Int256, data: Option<ByteString>) -> bool {
         let method = ByteString::from("transfer");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         
         args.push(Any::from(from));
         args.push(Any::from(to));
@@ -34,7 +41,7 @@ impl Neo {
         if let Some(data_bs) = data {
             args.push(Any::from(data_bs));
         } else {
-            args.push(Any::new());
+            args.push(Any::null());
         }
         
         let result = Runtime::call_contract(
@@ -43,16 +50,18 @@ impl Neo {
             args
         );
         
-        match bool::try_from(result) {
-            Ok(success) => success,
-            Err(_) => false,
+        // Extract boolean value
+        if let Any::Boolean(success) = result {
+            success
+        } else {
+            false
         }
     }
     
     /// Register a candidate for consensus
     pub fn register_candidate(candidate_key: ByteString) -> bool {
         let method = ByteString::from("registerCandidate");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         args.push(Any::from(candidate_key));
         
         let result = Runtime::call_contract(
@@ -61,16 +70,18 @@ impl Neo {
             args
         );
         
-        match bool::try_from(result) {
-            Ok(success) => success,
-            Err(_) => false,
+        // Extract boolean value
+        if let Any::Boolean(success) = result {
+            success
+        } else {
+            false
         }
     }
     
     /// Unregister a candidate
     pub fn unregister_candidate(candidate_key: ByteString) -> bool {
         let method = ByteString::from("unregisterCandidate");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         args.push(Any::from(candidate_key));
         
         let result = Runtime::call_contract(
@@ -79,22 +90,24 @@ impl Neo {
             args
         );
         
-        match bool::try_from(result) {
-            Ok(success) => success,
-            Err(_) => false,
+        // Extract boolean value
+        if let Any::Boolean(success) = result {
+            success
+        } else {
+            false
         }
     }
     
     /// Vote for a candidate
     pub fn vote(account: H160, candidate_key: Option<ByteString>) -> bool {
         let method = ByteString::from("vote");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         args.push(Any::from(account));
         
         if let Some(candidate) = candidate_key {
             args.push(Any::from(candidate));
         } else {
-            args.push(Any::new());
+            args.push(Any::null());
         }
         
         let result = Runtime::call_contract(
@@ -103,84 +116,82 @@ impl Neo {
             args
         );
         
-        match bool::try_from(result) {
-            Ok(success) => success,
-            Err(_) => false,
+        // Extract boolean value
+        if let Any::Boolean(success) = result {
+            success
+        } else {
+            false
         }
     }
     
-    /// Get all candidates
-    pub fn get_all_candidates() -> Array<Any> {
+    /// Gets all candidates and their votes
+    // IMPORTANT: The #[safe] attribute should be present for manifest generation
+    // but is temporarily commented out due to compilation issues
+    // #[safe]
+    pub fn get_all_candidates() -> Array {
         let method = ByteString::from("getAllCandidates");
-        let args = Array::<Any>::new();
+        let result = Runtime::call_contract(script_hash(), method, Array::new());
         
-        let result = Runtime::call_contract(
-            Neo::hash(),
-            method,
-            args
-        );
-        
-        match Array::<Any>::try_from(result) {
-            Ok(candidates) => candidates,
-            Err(_) => Array::<Any>::new(),
+        // Extract array value
+        if let Any::Array(array) = result {
+            Array::from_vec(array)
+        } else {
+            Array::new()
         }
     }
     
-    /// Get candidates
-    pub fn get_candidates() -> Array<Any> {
+    /// Gets all registered candidates that meet the threshold for voting
+    // IMPORTANT: The #[safe] attribute should be present for manifest generation
+    // but is temporarily commented out due to compilation issues
+    // #[safe]
+    pub fn get_candidates() -> Array {
         let method = ByteString::from("getCandidates");
-        let args = Array::<Any>::new();
+        let result = Runtime::call_contract(script_hash(), method, Array::new());
         
-        let result = Runtime::call_contract(
-            Neo::hash(),
-            method,
-            args
-        );
-        
-        match Array::<Any>::try_from(result) {
-            Ok(candidates) => candidates,
-            Err(_) => Array::<Any>::new(),
+        // Extract array value
+        if let Any::Array(array) = result {
+            Array::from_vec(array)
+        } else {
+            Array::new()
         }
     }
     
-    /// Get committee
-    pub fn get_committee() -> Array<ByteString> {
+    /// Gets the current committee members
+    // IMPORTANT: The #[safe] attribute should be present for manifest generation
+    // but is temporarily commented out due to compilation issues
+    // #[safe]
+    pub fn get_committee() -> Array {
         let method = ByteString::from("getCommittee");
-        let args = Array::<Any>::new();
+        let result = Runtime::call_contract(script_hash(), method, Array::new());
         
-        let result = Runtime::call_contract(
-            Neo::hash(),
-            method,
-            args
-        );
-        
-        match Array::<ByteString>::try_from(result) {
-            Ok(committee) => committee,
-            Err(_) => Array::<ByteString>::new(),
+        // Extract array value
+        if let Any::Array(array) = result {
+            Array::from_vec(array)
+        } else {
+            Array::new()
         }
     }
     
-    /// Get next validators
-    pub fn get_next_block_validators() -> Array<ByteString> {
+    /// Gets the validators for the next block
+    // IMPORTANT: The #[safe] attribute should be present for manifest generation
+    // but is temporarily commented out due to compilation issues
+    // #[safe]
+    pub fn get_next_block_validators() -> Array {
         let method = ByteString::from("getNextBlockValidators");
-        let args = Array::<Any>::new();
+        let result = Runtime::call_contract(script_hash(), method, Array::new());
         
-        let result = Runtime::call_contract(
-            Neo::hash(),
-            method,
-            args
-        );
-        
-        match Array::<ByteString>::try_from(result) {
-            Ok(validators) => validators,
-            Err(_) => Array::<ByteString>::new(),
+        // Extract array value
+        if let Any::Array(array) = result {
+            Array::from_vec(array)
+        } else {
+            Array::new()
         }
     }
     
     /// Get candidate voter count
     pub fn get_candidate_vote(candidate_key: ByteString) -> Int256 {
         let method = ByteString::from("getCandidateVote");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         args.push(Any::from(candidate_key));
         
         let result = Runtime::call_contract(
@@ -189,16 +200,18 @@ impl Neo {
             args
         );
         
-        match Int256::try_from(result) {
-            Ok(vote_count) => vote_count,
-            Err(_) => Int256::zero(),
+        // Extract integer value
+        if let Any::Integer(value) = result {
+            value
+        } else {
+            Int256::zero()
         }
     }
     
     /// Get account that a voter has voted for
     pub fn get_candidate_by_voter(voter: H160) -> Option<ByteString> {
         let method = ByteString::from("getVoterCandidates");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         args.push(Any::from(voter));
         
         let result = Runtime::call_contract(
@@ -207,18 +220,23 @@ impl Neo {
             args
         );
         
-        match ByteString::try_from(result) {
-            Ok(candidate) => Some(candidate),
-            Err(_) => None,
+        // Extract ByteString value
+        if let Any::ByteString(value) = result {
+            Some(value)
+        } else {
+            None
         }
     }
     
     /// Get unclaimed GAS for an account
     pub fn get_unclaimed_gas(account: H160) -> Int256 {
         let method = ByteString::from("unclaimedGas");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         args.push(Any::from(account));
-        args.push(Any::from(Runtime::time()));
+        
+        // Use Int256::from_u64 for the time value
+        let time = Runtime::time();
+        args.push(Any::from(Int256::from_u64(time)));
         
         let result = Runtime::call_contract(
             Neo::hash(),
@@ -226,16 +244,18 @@ impl Neo {
             args
         );
         
-        match Int256::try_from(result) {
-            Ok(gas) => gas,
-            Err(_) => Int256::zero(),
+        // Extract integer value
+        if let Any::Integer(value) = result {
+            value
+        } else {
+            Int256::zero()
         }
     }
     
     /// Get symbol of the NEO token
     pub fn symbol() -> ByteString {
         let method = ByteString::from("symbol");
-        let args = Array::<Any>::new();
+        let args = Array::new();
         
         let result = Runtime::call_contract(
             Neo::hash(),
@@ -243,16 +263,18 @@ impl Neo {
             args
         );
         
-        match ByteString::try_from(result) {
-            Ok(symbol) => symbol,
-            Err(_) => ByteString::from("NEO"),
+        // Extract ByteString value
+        if let Any::ByteString(value) = result {
+            value
+        } else {
+            ByteString::from("NEO")
         }
     }
     
     /// Get decimals of the NEO token
     pub fn decimals() -> u8 {
         let method = ByteString::from("decimals");
-        let args = Array::<Any>::new();
+        let args = Array::new();
         
         let result = Runtime::call_contract(
             Neo::hash(),
@@ -260,16 +282,18 @@ impl Neo {
             args
         );
         
-        match u8::try_from(result) {
-            Ok(decimals) => decimals,
-            Err(_) => 0, // NEO has 0 decimals (integer)
+        // Extract integer value and convert to u8
+        if let Any::Integer(value) = result {
+            value.to_u64().unwrap_or(0) as u8
+        } else {
+            0 // NEO has 0 decimals (integer)
         }
     }
     
     /// Get total supply of the NEO token
     pub fn total_supply() -> Int256 {
         let method = ByteString::from("totalSupply");
-        let args = Array::<Any>::new();
+        let args = Array::new();
         
         let result = Runtime::call_contract(
             Neo::hash(),
@@ -277,16 +301,18 @@ impl Neo {
             args
         );
         
-        match Int256::try_from(result) {
-            Ok(supply) => supply,
-            Err(_) => Int256::zero(),
+        // Extract integer value
+        if let Any::Integer(value) = result {
+            value
+        } else {
+            Int256::zero()
         }
     }
     
-    /// Get balance of NEO for an account
+    /// Get the balance of an account
     pub fn balance_of(account: H160) -> Int256 {
         let method = ByteString::from("balanceOf");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         args.push(Any::from(account));
         
         let result = Runtime::call_contract(
@@ -295,16 +321,18 @@ impl Neo {
             args
         );
         
-        match Int256::try_from(result) {
-            Ok(balance) => balance,
-            Err(_) => Int256::zero(),
+        // Extract integer value
+        if let Any::Integer(value) = result {
+            value
+        } else {
+            Int256::zero()
         }
     }
     
-    /// Get gas per block
+    /// Get the gas per block
     pub fn get_gas_per_block() -> Int256 {
         let method = ByteString::from("getGasPerBlock");
-        let args = Array::<Any>::new();
+        let args = Array::new();
         
         let result = Runtime::call_contract(
             Neo::hash(),
@@ -312,16 +340,18 @@ impl Neo {
             args
         );
         
-        match Int256::try_from(result) {
-            Ok(gas_per_block) => gas_per_block,
-            Err(_) => Int256::zero(),
+        // Extract integer value
+        if let Any::Integer(value) = result {
+            value
+        } else {
+            Int256::zero()
         }
     }
     
-    /// Get register price
+    /// Get the register price
     pub fn get_register_price() -> i64 {
         let method = ByteString::from("getRegisterPrice");
-        let args = Array::<Any>::new();
+        let args = Array::new();
         
         let result = Runtime::call_contract(
             Neo::hash(),
@@ -329,16 +359,18 @@ impl Neo {
             args
         );
         
-        match i64::try_from(result) {
-            Ok(price) => price,
-            Err(_) => 0,
+        // Extract integer value and convert to i64
+        if let Any::Integer(value) = result {
+            value.to_i64().unwrap_or(0)
+        } else {
+            0
         }
     }
     
-    /// Get committee address
+    /// Get the committee address
     pub fn get_committee_address() -> H160 {
         let method = ByteString::from("getCommitteeAddress");
-        let args = Array::<Any>::new();
+        let args = Array::new();
         
         let result = Runtime::call_contract(
             Neo::hash(),
@@ -346,16 +378,23 @@ impl Neo {
             args
         );
         
-        match H160::try_from(result) {
-            Ok(address) => address,
-            Err(_) => H160::zero(),
+        // Extract ByteString value and convert to H160
+        if let Any::ByteString(value) = result {
+            // Try to convert the ByteString to H160
+            if value.len() == 20 {
+                H160::from_slice(value.as_bytes())
+            } else {
+                H160::zero()
+            }
+        } else {
+            H160::zero()
         }
     }
     
-    /// Get account state
+    /// Get the account state
     pub fn get_account_state(account: H160) -> Any {
         let method = ByteString::from("getAccountState");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         args.push(Any::from(account));
         
         let result = Runtime::call_contract(
@@ -364,6 +403,7 @@ impl Neo {
             args
         );
         
+        // Just return the result as is
         result
     }
 }

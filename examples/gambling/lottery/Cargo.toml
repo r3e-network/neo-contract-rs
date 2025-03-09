@@ -1,0 +1,10 @@
+[package]
+name = "neo-lottery"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+neo-contract = { path = "../../../neo-contract" }
+
+[lib]
+crate-type = ["cdylib"]

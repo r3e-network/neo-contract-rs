@@ -1,35 +1,59 @@
-# Neo Contract RS
+# Neo Contract Framework for Rust
 
-A comprehensive Rust framework for developing Neo N3 smart contracts. This framework allows developers to write Neo smart contracts using Rust, targeting the Neo N3 blockchain.
+A framework for writing Neo N3 smart contracts in Rust using an ink!-style API. This project enables Rust developers to build smart contracts for the Neo blockchain with familiar syntax and tooling.
+
+## Overview
+
+The Neo Contract Framework for Rust consists of three main components:
+
+1. **neo-contract**: The core library that provides the ink!-style API for writing smart contracts
+2. **neo-contract-proc-macros**: Procedural macros for the attribute-based interface
+3. **neo-compiler**: A compiler that converts WebAssembly to Neo VM bytecode
+
+The framework follows this compilation flow:
+```
+Rust code → WebAssembly → Neo VM bytecode → NEF file + Manifest
+```
 
 ## Features
 
-- **Native Rust Development**: Write Neo N3 smart contracts using Rust
-- **Ink!-Style Contract Definition**: Modern, declarative approach to contract development inspired by ink!
-- **Extensive Standard Library**: Built-in types and utilities for Neo N3 smart contract development
-- **NEP-17 Support**: First-class support for the NEP-17 fungible token standard
-- **Contract-to-Contract Calls**: Easy-to-use API for contract interaction
-- **Deploy & Test Tools**: Tools for deploying and testing smart contracts (coming soon)
+- **Rust-First Development**: Write smart contracts in pure Rust with familiar syntax
+- **ink!-Style API**: Use attribute macros like `#[contract]`, `#[storage]`, `#[method]`
+- **Storage Abstractions**: Type-safe storage primitives (StorageItem, StorageMap)
+- **Neo VM Compatibility**: Automatic conversion to Neo VM bytecode
+- **Safe Methods**: Mark methods as safe (read-only) for improved security
+- **ABI Generation**: Automatic generation of contract ABIs
+- **Standard Implementation Helpers**: Utilities for implementing NEP standards (NEP-17, NEP-11, etc.)
+- **Security Features**: Reentrancy protection, access control, and other security primitives
+- **Comprehensive Testing**: Tools and utilities for unit testing and integration testing
 
-## Getting Started
-
-### Prerequisites
-
-- Rust toolchain (install via [rustup](https://rustup.rs/))
-- Wasm target: `rustup target add wasm32-unknown-unknown`
+## Quick Start
 
 ### Installation
 
-Add the framework to your project:
+```bash
+# Install cargo dependencies
+cargo install cargo-make
+cargo install wasm-strip
 
-```toml
-[dependencies]
-neo-contract = { git = "https://github.com/R3E-Network/neo-contract-rs" }
+# Clone the repository
+git clone https://github.com/neo-project/neo-contract-rs
+cd neo-contract-rs
+
+# Build all components
+cargo build --release
 ```
 
-### Creating a New Contract
+### Writing a Smart Contract
 
-Create a new library project with the cdylib crate type:
+Create a new crate for your contract:
+
+```bash
+cargo new --lib my-contract
+cd my-contract
+```
+
+Add dependencies to your Cargo.toml:
 
 ```toml
 [package]
@@ -41,221 +65,137 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-neo-contract = { git = "https://github.com/R3E-Network/neo-contract-rs" }
-wee_alloc = "0.4.5"  # Lightweight memory allocator for WebAssembly
+neo-contract = { path = "../path/to/neo-contract" }
+
+[profile.release]
+lto = true
+opt-level = "z"
+overflow-checks = true
+panic = "abort"
+codegen-units = 1
 ```
 
-## Contract Development Approaches
-
-### Ink!-Style Attribute Macros (Recommended)
-
-Neo Contract RS now fully supports the ink!-style attribute macros for contract definition. This approach provides a more declarative and intuitive way to write smart contracts:
+Implement your contract:
 
 ```rust
-use neo_contract::prelude::ink_style::*;
+use neo_contract::prelude::*;
 
 #[contract]
-#[contract_author("Your Name")]
-#[contract_description("A description of your contract")]
-mod token_contract {
-    use super::*;
-    
-    #[storage]
-    pub struct Token {
-        total_supply: Int256,
-        balances: Map,
+pub struct MyContract {
+    counter: StorageItem<u64>,
+}
+
+#[contractimpl]
+impl MyContract {
+    #[constructor]
+    pub fn new() -> Self {
+        Self {
+            counter: StorageItem::new(0),
+        }
     }
     
-    impl Token {
-        #[constructor]
-        pub fn new(initial_supply: Int256) -> Self {
-            // Implementation...
-        }
-        
-        #[message]
-        pub fn balance_of(&self, account: H160) -> Int256 {
-            // Implementation...
-        }
-        
-        #[event]
-        pub fn transfer_event(from: H160, to: H160, amount: Int256) {}
+    #[method]
+    pub fn increment(&mut self) {
+        let current = self.counter.get();
+        self.counter.set(current + 1);
+    }
+    
+    #[method]
+    pub fn get_counter(&self) -> u64 {
+        self.counter.get()
     }
 }
 ```
 
-This approach is similar to the ink! framework for Substrate but tailored for Neo N3 smart contracts. See the [ink! style guide](docs/ink_style_guide.md) for more details.
+### Compiling and Deploying
 
-### Traditional Style (Legacy Support)
+1. Compile to WebAssembly:
+   ```bash
+   cargo build --target wasm32-unknown-unknown --release
+   ```
 
-The framework also supports a more traditional approach to contract development for backward compatibility:
+2. Convert to Neo N3 smart contract:
+   ```bash
+   neo-compiler compile \
+       target/wasm32-unknown-unknown/release/my_contract.wasm \
+       --output ./build
+   ```
 
-```rust
-#![no_std]
-#![no_main]
-
-extern crate alloc;
-extern crate wee_alloc;
-
-use neo_contract::{
-    builtin::{H160, Int256, ByteString},
-    Runtime,
-    contract_method, smart_contract,
-};
-
-// Global allocator
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-// Panic handler
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
-
-pub struct Counter;
-
-#[smart_contract]
-impl Counter {
-    contract_method!(pub fn increment() -> u32 {
-        // Implementation
-        42
-    });
-    
-    contract_method!(pub fn get() -> u32 {
-        // Implementation
-        42
-    });
-}
-```
-
-## Contract Attributes Reference
-
-### Contract Structure Attributes
-
-- `#[neo_contract::contract]` - Defines a Neo N3 smart contract module
-- `#[neo(storage)]` - Marks a struct as the contract's storage
-- `#[neo(constructor)]` - Marks a method as a contract constructor
-- `#[neo(message)]` - Marks a method as a contract message (callable from outside)
-- `#[neo(event)]` - Marks a method as a contract event
-
-### Contract Metadata Attributes
-
-- `#[neo_contract::manifest_extra("key", "value")]` - Adds custom metadata to the contract manifest
-- `#[neo_contract::contract_author("Author Name")]` - Specifies the contract author
-- `#[neo_contract::contract_email("email@example.com")]` - Specifies the author's email
-- `#[neo_contract::contract_description("Description")]` - Provides a contract description
-- `#[neo_contract::contract_version("1.0.0")]` - Specifies the contract version
-- `#[neo_contract::contract_source_code("https://github.com/...")]` - Links to the source code
-
-## Building and Deploying
-
-### Building
-
-Build your contract with the WebAssembly target:
-
-```bash
-cargo build --target wasm32-unknown-unknown --release
-```
-
-This will generate a WebAssembly binary in `target/wasm32-unknown-unknown/release/`.
-
-### Deploying (Coming Soon)
-
-We are working on deployment tools to make it easy to deploy your contracts to the Neo N3 blockchain.
+3. Deploy using Neo CLI or other tools:
+   ```
+   neo-cli deploy ./build/my_contract.nef ./build/my_contract.manifest.json
+   ```
 
 ## Examples
 
-Check the `examples` directory for complete contract examples:
+Check out the examples directory for various contract examples:
 
-- `ink_style_token_with_attributes` - A token contract using the ink!-style attribute macros
-- `nep17_token` - A NEP-17 token implementation
-- `contract_call` - Example of contract-to-contract calls
-- `csharp_features` - Examples of C# framework features in Rust
+- [Hello World](examples/hello_world/): A simple greeting contract
+- [NEP-17 Token](examples/nep17/): A fungible token implementation
+- [Contract Call](examples/contract_call/): Demonstrates calling other contracts
+- [ink! Style Token](examples/ink_style_token/): Token implementation using ink! style
+- [ink! Style Complete](examples/ink_style_complete/): A comprehensive contract example
 
-## Advanced Features
+## Documentation
 
-### Static Field Initialization
+For more detailed documentation:
 
-```rust
-// Initialize a Hash160 with a hex string
-#[neo::hash160("0x0123456789abcdef0123456789abcdef01234567")]
-static CONTRACT_HASH: H160 = H160::zero();
+- [Getting Started](docs/getting_started.md): Introduction to the framework
+- [Storage and Variables](docs/storage_and_variables.md): Guide to storage and state management
+- [NEP-17 Tutorial](docs/nep17_tutorial.md): Creating fungible tokens
+- [Testing Guide](docs/testing_guide.md): Comprehensive testing strategies
+- [Neo Compiler Implementation](docs/neo_compiler_implementation.md): Details on the WASM to Neo VM compiler
+- [ink! Style Guide](docs/ink_style_guide.md): Patterns for ink!-style smart contracts
+- [Deployment Guide](docs/deployment_guide.md): Deploying contracts to Neo networks
+- [Safe Methods](docs/safe_methods.md): Using and implementing safe (read-only) methods
 
-// Initialize an integer with a value
-#[neo::integer("1000000")]
-static AMOUNT: Int256 = Int256::zero();
-```
+## Architecture
 
-### Contract-to-Contract Calls
+The framework architecture consists of:
 
-```rust
-// Call another contract
-let result = Runtime::call_contract(
-    &target_contract_hash,
-    "method_name",
-    &args,
-    CallFlags::All
-);
-```
+1. **neo-contract**:
+   - Storage abstractions for handling on-chain data
+   - Runtime interaction with the Neo blockchain
+   - Type conversions and serialization
+   - Helper traits for standard implementations
+   - Security utilities and access control
+
+2. **neo-contract-proc-macros**:
+   - Contract attribute macros for ink!-style contracts
+   - Storage struct processing for state management
+   - Method visibility and safety attributes
+   - ABI generation for contract interfaces
+   - Event definition and emission
+
+3. **neo-compiler**:
+   - WebAssembly parsing and analysis
+   - WASM to Neo VM bytecode conversion
+   - Intermediate representation optimization
+   - NEF file generation for deployment
+   - Contract manifest creation with permissions and standards
+
+## Testing
+
+The framework includes comprehensive testing utilities to ensure your smart contracts are reliable and secure:
+
+- **Unit Testing**: Test individual contract methods and components
+- **Integration Testing**: Test interactions between multiple contracts
+- **Mock Environment**: Test with mocked blockchain state and operations
+- **Storage Testing**: Verify storage operations without deploying to a blockchain
+- **Security Testing**: Test reentrancy protection, access control, and more
+
+For more details, see the [Testing Guide](docs/testing_guide.md).
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
+
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## NeoBurger Example
+## Acknowledgements
 
-The NeoBurger example demonstrates a complex contract system for Neo N3 governance. It consists of three contracts:
-
-1. **BurgerNEO** - Core contract that handles NEO staking and bNEO token issuance
-   - Implements NEP-17 token standard
-   - Manages NEO deposits and withdrawals
-   - Distributes GAS rewards to bNEO holders
-
-2. **BurgerAgent** - Agent contract that handles voting and NEO management
-   - Manages voting for consensus nodes
-   - Handles NEO transfers on behalf of the core contract
-   - Claims GAS rewards and sends them to the core contract
-
-3. **GovernanceToken (NOBUG)** - Governance token contract for the NeoBurger system
-   - Implements NEP-17 token standard
-   - Provides governance functionality for the NeoBurger ecosystem
-   - Allows token holders to submit and execute proposals
-
-### Building the NeoBurger Example
-
-```bash
-# Build the core contract
-cd examples/neoburger
-cargo build --release
-
-# Build the agent contract
-cd ../neoburger_agent
-cargo build --release
-
-# Build the governance token contract
-cd ../neoburger_governance
-cargo build --release
-```
-
-### Features Demonstrated
-
-- **ink!-style Attribute Macros**: Using the new unified attribute macro system
-- **NEP-17 Token Standard**: Implementation of the Neo N3 token standard
-- **Storage Management**: Efficient storage of balances, rewards, and governance data
-- **Voting Mechanism**: System for voting on Neo consensus nodes
-- **Reward Distribution**: GAS reward distribution to token holders
-- **Agent Contract System**: Delegation of NEO management to agent contracts
-- **Governance Functionality**: Proposal submission and execution system
-
-## Neoburger Example Contracts
-
-The repository includes example contracts for the Neoburger ecosystem:
-- **neoburger**: Main contract for the Neoburger platform
-- **neoburger_agent**: Agent contract for Neoburger operations
-- **neoburger_governance**: Governance contract for Neoburger ecosystem
-
-These examples demonstrate complex contract interactions and governance mechanisms.
+This project is inspired by [ink!](https://github.com/paritytech/ink) for Substrate and the Neo blockchain community.

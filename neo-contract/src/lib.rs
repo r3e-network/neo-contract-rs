@@ -1,89 +1,140 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
+//! Neo Contract Rust Framework
+//!
+//! This crate provides a framework for developing Neo N3 smart contracts in Rust.
+//! It is inspired by the ink! smart contract framework for Substrate.
 
 #![no_std]
-#![allow(unused_variables)]
+#![cfg_attr(feature = "std", feature(alloc_error_handler))]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::type_complexity)]
+#![recursion_limit = "1024"]
 
 extern crate alloc;
 
+// Re-export core crates
+pub use alloc::{boxed, collections, fmt, string, vec};
+
+// Modules
 pub mod attributes;
 pub mod call_flags;
-pub mod contract;
-pub mod crypto;
-pub mod env;
-pub mod events;
+pub mod codec;
 pub mod error;
+pub mod events;
 pub mod find_options;
+pub mod role;
+pub mod static_values;
+pub mod transaction_attribute_type;
+
+// Core functionality
+pub mod types;
+pub mod storage;
+pub mod env;
+pub mod num256;
+pub mod policy;
+pub mod utils;
 pub mod macros;
 pub mod runtime;
-pub mod security;
-pub mod policy;
-pub mod profiling;
-pub mod role;
-pub mod serialize;
-pub mod static_values;
-pub mod storage;
+
+// Token standards and implementations
 pub mod token;
-pub mod transaction_attribute_type;
-pub mod types;
-pub mod utils;
 
-// Re-exports
-pub use call_flags::CallFlags;
-pub use contract::{nep11, nep17, native};
-pub use crypto::*;
-pub use env::{contract as env_contract, contract_non_wasm, syscall, syscall_non_wasm};
-pub use find_options::FindOptions;
-pub use role::Role;
-pub use contract::native::role_management::RoleManagement;
-// Re-export macros
-pub use macros::*;
-pub use runtime::Runtime;
-pub use static_values::*;
-pub use storage::*;
-pub use types::{block, builtin as types_builtin, bytes, context, key, notification, signer, storage as types_storage, tx};
-pub use utils::*;
-pub use events::*;
-pub use error::*;
-pub use security::*;
+// Type re-exports for convenience
+pub use types::builtin::h160::H160;
+pub use types::builtin::h256::H256;
+pub use types::builtin::string::ByteString;
+pub use types::builtin::int256::Int256;
+pub use types::builtin::array::Array;
+pub use types::builtin::any::Any;
+pub use types::builtin::map::Map;
 
-// Re-export the reentrancy guard macro
-pub use reentrancy_guard;
-pub use no_reentrant_method;
-pub use ensure;
-pub use require_witness;
-pub use define_event;
+// Module re-exports for convenience - env module already has these
+// pub use env::{storage, runtime as env_runtime, blockchain, contract};
+// Re-export Runtime struct for backward compatibility
+pub use self::runtime::Runtime;
 
-// Re-export proc macros
-pub use neo_contract_proc_macros::{
-    export_trait, smart_contract, 
-    // Core ink!-style attributes
-    contract, storage, constructor, message, event,
-    // Metadata attributes
-    contract_author, contract_email, contract_description, contract_version,
-    manifest_extra, contract_permission, contract_trust, supported_standards,
-    // Static field attributes
-    byte_array, hash160, integer, public_key, string, contract_hash,
-    // Security attributes
-    safe, no_reentrant, no_reentrant_method, stored,
-    // Function attributes
-    modifier, calling_convention, op_code, syscall
-};
+// Contract module
+pub mod contract;
 
-// Re-export builtin types for easier access
-pub mod builtin {
+// Security module
+pub mod security;
+
+// Crypto module
+pub mod crypto;
+
+// Profiling module
+pub mod profiling;
+
+// Prelude module
+pub mod prelude {
+    //! The prelude module exports all the most commonly used types and functions.
+    //! This allows users to import everything they need with a single import.
+    
+    // Import env modules
+    pub use crate::env::{storage, runtime, blockchain, contract};
+    // Import crypto and system directly from crate
+    pub use crate::crypto;
+    
     pub use crate::types::builtin::h160::H160;
     pub use crate::types::builtin::h256::H256;
-    pub use crate::types::builtin::int256::Int256;
     pub use crate::types::builtin::string::ByteString;
+    pub use crate::types::builtin::int256::Int256;
     pub use crate::types::builtin::array::Array;
     pub use crate::types::builtin::any::Any;
     pub use crate::types::builtin::map::Map;
+    
+    pub use crate::call_flags::CallFlags;
+    pub use crate::error::{Error, ErrorCode, Result};
+    pub use crate::events;
+    pub use crate::find_options::FindOptions;
+    pub use crate::role::Role;
+    
+    // Storage modules are now properly implemented
+    pub use crate::storage::{
+        Context as StorageContext,  // Import Context directly from storage module
+        item::Item,
+        map::Map as StorageMap,
+        versioned::VersionedItem,
+        iter::{StorageIter, StorageIterator},
+        pagination::{Page, Paginator},
+    };
+    
+    pub use crate::macros::*;
+    
+    // Attribute macros
+    pub use neo_contract_proc_macros::{
+        contract,
+        contract_permission,
+        contract_trust,
+        manifest_extra,
+        supported_standards,
+        no_reentrant,
+        safe,
+    };
+    
+    // Commonly used alloc types
+    pub use alloc::{string::String, vec::Vec, boxed::Box};
 }
 
-// Re-export TransactionAttributeType and FindOptions
-pub use transaction_attribute_type::TransactionAttributeType;
-pub use find_options::FindOptions;
+// This section is needed for the proc macros
+pub use neo_contract_proc_macros::{
+    contract,
+    contract_permission,
+    contract_trust,
+    manifest_extra,
+    supported_standards,
+    no_reentrant,
+    safe,
+};
 
-// Add prelude module
-pub mod prelude;
+// Add a re-export for neo_method to make it available for the safe attribute
+#[doc(hidden)]
+pub use neo_contract_proc_macros::method as neo_method;
+
+// Re-export for serialization
+pub mod serialize;
+
+// Export test utilities (only in test builds)
+#[cfg(test)]
+pub mod test_utils;

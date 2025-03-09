@@ -8,9 +8,9 @@
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::builtin::{H160, ByteString};
-use crate::Runtime;
-use crate::storage::{StorageMap, Storable};
+use crate::prelude::{H160, ByteString, StorageMap};
+use crate::runtime::Runtime;
+use crate::policy::voting::Storable;
 use crate::error::{Error, ErrorCode, Result};
 use crate::policy::Policy;
 

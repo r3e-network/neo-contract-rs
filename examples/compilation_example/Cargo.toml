@@ -1,0 +1,12 @@
+[package]
+name = "compilation_example"
+version = "0.1.0"
+edition = "2021"
+authors = ["Neo Project"]
+description = "Example of Neo contract compilation from Rust to Neo VM"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+neo-contract = { path = "../../neo-contract" }

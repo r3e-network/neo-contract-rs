@@ -1,0 +1,24 @@
+[package]
+name = "hello_world"
+version = "0.1.0"
+edition = "2021"
+authors = ["Neo Contract Rust Team"]
+description = "A simple hello world example using Neo Contract Rust"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+neo-contract = { path = "../../neo-contract" }
+
+[features]
+std = ["neo-contract/std"]
+default = ["std"]
+
+[profile.release]
+opt-level = "z"
+debug = 0
+strip = "symbols"
+lto = true
+codegen-units = 1
+panic = "abort"

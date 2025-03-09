@@ -1,155 +1,265 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
+//! Error handling for Neo Contract RS
+//!
+//! This module provides error handling functionality for Neo smart contracts.
 
-//! Error handling for Neo smart contracts
-//! This module provides standardized error types and helper functions
-//! for handling errors in Neo smart contracts.
-
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use core::fmt;
 
-/// Standard error codes for Neo smart contracts
+/// Error codes for Neo Contract RS
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u32)]
+#[repr(u8)]
 pub enum ErrorCode {
-    /// No error
-    None = 0,
+    /// Unknown error
+    Unknown = 0,
     
     /// Invalid argument
     InvalidArgument = 1,
     
-    /// Unauthorized operation
-    Unauthorized = 2,
-    
-    /// Insufficient funds
-    InsufficientFunds = 3,
-    
-    /// Storage error
-    StorageError = 4,
-    
-    /// Contract call error
-    ContractCallError = 5,
+    /// Invalid format
+    InvalidFormat = 2,
     
     /// Invalid state
-    InvalidState = 6,
+    InvalidState = 3,
     
-    /// Overflow
-    Overflow = 7,
+    /// Not found
+    NotFound = 4,
     
-    /// No signature
-    NoSignature = 8,
+    /// Unauthorized
+    Unauthorized = 5,
     
-    /// Reentrancy
-    Reentrancy = 9,
+    /// Insufficient funds
+    InsufficientFunds = 6,
     
-    /// Custom error
-    Custom = 10000,
+    /// Overflow error
+    OverflowError = 7,
+    
+    /// Underflow error
+    UnderflowError = 8,
+    
+    /// Encoding error
+    EncodingError = 9,
+    
+    /// Decoding error
+    DecodingError = 10,
+    
+    /// Execution error
+    ExecutionError = 11,
+    
+    /// Storage error
+    StorageError = 12,
+    
+    /// VM error
+    VMError = 13,
+    
+    /// Contract error
+    ContractError = 14,
+    
+    /// System error
+    SystemError = 15,
+    
+    /// Reentrancy error
+    ReentrancyError = 16,
+    
+    /// Validation error
+    ValidationError = 17,
+    
+    /// Permission denied
+    PermissionDenied = 18,
+    
+    /// Assertion error
+    AssertionError = 19,
 }
 
-/// Result type for Neo contract operations
-pub type Result<T> = core::result::Result<T, Error>;
+impl ErrorCode {
+    /// Returns a human-readable name for the error code
+    pub fn name(&self) -> &'static str {
+        match self {
+            ErrorCode::Unknown => "Unknown",
+            ErrorCode::InvalidArgument => "InvalidArgument",
+            ErrorCode::InvalidFormat => "InvalidFormat",
+            ErrorCode::InvalidState => "InvalidState",
+            ErrorCode::NotFound => "NotFound",
+            ErrorCode::Unauthorized => "Unauthorized",
+            ErrorCode::InsufficientFunds => "InsufficientFunds",
+            ErrorCode::OverflowError => "OverflowError",
+            ErrorCode::UnderflowError => "UnderflowError",
+            ErrorCode::EncodingError => "EncodingError",
+            ErrorCode::DecodingError => "DecodingError",
+            ErrorCode::ExecutionError => "ExecutionError",
+            ErrorCode::StorageError => "StorageError",
+            ErrorCode::VMError => "VMError",
+            ErrorCode::ContractError => "ContractError",
+            ErrorCode::SystemError => "SystemError",
+            ErrorCode::ReentrancyError => "ReentrancyError",
+            ErrorCode::ValidationError => "ValidationError",
+            ErrorCode::PermissionDenied => "PermissionDenied",
+            ErrorCode::AssertionError => "AssertionError",
+        }
+    }
+}
 
-/// Error type for Neo contract operations
+impl fmt::Display for ErrorCode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name())
+    }
+}
+
+/// Error type for Neo Contract RS
 #[derive(Debug, Clone)]
 pub struct Error {
-    /// Error code
-    pub code: ErrorCode,
+    /// The error code
+    code: ErrorCode,
     
-    /// Error message
-    pub message: String,
+    /// The error message
+    message: Option<String>,
 }
 
 impl Error {
-    /// Create a new error
-    pub fn new(code: ErrorCode, message: &str) -> Self {
-        Self {
+    /// Creates a new error with the given code
+    pub fn new(code: ErrorCode) -> Self {
+        Error {
             code,
-            message: message.to_string(),
+            message: None,
         }
     }
     
-    /// Create a standard unauthorized error
+    /// Creates a new error with the given code and message
+    pub fn with_message(code: ErrorCode, message: impl Into<String>) -> Self {
+        Error {
+            code,
+            message: Some(message.into()),
+        }
+    }
+    
+    /// Gets the error code
+    pub fn code(&self) -> ErrorCode {
+        self.code
+    }
+    
+    /// Gets the error message
+    pub fn message(&self) -> Option<&str> {
+        self.message.as_deref()
+    }
+    
+    /// Sets the error message
+    pub fn set_message(&mut self, message: impl Into<String>) {
+        self.message = Some(message.into());
+    }
+    
+    /// Clears the error message
+    pub fn clear_message(&mut self) {
+        self.message = None;
+    }
+    
+    /// Creates an unknown error
+    pub fn unknown() -> Self {
+        Self::new(ErrorCode::Unknown)
+    }
+    
+    /// Creates an invalid argument error
+    pub fn invalid_argument() -> Self {
+        Self::new(ErrorCode::InvalidArgument)
+    }
+    
+    /// Creates an invalid format error
+    pub fn invalid_format() -> Self {
+        Self::new(ErrorCode::InvalidFormat)
+    }
+    
+    /// Creates an invalid state error
+    pub fn invalid_state() -> Self {
+        Self::new(ErrorCode::InvalidState)
+    }
+    
+    /// Creates a not found error
+    pub fn not_found() -> Self {
+        Self::new(ErrorCode::NotFound)
+    }
+    
+    /// Creates an unauthorized error
     pub fn unauthorized() -> Self {
-        Self::new(ErrorCode::Unauthorized, "Unauthorized operation")
+        Self::new(ErrorCode::Unauthorized)
     }
     
-    /// Create a standard insufficient funds error
+    /// Creates an insufficient funds error
     pub fn insufficient_funds() -> Self {
-        Self::new(ErrorCode::InsufficientFunds, "Insufficient funds")
+        Self::new(ErrorCode::InsufficientFunds)
     }
     
-    /// Create a standard invalid argument error
-    pub fn invalid_argument(msg: &str) -> Self {
-        Self::new(ErrorCode::InvalidArgument, msg)
+    /// Creates an overflow error
+    pub fn overflow() -> Self {
+        Self::new(ErrorCode::OverflowError)
     }
     
-    /// Create a storage error
-    pub fn storage_error() -> Self {
-        Self::new(ErrorCode::StorageError, "Storage operation failed")
+    /// Creates an underflow error
+    pub fn underflow() -> Self {
+        Self::new(ErrorCode::UnderflowError)
     }
     
-    /// Create a contract call error
-    pub fn contract_call_error(msg: &str) -> Self {
-        Self::new(ErrorCode::ContractCallError, msg)
+    /// Creates an encoding error
+    pub fn encoding() -> Self {
+        Self::new(ErrorCode::EncodingError)
     }
     
-    /// Create a custom error
-    pub fn custom(msg: &str) -> Self {
-        Self::new(ErrorCode::Custom, msg)
+    /// Creates a decoding error
+    pub fn decoding() -> Self {
+        Self::new(ErrorCode::DecodingError)
     }
     
-    /// Assert a condition or return an error
-    pub fn assert(condition: bool, code: ErrorCode, message: &str) -> Result<()> {
-        if condition {
-            Ok(())
-        } else {
-            Err(Self::new(code, message))
-        }
+    /// Creates an execution error
+    pub fn execution() -> Self {
+        Self::new(ErrorCode::ExecutionError)
     }
     
-    /// Check witness or return unauthorized error
-    pub fn check_witness(address: &crate::builtin::H160) -> Result<()> {
-        if crate::Runtime::check_witness(address.clone()) {
-            Ok(())
-        } else {
-            Err(Self::unauthorized())
-        }
+    /// Creates a storage error
+    pub fn storage() -> Self {
+        Self::new(ErrorCode::StorageError)
+    }
+    
+    /// Creates a VM error
+    pub fn vm() -> Self {
+        Self::new(ErrorCode::VMError)
+    }
+    
+    /// Creates a contract error
+    pub fn contract() -> Self {
+        Self::new(ErrorCode::ContractError)
+    }
+    
+    /// Creates a system error
+    pub fn system() -> Self {
+        Self::new(ErrorCode::SystemError)
+    }
+    
+    /// Creates a reentrancy error
+    pub fn reentrancy() -> Self {
+        Self::new(ErrorCode::ReentrancyError)
+    }
+    
+    /// Creates a validation error
+    pub fn validation() -> Self {
+        Self::new(ErrorCode::ValidationError)
+    }
+    
+    /// Creates a permission denied error
+    pub fn permission_denied() -> Self {
+        Self::new(ErrorCode::PermissionDenied)
+    }
+    
+    /// Creates an assertion error
+    pub fn assertion() -> Self {
+        Self::new(ErrorCode::AssertionError)
     }
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Error {}: {}", self.code as u32, self.message)
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self.message {
+            Some(message) => write!(f, "{}: {}", self.code, message),
+            None => write!(f, "{}", self.code),
+        }
     }
 }
 
-// Helper macros for error handling
-#[macro_export]
-macro_rules! ensure {
-    ($condition:expr, $error:expr) => {
-        if !($condition) {
-            return Err($error);
-        }
-    };
-    
-    ($condition:expr, $error_code:expr, $message:expr) => {
-        if !($condition) {
-            return Err($crate::error::Error::new($error_code, $message));
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! require_witness {
-    ($address:expr) => {
-        $crate::error::Error::check_witness(&$address)?;
-    };
-}
-
-/// Revert execution with an error
-pub fn revert(code: ErrorCode, message: &str) -> ! {
-    // Log the error
-    let error = Error::new(code, message);
-    // In a real contract, this would revert the execution
-    panic!("{}", error);
-}
+/// Result type for Neo Contract RS
+pub type Result<T> = core::result::Result<T, Error>;

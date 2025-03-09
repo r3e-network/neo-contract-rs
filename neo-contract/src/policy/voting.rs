@@ -4,14 +4,20 @@
 //! Voting mechanism for decentralized governance
 //! This module provides tools for creating and managing votes and proposals
 
+use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::builtin::{H160, ByteString, Int256, Array, Any};
-use crate::Runtime;
-use crate::storage::{StorageMap, Storable};
+
+// Fix imports to use prelude for all types
+use crate::prelude::{H160, ByteString, Int256, Array, Any, StorageMap};
+use crate::runtime::Runtime;
 use crate::error::{Error, ErrorCode, Result};
-use crate::policy::Policy;
-use crate::contract::Contract;
+
+// Define Storable trait here since it's not accessible from storage
+pub trait Storable {
+    fn to_storage(&self) -> ByteString;
+    fn from_storage(data: &ByteString) -> Option<Self> where Self: Sized;
+}
 
 /// Represents a vote value
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -118,7 +124,7 @@ pub struct ProposalAction {
     /// Method to call
     method: ByteString,
     /// Arguments to pass
-    args: Array<Any>,
+    args: Array,
 }
 
 /// Voting system for governance
@@ -150,8 +156,8 @@ impl VotingSystem {
         actions: Vec<ProposalAction>
     ) -> Result<()> {
         // Check if caller is the proposer
-        if !Runtime::check_witness(proposer.clone()) {
-            return Err(Error::new(ErrorCode::Unauthorized, "Proposer must be the caller"));
+        if !Runtime::check_witness(&proposer) {
+            return Err(Error::Unauthorized("Proposer must be the caller"));
         }
         
         // Check if proposal already exists
@@ -159,7 +165,7 @@ impl VotingSystem {
         let proposals_map = self.get_proposals_map();
         
         if proposals_map.get(&proposal_id).is_some() {
-            return Err(Error::new(ErrorCode::AlreadyExists, "Proposal already exists"));
+            return Err(Error::AlreadyExists("Proposal already exists"));
         }
         
         // Create the proposal
@@ -186,8 +192,8 @@ impl VotingSystem {
     /// Vote on a proposal
     pub fn vote(&self, proposal_id: &str, voter: H160, vote: VoteValue) -> Result<()> {
         // Check if caller is the voter
-        if !Runtime::check_witness(voter.clone()) {
-            return Err(Error::new(ErrorCode::Unauthorized, "Voter must be the caller"));
+        if !Runtime::check_witness(&voter) {
+            return Err(Error::Unauthorized("Voter must be the caller"));
         }
         
         // Get the proposal
@@ -198,16 +204,16 @@ impl VotingSystem {
         let current_block = self.get_current_block_height();
         
         if current_block < proposal.start_block {
-            return Err(Error::new(ErrorCode::InvalidState, "Voting has not started yet"));
+            return Err(Error::InvalidState("Voting has not started yet"));
         }
         
         if current_block > proposal.end_block {
-            return Err(Error::new(ErrorCode::InvalidState, "Voting has ended"));
+            return Err(Error::InvalidState("Voting has ended"));
         }
         
         // Check if the proposal is still pending
         if proposal.status != ProposalStatus::Pending {
-            return Err(Error::new(ErrorCode::InvalidState, "Proposal is not pending"));
+            return Err(Error::InvalidState("Proposal is not pending"));
         }
         
         // Record the vote
@@ -227,14 +233,14 @@ impl VotingSystem {
         
         // Check if the proposal is still pending
         if proposal.status != ProposalStatus::Pending {
-            return Err(Error::new(ErrorCode::InvalidState, "Proposal is not pending"));
+            return Err(Error::InvalidState("Proposal is not pending"));
         }
         
         // Check if the voting period has ended
         let current_block = self.get_current_block_height();
         
         if current_block <= proposal.end_block {
-            return Err(Error::new(ErrorCode::InvalidState, "Voting period has not ended"));
+            return Err(Error::InvalidState("Voting period has not ended"));
         }
         
         // Calculate the results
@@ -274,7 +280,7 @@ impl VotingSystem {
         
         // Check if the proposal is accepted
         if proposal.status != ProposalStatus::Accepted {
-            return Err(Error::new(ErrorCode::InvalidState, "Proposal is not accepted"));
+            return Err(Error::InvalidState("Proposal is not accepted"));
         }
         
         // Execute all actions
@@ -289,7 +295,7 @@ impl VotingSystem {
             let success = bool::try_from(result).unwrap_or(false);
             
             if !success {
-                return Err(Error::new(ErrorCode::ContractCallError, "Action execution failed"));
+                return Err(Error::ContractCallError("Action execution failed"));
             }
         }
         
@@ -309,13 +315,13 @@ impl VotingSystem {
         let mut proposal = self.get_proposal(&proposal_id_bs)?;
         
         // Check if the caller is the proposer
-        if !Runtime::check_witness(proposal.proposer.clone()) {
-            return Err(Error::new(ErrorCode::Unauthorized, "Only the proposer can cancel"));
+        if !Runtime::check_witness(&proposal.proposer) {
+            return Err(Error::Unauthorized("Only the proposer can cancel"));
         }
         
         // Check if the proposal is still pending
         if proposal.status != ProposalStatus::Pending {
-            return Err(Error::new(ErrorCode::InvalidState, "Proposal is not pending"));
+            return Err(Error::InvalidState("Proposal is not pending"));
         }
         
         // Update the proposal status
@@ -335,7 +341,7 @@ impl VotingSystem {
         if let Some(proposal) = proposals_map.get(proposal_id) {
             Ok(proposal)
         } else {
-            Err(Error::new(ErrorCode::NotFound, "Proposal not found"))
+            Err(Error::NotFound("Proposal not found"))
         }
     }
     
@@ -352,7 +358,7 @@ impl VotingSystem {
         StorageMap::new(key.as_bytes())
     }
     
-    /// Helper method to get the votes map for a proposal
+    /// Helper method to get the votes map
     fn get_votes_map(&self, proposal_id: &str) -> StorageMap<H160, VoteValue> {
         let key = format!("{}:votes:{}", self.prefix, proposal_id);
         StorageMap::new(key.as_bytes())
@@ -387,7 +393,7 @@ impl VotingSystem {
         if let Some(token_hash) = self.voting_token {
             // Call the token contract to get the balance
             let method = ByteString::from("balanceOf");
-            let mut args = Array::<Any>::new();
+            let mut args = Array::new();
             args.push(Any::from(address.clone()));
             
             let result = Runtime::call_contract(
@@ -411,7 +417,7 @@ impl VotingSystem {
         if let Some(token_hash) = self.voting_token {
             // Call the token contract to get the total supply
             let method = ByteString::from("totalSupply");
-            let args = Array::<Any>::new();
+            let args = Array::new();
             
             let result = Runtime::call_contract(
                 token_hash,
@@ -435,7 +441,7 @@ impl VotingSystem {
         
         // Call the Ledger contract to get the block
         let method = ByteString::from("getBlock");
-        let mut args = Array::<Any>::new();
+        let mut args = Array::new();
         args.push(Any::from(block_hash));
         
         let result = Runtime::call_contract(
@@ -450,7 +456,7 @@ impl VotingSystem {
         let height_result = Runtime::call_contract(
             crate::contract::native::ledger::Ledger::hash(),
             height_method,
-            Array::<Any>::new()
+            Array::new()
         );
         
         match u32::try_from(height_result) {
@@ -462,7 +468,7 @@ impl VotingSystem {
     /// Emit a proposal created event
     fn emit_proposal_created(&self, proposal: &Proposal) {
         let event_name = ByteString::from("ProposalCreated");
-        let mut event_data = Array::<Any>::new();
+        let mut event_data = Array::new();
         
         event_data.push(Any::from(proposal.id.clone()));
         event_data.push(Any::from(proposal.description.clone()));
@@ -476,7 +482,7 @@ impl VotingSystem {
     /// Emit a vote cast event
     fn emit_vote_cast(&self, proposal_id: &str, voter: H160, vote: VoteValue) {
         let event_name = ByteString::from("VoteCast");
-        let mut event_data = Array::<Any>::new();
+        let mut event_data = Array::new();
         
         event_data.push(Any::from(ByteString::from(proposal_id)));
         event_data.push(Any::from(voter));
@@ -488,7 +494,7 @@ impl VotingSystem {
     /// Emit a proposal finished event
     fn emit_proposal_finished(&self, proposal: &Proposal, passed: bool) {
         let event_name = ByteString::from("ProposalFinished");
-        let mut event_data = Array::<Any>::new();
+        let mut event_data = Array::new();
         
         event_data.push(Any::from(proposal.id.clone()));
         event_data.push(Any::from(if passed { 1 } else { 0 }));
@@ -499,7 +505,7 @@ impl VotingSystem {
     /// Emit a proposal executed event
     fn emit_proposal_executed(&self, proposal: &Proposal) {
         let event_name = ByteString::from("ProposalExecuted");
-        let mut event_data = Array::<Any>::new();
+        let mut event_data = Array::new();
         
         event_data.push(Any::from(proposal.id.clone()));
         
@@ -509,7 +515,7 @@ impl VotingSystem {
     /// Emit a proposal canceled event
     fn emit_proposal_canceled(&self, proposal: &Proposal) {
         let event_name = ByteString::from("ProposalCanceled");
-        let mut event_data = Array::<Any>::new();
+        let mut event_data = Array::new();
         
         event_data.push(Any::from(proposal.id.clone()));
         

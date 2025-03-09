@@ -1,0 +1,144 @@
+# Neo Contract Makefile Template
+# This Makefile provides common commands for building and deploying Neo smart contracts.
+
+# Contract name (override with make CONTRACT_NAME=YourName)
+CONTRACT_NAME ?= $(shell grep -m 1 "^name" Cargo.toml | cut -d'"' -f2 | cut -d"'" -f2)
+
+# Output directory
+OUTPUT_DIR ?= ./dist
+
+# Manifest template (optional)
+MANIFEST_TEMPLATE ?= 
+
+# Neo node RPC URL for deployment
+NEO_RPC_URL ?= http://localhost:10332
+
+# Neo node RPC URL for testnet
+NEO_TESTNET_RPC_URL ?= http://seed1t4.neo.org:20332
+
+# Wallet path for deployment
+WALLET_PATH ?= ./wallet.json
+
+# Wallet password
+WALLET_PASSWORD ?= 
+
+# Account address
+ACCOUNT_ADDRESS ?= 
+
+# Additional manifest overrides
+MANIFEST_OVERRIDES ?= 
+
+# Default target
+.PHONY: all
+all: build
+
+# Clean build artifacts
+.PHONY: clean
+clean:
+	@echo "Cleaning build artifacts..."
+	@rm -rf $(OUTPUT_DIR)
+	@cargo clean
+	@echo "Clean completed."
+
+# Build contract
+.PHONY: build
+build:
+	@echo "Building Neo contract: $(CONTRACT_NAME)"
+	@mkdir -p $(OUTPUT_DIR)
+	@BUILD_ARGS="--name $(CONTRACT_NAME) --output $(OUTPUT_DIR)"
+	@if [ -n "$(MANIFEST_TEMPLATE)" ]; then \
+		BUILD_ARGS="$$BUILD_ARGS --template $(MANIFEST_TEMPLATE)"; \
+	fi
+	@if [ -n "$(MANIFEST_OVERRIDES)" ]; then \
+		for override in $(MANIFEST_OVERRIDES); do \
+			BUILD_ARGS="$$BUILD_ARGS --manifest $$override"; \
+		done; \
+	fi
+	@../scripts/build_contract.sh $$BUILD_ARGS
+	@echo "Build completed."
+
+# Deploy contract to local node
+.PHONY: deploy
+deploy: build
+	@echo "Deploying contract to Neo node: $(NEO_RPC_URL)"
+	@if [ -z "$(WALLET_PATH)" ]; then \
+		echo "Error: WALLET_PATH is required for deployment"; \
+		exit 1; \
+	fi
+	@if [ -z "$(WALLET_PASSWORD)" ]; then \
+		echo "Error: WALLET_PASSWORD is required for deployment"; \
+		exit 1; \
+	fi
+	@if [ -z "$(ACCOUNT_ADDRESS)" ]; then \
+		echo "Error: ACCOUNT_ADDRESS is required for deployment"; \
+		exit 1; \
+	fi
+	@neo-cli deploy \
+		--rpc-url $(NEO_RPC_URL) \
+		--wallet $(WALLET_PATH) \
+		--password $(WALLET_PASSWORD) \
+		--account $(ACCOUNT_ADDRESS) \
+		$(OUTPUT_DIR)/$(CONTRACT_NAME).nef \
+		$(OUTPUT_DIR)/$(CONTRACT_NAME).manifest.json
+	@echo "Deployment completed."
+
+# Deploy contract to testnet
+.PHONY: deploy-testnet
+deploy-testnet: build
+	@echo "Deploying contract to Neo testnet: $(NEO_TESTNET_RPC_URL)"
+	@if [ -z "$(WALLET_PATH)" ]; then \
+		echo "Error: WALLET_PATH is required for deployment"; \
+		exit 1; \
+	fi
+	@if [ -z "$(WALLET_PASSWORD)" ]; then \
+		echo "Error: WALLET_PASSWORD is required for deployment"; \
+		exit 1; \
+	fi
+	@if [ -z "$(ACCOUNT_ADDRESS)" ]; then \
+		echo "Error: ACCOUNT_ADDRESS is required for deployment"; \
+		exit 1; \
+	fi
+	@neo-cli deploy \
+		--rpc-url $(NEO_TESTNET_RPC_URL) \
+		--wallet $(WALLET_PATH) \
+		--password $(WALLET_PASSWORD) \
+		--account $(ACCOUNT_ADDRESS) \
+		$(OUTPUT_DIR)/$(CONTRACT_NAME).nef \
+		$(OUTPUT_DIR)/$(CONTRACT_NAME).manifest.json
+	@echo "Testnet deployment completed."
+
+# Run local tests
+.PHONY: test
+test:
+	@echo "Running tests..."
+	@cargo test
+	@echo "Tests completed."
+
+# Generate documentation
+.PHONY: docs
+docs:
+	@echo "Generating documentation..."
+	@cargo doc --no-deps
+	@echo "Documentation generated."
+
+# Help
+.PHONY: help
+help:
+	@echo "Neo Contract Makefile - Available commands:"
+	@echo "  make              Build the contract"
+	@echo "  make build        Build the contract"
+	@echo "  make clean        Clean build artifacts"
+	@echo "  make deploy       Deploy to local Neo node"
+	@echo "  make deploy-testnet Deploy to Neo testnet"
+	@echo "  make test         Run tests"
+	@echo "  make docs         Generate documentation"
+	@echo "  make help         Show this help message"
+	@echo ""
+	@echo "Environment variables:"
+	@echo "  CONTRACT_NAME     Contract name (default: from Cargo.toml)"
+	@echo "  OUTPUT_DIR        Output directory (default: ./dist)"
+	@echo "  MANIFEST_TEMPLATE Path to manifest template (optional)"
+	@echo "  NEO_RPC_URL       Neo node RPC URL (default: http://localhost:10332)"
+	@echo "  WALLET_PATH       Path to wallet file for deployment"
+	@echo "  WALLET_PASSWORD   Wallet password"
+	@echo "  ACCOUNT_ADDRESS   Account address for deployment"

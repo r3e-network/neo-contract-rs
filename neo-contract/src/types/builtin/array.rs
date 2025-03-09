@@ -1,107 +1,186 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
+//! Array type for Neo Contract RS
+//!
+//! This module defines the Array type, which is used for dynamic arrays in Neo.
 
-use alloc::vec::Vec;
 use core::fmt;
-use core::ops::{Deref, DerefMut};
+use core::ops::{Deref, DerefMut, Index, IndexMut};
+use alloc::vec::Vec;
+use super::any::Any;
 
-/// Array represents a dynamic array of values
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct Array<T> {
-    items: Vec<T>,
-}
+/// Array represents a dynamic array of values in Neo
+#[derive(Clone, Default)]
+pub struct Array(pub Vec<Any>);
 
-impl<T> Array<T> {
-    /// Create a new empty array
+impl Array {
+    /// Creates a new empty Array
     pub fn new() -> Self {
-        Self { items: Vec::new() }
+        Array(Vec::new())
     }
-
-    /// Create an array from a vector
-    pub fn from_vec(items: Vec<T>) -> Self {
-        Self { items }
+    
+    /// Creates an Array with the given capacity
+    pub fn with_capacity(capacity: usize) -> Self {
+        Array(Vec::with_capacity(capacity))
     }
-
-    /// Get the length of the array
+    
+    /// Creates an Array from a vector of Any values
+    pub fn from_vec(vec: Vec<Any>) -> Self {
+        Array(vec)
+    }
+    
+    /// Returns the length of the Array
     pub fn len(&self) -> usize {
-        self.items.len()
+        self.0.len()
     }
-
-    /// Check if the array is empty
+    
+    /// Checks if the Array is empty
     pub fn is_empty(&self) -> bool {
-        self.items.is_empty()
+        self.0.is_empty()
     }
-
-    /// Push an item to the array
-    pub fn push(&mut self, item: T) {
-        self.items.push(item);
+    
+    /// Pushes a value to the end of the Array
+    pub fn push<T: Into<Any>>(&mut self, value: T) {
+        self.0.push(value.into());
     }
-
-    /// Pop an item from the array
-    pub fn pop(&mut self) -> Option<T> {
-        self.items.pop()
+    
+    /// Pops a value from the end of the Array
+    pub fn pop(&mut self) -> Option<Any> {
+        self.0.pop()
     }
-
-    /// Get an item from the array
-    pub fn get(&self, index: usize) -> Option<&T> {
-        self.items.get(index)
+    
+    /// Gets a reference to a value by index
+    pub fn get(&self, index: usize) -> Option<&Any> {
+        self.0.get(index)
     }
-
-    /// Get a mutable reference to an item in the array
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
-        self.items.get_mut(index)
+    
+    /// Gets a mutable reference to a value by index
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut Any> {
+        self.0.get_mut(index)
     }
-
-    /// Set an item in the array
-    pub fn set(&mut self, index: usize, item: T) -> bool {
-        if index < self.items.len() {
-            self.items[index] = item;
-            true
+    
+    /// Sets a value at the given index
+    pub fn set<T: Into<Any>>(&mut self, index: usize, value: T) -> Result<(), &'static str> {
+        if index < self.0.len() {
+            self.0[index] = value.into();
+            Ok(())
         } else {
-            false
+            Err("Index out of bounds")
         }
     }
-
-    /// Remove an item from the array
-    pub fn remove(&mut self, index: usize) -> T {
-        self.items.remove(index)
+    
+    /// Removes a value at the given index
+    pub fn remove(&mut self, index: usize) -> Any {
+        self.0.remove(index)
     }
-
-    /// Clear the array
+    
+    /// Inserts a value at the given index
+    pub fn insert<T: Into<Any>>(&mut self, index: usize, value: T) {
+        self.0.insert(index, value.into());
+    }
+    
+    /// Clears the Array
     pub fn clear(&mut self) {
-        self.items.clear();
+        self.0.clear();
     }
-}
-
-impl<T> From<Vec<T>> for Array<T> {
-    fn from(items: Vec<T>) -> Self {
-        Self { items }
+    
+    /// Returns an iterator over the Array
+    pub fn iter(&self) -> impl Iterator<Item = &Any> {
+        self.0.iter()
     }
-}
-
-impl<T> Deref for Array<T> {
-    type Target = Vec<T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.items
+    
+    /// Returns a mutable iterator over the Array
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Any> {
+        self.0.iter_mut()
     }
-}
-
-impl<T> DerefMut for Array<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.items
-    }
-}
-
-impl<T: fmt::Display> fmt::Display for Array<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[")?;
-        for (i, item) in self.items.iter().enumerate() {
-            if i > 0 {
-                write!(f, ", ")?;
+    
+    /// Resizes the Array to the given length with the given value
+    pub fn resize<T: Into<Any> + Clone>(&mut self, len: usize, value: T) {
+        let value = value.into();
+        if len > self.0.len() {
+            let additional = len - self.0.len();
+            for _ in 0..additional {
+                self.0.push(value.clone());
             }
-            write!(f, "{}", item)?;
+        } else if len < self.0.len() {
+            self.0.truncate(len);
         }
-        write!(f, "]")
+    }
+    
+    /// Returns a reference to the underlying vector
+    pub fn as_vec(&self) -> &Vec<Any> {
+        &self.0
+    }
+    
+    /// Converts the Array into a vector
+    pub fn into_vec(self) -> Vec<Any> {
+        self.0
+    }
+}
+
+impl Deref for Array {
+    type Target = Vec<Any>;
+    
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Array {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Index<usize> for Array {
+    type Output = Any;
+    
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl IndexMut<usize> for Array {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
+
+impl From<Vec<Any>> for Array {
+    fn from(vec: Vec<Any>) -> Self {
+        Array(vec)
+    }
+}
+
+impl fmt::Debug for Array {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Array(")?;
+        f.debug_list().entries(self.0.iter()).finish()?;
+        write!(f, ")")
+    }
+}
+
+impl IntoIterator for Array {
+    type Item = Any;
+    type IntoIter = alloc::vec::IntoIter<Self::Item>;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Array {
+    type Item = &'a Any;
+    type IntoIter = core::slice::Iter<'a, Any>;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Array {
+    type Item = &'a mut Any;
+    type IntoIter = core::slice::IterMut<'a, Any>;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter_mut()
     }
 }

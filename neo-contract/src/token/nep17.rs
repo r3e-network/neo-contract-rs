@@ -3,11 +3,14 @@
 
 //! NEP-17 token implementation for the Neo N3 blockchain
 
+use alloc::vec::Vec;
 use alloc::string::String;
-use crate::builtin::{H160, ByteString, Int256, Array, Any};
-use crate::storage::{StorageMap, Storable};
-use crate::Runtime;
-use crate::error::{Error, ErrorCode, Result};
+
+// Update imports to use prelude
+use crate::prelude::{H160, ByteString, Int256, Array, Any, StorageMap};
+use crate::policy::voting::Storable;  // Import Storable from the voting module where we defined it
+use crate::runtime::Runtime;
+use crate::error::{Error, Result};  // Remove ErrorCode since we're using the enum variants directly
 use crate::token::{Token, TokenEvents, NEP17Token};
 
 /// NEP-17 token implementation
@@ -58,10 +61,7 @@ impl NEP17TokenContract {
     pub fn initialize(&self, owner: H160, initial_supply: Int256) -> Result<()> {
         // Check if already initialized
         if self.owner.get(&ByteString::from("owner")).is_some() {
-            return Err(Error::new(
-                ErrorCode::AlreadyExists,
-                "Token already initialized"
-            ));
+            return Err(Error::AlreadyExists("Token already initialized"));
         }
         
         // Set owner
@@ -79,19 +79,13 @@ impl NEP17TokenContract {
     pub fn mint(&self, to: &H160, amount: Int256) -> Result<()> {
         // Check amount
         if amount <= Int256::zero() {
-            return Err(Error::new(
-                ErrorCode::InvalidArgument,
-                "Amount must be positive"
-            ));
+            return Err(Error::InvalidArgument("Amount must be positive"));
         }
         
         // Check only owner can mint
         let owner = self.get_owner();
         if !Runtime::check_witness(&owner) {
-            return Err(Error::new(
-                ErrorCode::Unauthorized,
-                "Only owner can mint"
-            ));
+            return Err(Error::Unauthorized("Only owner can mint"));
         }
         
         // Update balance
@@ -112,27 +106,18 @@ impl NEP17TokenContract {
     pub fn burn(&self, from: &H160, amount: Int256) -> Result<()> {
         // Check amount
         if amount <= Int256::zero() {
-            return Err(Error::new(
-                ErrorCode::InvalidArgument,
-                "Amount must be positive"
-            ));
+            return Err(Error::InvalidArgument("Amount must be positive"));
         }
         
         // Check owner or self authorization
         if !Runtime::check_witness(from) {
-            return Err(Error::new(
-                ErrorCode::Unauthorized,
-                "Not authorized to burn"
-            ));
+            return Err(Error::Unauthorized("Not authorized to burn"));
         }
         
         // Check balance
         let balance = self.balance_of(from);
         if balance < amount {
-            return Err(Error::new(
-                ErrorCode::InsufficientFunds,
-                "Insufficient balance for burn"
-            ));
+            return Err(Error::InsufficientFunds("Insufficient balance for burn"));
         }
         
         // Update balance

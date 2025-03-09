@@ -7,6 +7,11 @@ use syn::{
     parse_macro_input, AttributeArgs, Lit, NestedMeta, ItemStatic,
 };
 
+/// Public interface for the byte_array_fixed attribute macro
+pub fn byte_array_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
+    generate(attr, item)
+}
+
 /// Process the byte_array attribute macro
 pub fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse the static item

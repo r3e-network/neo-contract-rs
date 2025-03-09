@@ -7,6 +7,11 @@ use syn::{
     parse_macro_input, AttributeArgs, Lit, NestedMeta, ItemStatic,
 };
 
+/// Public interface for the string attribute macro
+pub fn string(attr: TokenStream, item: TokenStream) -> TokenStream {
+    generate(attr, item)
+}
+
 /// Process the string attribute macro
 pub fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse the static item

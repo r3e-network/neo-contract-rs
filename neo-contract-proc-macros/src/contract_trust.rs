@@ -6,6 +6,11 @@ use syn::{
     parse_macro_input, AttributeArgs, Lit, NestedMeta,
 };
 
+/// Public interface for the contract_trust attribute macro
+pub fn contract_trust(attr: TokenStream, item: TokenStream) -> TokenStream {
+    generate(attr, item)
+}
+
 /// Process the contract_trust attribute macro
 pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse attribute arguments

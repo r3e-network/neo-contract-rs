@@ -1,61 +1,65 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
+//! ByteString type for Neo Contract RS
+//!
+//! This module defines the ByteString type, which is used to represent strings
+//! and binary data in Neo smart contracts.
 
-use alloc::string::String;
-use alloc::vec::Vec;
 use core::fmt;
+use core::ops::Deref;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 
-/// ByteString represents a byte string
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// ByteString represents a string or binary data in Neo
+#[derive(PartialEq, Eq, Clone, Default)]
 pub struct ByteString(pub Vec<u8>);
 
 impl ByteString {
-    /// Create a new ByteString
+    /// Creates a new ByteString from a Vec<u8>
     pub fn new(bytes: Vec<u8>) -> Self {
         ByteString(bytes)
     }
-
-    /// Create an empty ByteString
+    
+    /// Creates an empty ByteString
     pub fn empty() -> Self {
         ByteString(Vec::new())
     }
-
-    /// Get the bytes of the ByteString
+    
+    /// Returns the bytes as a slice
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
-
-    /// Get the length of the ByteString
+    
+    /// Returns the length of the ByteString
     pub fn len(&self) -> usize {
         self.0.len()
     }
-
-    /// Check if the ByteString is empty
+    
+    /// Checks if the ByteString is empty
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-
-    /// Extend the ByteString with a slice
-    pub fn extend_from_slice(&mut self, slice: &[u8]) {
-        self.0.extend_from_slice(slice);
+    
+    /// Converts a byte slice to a ByteString
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        ByteString(bytes.to_vec())
+    }
+    
+    /// Attempts to convert the ByteString to a UTF-8 string
+    pub fn to_utf8(&self) -> Option<String> {
+        core::str::from_utf8(&self.0).ok().map(|s| s.to_string())
     }
 }
 
-impl Default for ByteString {
-    fn default() -> Self {
-        Self::empty()
+impl Deref for ByteString {
+    type Target = Vec<u8>;
+    
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-impl fmt::Display for ByteString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ByteString({})", self.len())
-    }
-}
-
-impl From<Vec<u8>> for ByteString {
-    fn from(bytes: Vec<u8>) -> Self {
-        ByteString(bytes)
+impl AsRef<[u8]> for ByteString {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 
@@ -65,9 +69,9 @@ impl From<&[u8]> for ByteString {
     }
 }
 
-impl From<String> for ByteString {
-    fn from(s: String) -> Self {
-        ByteString(s.into_bytes())
+impl From<Vec<u8>> for ByteString {
+    fn from(bytes: Vec<u8>) -> Self {
+        ByteString(bytes)
     }
 }
 
@@ -77,8 +81,38 @@ impl From<&str> for ByteString {
     }
 }
 
-impl AsRef<[u8]> for ByteString {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
+impl From<String> for ByteString {
+    fn from(s: String) -> Self {
+        ByteString(s.into_bytes())
+    }
+}
+
+impl fmt::Debug for ByteString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match core::str::from_utf8(&self.0) {
+            Ok(s) => write!(f, "ByteString(\"{}\")", s),
+            Err(_) => {
+                write!(f, "ByteString(0x")?;
+                for byte in &self.0 {
+                    write!(f, "{:02x}", byte)?;
+                }
+                write!(f, ")")
+            }
+        }
+    }
+}
+
+impl fmt::Display for ByteString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match core::str::from_utf8(&self.0) {
+            Ok(s) => write!(f, "{}", s),
+            Err(_) => {
+                write!(f, "0x")?;
+                for byte in &self.0 {
+                    write!(f, "{:02x}", byte)?;
+                }
+                Ok(())
+            }
+        }
     }
 }

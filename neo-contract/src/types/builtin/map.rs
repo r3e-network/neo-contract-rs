@@ -1,81 +1,177 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
+//! Map type for Neo Contract RS
+//!
+//! This module defines the Map type, which is used for key-value dictionaries in Neo.
 
-use alloc::vec::Vec;
 use core::fmt;
-use crate::types::builtin::string::ByteString;
+use alloc::vec::Vec;
+use super::any::Any;
 
-/// Map represents a map of key-value pairs
-#[derive(Debug, Clone)]
-pub struct Map<K, V> {
-    /// Keys
-    pub keys: Vec<K>,
-    /// Values
-    pub values: Vec<V>,
-}
+/// Map represents a key-value dictionary in Neo
+#[derive(Clone, Default)]
+pub struct Map(pub Vec<(Any, Any)>);
 
-impl<K, V> Map<K, V> {
-    /// Create a new map
+impl Map {
+    /// Creates a new empty Map
     pub fn new() -> Self {
-        Self {
-            keys: Vec::new(),
-            values: Vec::new(),
-        }
+        Map(Vec::new())
     }
-
-    /// Get the number of key-value pairs
+    
+    /// Creates a Map with the given capacity
+    pub fn with_capacity(capacity: usize) -> Self {
+        Map(Vec::with_capacity(capacity))
+    }
+    
+    /// Creates a Map from a vector of key-value pairs
+    pub fn from_vec(vec: Vec<(Any, Any)>) -> Self {
+        Map(vec)
+    }
+    
+    /// Returns the number of key-value pairs in the Map
     pub fn len(&self) -> usize {
-        self.keys.len()
+        self.0.len()
     }
-
-    /// Check if the map is empty
+    
+    /// Checks if the Map is empty
     pub fn is_empty(&self) -> bool {
-        self.keys.is_empty()
+        self.0.is_empty()
     }
-
-    /// Put a key-value pair in the map
-    pub fn put(&mut self, key: K, value: V) where K: PartialEq {
-        if let Some(index) = self.keys.iter().position(|k| k == &key) {
-            self.values[index] = value;
-        } else {
-            self.keys.push(key);
-            self.values.push(value);
-        }
-    }
-
-    /// Delete a key-value pair from the map
-    pub fn delete(&mut self, key: &K) where K: PartialEq {
-        if let Some(index) = self.keys.iter().position(|k| k == key) {
-            self.keys.remove(index);
-            self.values.remove(index);
-        }
-    }
-
-    /// Get a value by key
-    pub fn get(&self, key: &K) -> Option<&V> where K: PartialEq {
-        if let Some(index) = self.keys.iter().position(|k| k == key) {
-            return Some(&self.values[index]);
+    
+    /// Gets a reference to a value by key
+    pub fn get(&self, key: &Any) -> Option<&Any> {
+        for (k, v) in &self.0 {
+            if k == key {
+                return Some(v);
+            }
         }
         None
     }
-
-    /// Get a mutable value by key
-    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> where K: PartialEq {
-        if let Some(index) = self.keys.iter().position(|k| k == key) {
-            return Some(&mut self.values[index]);
+    
+    /// Gets a mutable reference to a value by key
+    pub fn get_mut(&mut self, key: &Any) -> Option<&mut Any> {
+        for (k, v) in &mut self.0 {
+            if k == key {
+                return Some(v);
+            }
         }
         None
     }
-}
-
-impl<K, V> Default for Map<K, V> {
-    fn default() -> Self {
-        Self::new()
+    
+    /// Sets a value for the given key
+    pub fn set<K: Into<Any>, V: Into<Any>>(&mut self, key: K, value: V) {
+        let key = key.into();
+        let value = value.into();
+        
+        // Check if the key already exists
+        for entry in &mut self.0 {
+            if entry.0 == key {
+                entry.1 = value;
+                return;
+            }
+        }
+        
+        // Key doesn't exist, add a new entry
+        self.0.push((key, value));
+    }
+    
+    /// Removes a key-value pair by key
+    pub fn remove(&mut self, key: &Any) -> Option<Any> {
+        let index = self.0.iter().position(|(k, _)| k == key)?;
+        Some(self.0.remove(index).1)
+    }
+    
+    /// Checks if the Map contains the given key
+    pub fn contains_key(&self, key: &Any) -> bool {
+        self.0.iter().any(|(k, _)| k == key)
+    }
+    
+    /// Clears the Map
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
+    
+    /// Returns an iterator over the key-value pairs
+    pub fn iter(&self) -> impl Iterator<Item = &(Any, Any)> {
+        self.0.iter()
+    }
+    
+    /// Returns a mutable iterator over the key-value pairs
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut (Any, Any)> {
+        self.0.iter_mut()
+    }
+    
+    /// Returns an iterator over the keys
+    pub fn keys(&self) -> impl Iterator<Item = &Any> {
+        self.0.iter().map(|(k, _)| k)
+    }
+    
+    /// Returns an iterator over the values
+    pub fn values(&self) -> impl Iterator<Item = &Any> {
+        self.0.iter().map(|(_, v)| v)
+    }
+    
+    /// Returns a reference to the underlying vector
+    pub fn as_vec(&self) -> &Vec<(Any, Any)> {
+        &self.0
+    }
+    
+    /// Converts the Map into a vector
+    pub fn into_vec(self) -> Vec<(Any, Any)> {
+        self.0
     }
 }
 
-impl<K: fmt::Display, V: fmt::Display> fmt::Display for Map<K, V> {
+impl From<Vec<(Any, Any)>> for Map {
+    fn from(vec: Vec<(Any, Any)>) -> Self {
+        Map(vec)
+    }
+}
+
+impl<K: Into<Any>, V: Into<Any>> FromIterator<(K, V)> for Map {
+    fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> Self {
+        let vec = iter
+            .into_iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect();
+        Map(vec)
+    }
+}
+
+impl fmt::Debug for Map {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Map({} items)", self.len())
+        write!(f, "Map({{")?;
+        for (i, (k, v)) in self.0.iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{:?}: {:?}", k, v)?;
+        }
+        write!(f, "}})")
+    }
+}
+
+impl IntoIterator for Map {
+    type Item = (Any, Any);
+    type IntoIter = alloc::vec::IntoIter<Self::Item>;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Map {
+    type Item = &'a (Any, Any);
+    type IntoIter = core::slice::Iter<'a, (Any, Any)>;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Map {
+    type Item = &'a mut (Any, Any);
+    type IntoIter = core::slice::IterMut<'a, (Any, Any)>;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter_mut()
     }
 }

@@ -1,97 +1,185 @@
-# Neo Contract RS Examples
+# Neo Contract Rust Examples
 
-This directory contains examples of Neo N3 smart contracts built with Neo Contract RS. All examples use the modern ink!-style contract definition syntax for a consistent and intuitive development experience.
+This directory contains example smart contracts written using the Neo Contract Rust framework. These examples demonstrate various features and patterns for developing Neo N3 smart contracts with Rust.
 
 ## Examples Overview
 
-### NEP-17 Token Examples
+### Basic Examples
 
-- **nep17**: A basic implementation of the NEP-17 token standard using ink! style attributes
-- **nep17_token**: A complete NEP-17 token with storage handling and all standard methods
+- **[hello_world](./hello_world/)**: A simple contract that demonstrates basic storage and method definition.
+- **[transfer](./transfer/)**: Shows how to handle NEP-17 token transfers within a contract.
 
-### Contract Interaction Examples
+### Token Standards
 
-- **contract_call**: Demonstrates how to interact with other contracts on the Neo N3 blockchain
+- **[nep17](./nep17/)**: A basic implementation of the NEP-17 fungible token standard.
+- **[nep17_token](./nep17_token/)**: An extended NEP-17 token implementation with additional features.
 
 ### Ink! Style Examples
 
-- **ink_style_token**: A simple token implementation using ink! style attributes
-- **ink_style_token_with_attributes**: An enhanced token implementation with complete metadata attributes
+- **[ink_style_token](./ink_style_token/)**: NEP-17 token implementation using the ink! style syntax.
+- **[ink_style_token_with_attributes](./ink_style_token_with_attributes/)**: Similar to the above, but with attribute macros.
+- **[ink_style_complete](./ink_style_complete/)**: A comprehensive example showing the full power of ink! style syntax.
 
-### Advanced Examples
+### Advanced Patterns
 
-- **csharp_features**: Demonstrates C# framework features ported to Rust
-- **neoburger**: NeoBurger ecosystem contracts demonstrating advanced Neo N3 functionality
-- **transfer**: Example demonstrating token transfer mechanics
+- **[contract_call](./contract_call/)**: Demonstrates how to make calls between contracts.
+- **[csharp_features](./csharp_features/)**: Shows how to implement features commonly found in C# contracts.
 
-## Ink! Style Contract Definition
+### Real-world Applications
 
-All examples in this repository follow the ink!-style contract definition approach, which provides a more ergonomic and declarative way to write smart contracts.
+- **[neoburger](./neoburger/)**: Implementation of the NeoBurger protocol.
+- **[neoburger_agent](./neoburger_agent/)**: Agent contract for the NeoBurger protocol.
+- **[neoburger_governance](./neoburger_governance/)**: Governance contract for the NeoBurger protocol.
 
-### Basic Structure
+## Building Examples
+
+Each example directory contains its own code and potentially a Makefile for building. To build an example:
+
+1. Navigate to the example directory:
+   ```
+   cd examples/hello_world
+   ```
+
+2. If a Makefile is present, build using:
+   ```
+   make
+   ```
+   or
+   ```
+   make BUILD_MODE=release
+   ```
+
+3. If no Makefile is present, build manually:
+   ```bash
+   # Compile to WASM
+   cargo build --target wasm32-unknown-unknown
+
+   # Convert to NEF
+   ../../bin/neo-wasm -input target/wasm32-unknown-unknown/debug/hello_world.wasm -output build -name hello_world
+   ```
+
+## Example Contract: Hello World
+
+Here's a simple example of a Hello World contract:
 
 ```rust
-#[contract]
-#[contract_author("Author Name")]
-#[contract_description("Contract Description")]
-#[contract_version("0.1.0")]
-#[supported_standards("NEP-17")]
-mod token_contract {
+#![cfg_attr(not(feature = "std"), no_std)]
+
+use neo_contract::prelude::*;
+
+#[neo_contract]
+pub mod contract {
     use super::*;
 
-    #[storage]
-    pub struct Token {
-        total_supply: Int256,
-        balances: Map<H160, Int256>,
+    #[neo_storage]
+    struct HelloWorld {
+        message: StorageItem<String>,
     }
 
-    impl Token {
-        #[constructor]
-        pub fn new(initial_supply: Int256) -> Self {
-            // Implementation...
+    impl HelloWorld {
+        pub fn new() -> Self {
+            Self {
+                message: StorageItem::new(b"message"),
+            }
         }
-        
-        #[message]
-        pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
-            // Implementation...
+
+        #[neo_method(return_value = String)]
+        #[safe]
+        pub fn get_message(&self) -> String {
+            self.message.get().unwrap_or_else(|| "Hello, Neo!".to_string())
         }
-        
-        #[event]
-        pub fn transfer_event(from: H160, to: H160, amount: Int256) {}
+
+        #[neo_method]
+        pub fn set_message(&mut self, message: String) {
+            self.message.set(&message);
+        }
     }
 }
 ```
 
-### Key Attributes
+## Example Contract: NEP-17 Token
 
-- `#[contract]`: Marks a module as a Neo N3 smart contract
-- `#[storage]`: Marks a struct as the contract's storage
-- `#[constructor]`: Marks a method as a contract constructor
-- `#[message]`: Marks a method as a contract message (callable from outside)
-- `#[safe]`: Marks a method as read-only (cannot modify contract storage)
-- `#[event]`: Marks a method as a contract event
+Here's a simplified example of a NEP-17 token contract:
 
-### Metadata Attributes
+```rust
+#![cfg_attr(not(feature = "std"), no_std)]
 
-- `#[contract_author("Author Name")]`: Specifies the contract author
-- `#[contract_description("Description")]`: Provides a contract description
-- `#[contract_version("1.0.0")]`: Specifies the contract version
-- `#[supported_standards("NEP-17")]`: Declares supported standards
+use neo_contract::prelude::*;
 
-## Building and Running Examples
+#[neo_contract]
+pub mod token {
+    use super::*;
 
-To build all examples at once, use the provided script:
+    #[neo_storage]
+    struct Token {
+        total_supply: StorageItem<u64>,
+        balances: StorageMap<Address, u64>,
+    }
 
-```bash
-cd /path/to/neo-contract-rs
-./scripts/build_examples.sh
+    impl Token {
+        pub fn new() -> Self {
+            Self {
+                total_supply: StorageItem::new(b"total_supply"),
+                balances: StorageMap::new(b"balances"),
+            }
+        }
+
+        #[neo_method(return_value = u64)]
+        #[safe]
+        pub fn total_supply(&self) -> u64 {
+            self.total_supply.get().unwrap_or(0)
+        }
+
+        #[neo_method(return_value = u64)]
+        #[safe]
+        pub fn balance_of(&self, account: Address) -> u64 {
+            self.balances.get(&account).unwrap_or(0)
+        }
+
+        #[neo_method(return_value = bool)]
+        pub fn transfer(&mut self, from: Address, to: Address, amount: u64, data: Vec<u8>) -> bool {
+            // Verify sender
+            assert!(runtime::check_witness(&from), "No authorization");
+            
+            // Get balances
+            let from_balance = self.balance_of(from);
+            let to_balance = self.balance_of(to);
+            
+            // Check sufficient funds
+            assert!(from_balance >= amount, "Insufficient funds");
+            
+            // Handle zero transfer
+            if amount == 0 {
+                events::transfer(from, to, 0);
+                return true;
+            }
+            
+            // Update balances
+            if from_balance == amount {
+                self.balances.delete(&from);
+            } else {
+                self.balances.set(&from, &(from_balance - amount));
+            }
+            
+            self.balances.set(&to, &(to_balance + amount));
+            
+            // Emit event
+            events::transfer(from, to, amount);
+            
+            // Post transfer hook
+            if to.is_contract() {
+                contract::call(
+                    &to,
+                    "onNEP17Payment",
+                    &[from, amount, data],
+                    CallFlags::ALL,
+                );
+            }
+            
+            true
+        }
+    }
+}
 ```
 
-To build a specific example:
-
-```bash
-cd /path/to/neo-contract-rs/examples/<example-name>
-cargo build --target wasm32-unknown-unknown --release
-```
-
-The compiled WebAssembly binaries will be located in `target/wasm32-unknown-unknown/release/`.
+Check the individual example directories for more detailed code and documentation.

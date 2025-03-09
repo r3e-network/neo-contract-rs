@@ -1,0 +1,43 @@
+[package]
+name = "neo-compiler"
+version = "0.1.0"
+edition = "2021"
+description = "Neo N3 smart contract compiler for Rust"
+authors = ["Neo Global Development <dev@neo.org>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/neo-project/neo-contract-rs"
+keywords = ["neo", "blockchain", "smart-contract", "wasm", "compiler"]
+categories = ["cryptography::cryptocurrencies", "development-tools::build-utils"]
+
+[dependencies]
+anyhow = "1.0"
+log = "0.4"
+wasmparser = "0.109"
+sha2 = "0.10"
+hex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = { version = "4.3", features = ["derive"] }
+thiserror = "1.0"
+lazy_static = "1.4"
+
+[dev-dependencies]
+pretty_assertions = "1.3"
+tempfile = "3.8"
+wat = "1.0"
+
+[[example]]
+name = "simple_compilation"
+path = "examples/simple_compilation.rs"
+
+[[example]]
+name = "manual_script_creation"
+path = "examples/manual_script_creation.rs"
+
+[[example]]
+name = "nep17_token"
+path = "examples/nep17_token.rs"
+
+[features]
+default = []

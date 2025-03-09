@@ -1,177 +1,142 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
+//! Storage Iterator for Neo Contract RS
+//!
+//! This module provides an iterator API for storage.
 
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-use crate::builtin::ByteString;
-use crate::types::context::StorageContext;
+use crate::error::{Error, ErrorCode, Result};
+use crate::find_options::FindOptions;
+use super::context::Context;
+use super::item::Codec;
 
-/// Iterator for basic storage values
-pub struct Iter<T> {
-    data: Vec<T>,
-    index: usize,
-}
-
-impl<T> Iter<T> {
-    /// Create a new iterator from a vector
-    pub fn new(data: Vec<T>) -> Self {
-        Iter { data, index: 0 }
-    }
-
-    /// Check if the iterator has a next element
-    pub fn has_next(&self) -> bool {
-        self.index < self.data.len()
-    }
-
-    /// Get the next element from the iterator
-    pub fn next(&mut self) -> Option<&T> {
-        if self.has_next() {
-            let result = &self.data[self.index];
-            self.index += 1;
-            Some(result)
-        } else {
-            None
-        }
-    }
-}
-
-/// Native storage iterator that uses Neo's built-in storage iterator
-pub struct StorageIterator {
-    /// Iterator ID returned by storage.find
-    id: i32,
-}
-
-impl StorageIterator {
-    /// Create a new storage iterator for the given prefix
-    pub fn new(context: StorageContext, prefix: ByteString) -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        let id = unsafe { crate::env::syscall_non_wasm::system_storage_find(context, prefix) };
-        
-        #[cfg(target_arch = "wasm32")]
-        let id = unsafe { crate::env::syscall::system_storage_find(context, prefix) };
-        
-        Self { id }
-    }
+/// An iterator over storage entries
+pub struct StorageIter<K, V> {
+    /// The items in the iterator
+    items: Vec<(Vec<u8>, Vec<u8>)>,
     
-    /// Check if the iterator has a next element
-    pub fn has_next(&self) -> bool {
-        #[cfg(not(target_arch = "wasm32"))]
-        let result = unsafe { 
-            crate::env::syscall_non_wasm::system_iterator_next(self.id)
-        };
-        
-        #[cfg(target_arch = "wasm32")]
-        let result = unsafe { 
-            crate::env::syscall::system_iterator_next(self.id)
-        };
-        
-        result
-    }
+    /// The current position in the iterator
+    position: usize,
     
-    /// Get the next key from the iterator
-    pub fn next_key(&self) -> Option<ByteString> {
-        if !self.has_next() {
-            return None;
-        }
-        
-        #[cfg(not(target_arch = "wasm32"))]
-        let key = unsafe { 
-            crate::env::syscall_non_wasm::system_iterator_key(self.id)
-        };
-        
-        #[cfg(target_arch = "wasm32")]
-        let key = unsafe { 
-            crate::env::syscall::system_iterator_key(self.id)
-        };
-        
-        Some(key)
-    }
+    /// The prefix to remove from keys
+    prefix: Vec<u8>,
     
-    /// Get the next value from the iterator
-    pub fn next_value(&self) -> Option<ByteString> {
-        if !self.has_next() {
-            return None;
-        }
-        
-        #[cfg(not(target_arch = "wasm32"))]
-        let value = unsafe { 
-            crate::env::syscall_non_wasm::system_iterator_value(self.id)
-        };
-        
-        #[cfg(target_arch = "wasm32")]
-        let value = unsafe { 
-            crate::env::syscall::system_iterator_value(self.id)
-        };
-        
-        Some(value)
-    }
+    /// The type of keys in this iterator
+    _key_marker: PhantomData<K>,
     
-    /// Get the next key-value pair from the iterator
-    pub fn next(&self) -> Option<(ByteString, ByteString)> {
-        if !self.has_next() {
-            return None;
-        }
-        
-        let key = self.next_key()?;
-        let value = self.next_value()?;
-        
-        Some((key, value))
-    }
+    /// The type of values in this iterator
+    _value_marker: PhantomData<V>,
 }
 
-impl Drop for StorageIterator {
-    fn drop(&mut self) {
-        // Clean up the iterator when it goes out of scope
-        if self.id >= 0 {
-            #[cfg(not(target_arch = "wasm32"))]
-            unsafe { 
-                crate::env::syscall_non_wasm::system_iterator_value(self.id);
-            }
-            
-            #[cfg(target_arch = "wasm32")]
-            unsafe { 
-                crate::env::syscall::system_iterator_value(self.id);
-            }
-        }
-    }
-}
-
-/// Typed storage iterator that converts raw storage values to specific types
-pub struct TypedStorageIterator<K, V> {
-    /// The underlying storage iterator
-    iterator: StorageIterator,
-    /// Marker for the key type
-    _key_type: PhantomData<K>,
-    /// Marker for the value type
-    _value_type: PhantomData<V>,
-}
-
-impl<K, V> TypedStorageIterator<K, V> 
+impl<K, V> StorageIter<K, V>
 where
-    K: TryFrom<ByteString>,
-    V: TryFrom<ByteString>,
+    K: Codec,
+    V: Codec,
 {
-    /// Create a new typed storage iterator
-    pub fn new(context: StorageContext, prefix: ByteString) -> Self {
-        Self {
-            iterator: StorageIterator::new(context, prefix),
-            _key_type: PhantomData,
-            _value_type: PhantomData,
+    /// Creates a new storage iterator with the given items and prefix
+    pub fn new(items: Vec<(Vec<u8>, Vec<u8>)>, prefix: impl AsRef<[u8]>) -> Self {
+        StorageIter {
+            items,
+            position: 0,
+            prefix: prefix.as_ref().to_vec(),
+            _key_marker: PhantomData,
+            _value_marker: PhantomData,
         }
     }
     
-    /// Check if the iterator has a next element
-    pub fn has_next(&self) -> bool {
-        self.iterator.has_next()
+    /// Creates a storage iterator that finds entries with the given prefix and options
+    pub fn find(prefix: impl AsRef<[u8]>, options: FindOptions) -> Self {
+        let items = super::find(prefix.as_ref(), options);
+        Self::new(items, prefix)
     }
     
-    /// Get the next element from the iterator
-    pub fn next(&self) -> Option<(K, V)> {
-        let (key_bs, value_bs) = self.iterator.next()?;
+    /// Creates a storage iterator that finds entries with the given prefix, context, and options
+    pub fn find_with_context(prefix: impl AsRef<[u8]>, context: &Context, options: FindOptions) -> Self {
+        let items = context.find(prefix.as_ref(), options);
+        Self::new(items, prefix)
+    }
+    
+    /// Gets the next entry in the iterator
+    pub fn next(&mut self) -> Option<Result<(K, V)>> {
+        if self.position >= self.items.len() {
+            return None;
+        }
         
-        let key = K::try_from(key_bs).ok()?;
-        let value = V::try_from(value_bs).ok()?;
+        let (key, value) = &self.items[self.position];
+        self.position += 1;
         
-        Some((key, value))
+        // Skip the prefix in the key
+        let key_bytes = &key[self.prefix.len()..];
+        
+        // Try to decode the key and value
+        match (K::decode(key_bytes), V::decode(value)) {
+            (Ok(k), Ok(v)) => Some(Ok((k, v))),
+            (Err(e), _) => Some(Err(Error::new(ErrorCode::DecodingError))),
+            (_, Err(e)) => Some(Err(Error::new(ErrorCode::DecodingError))),
+        }
+    }
+    
+    /// Gets all entries in the iterator
+    pub fn collect(&mut self) -> Result<Vec<(K, V)>> {
+        let mut result = Vec::new();
+        
+        while let Some(entry) = self.next() {
+            result.push(entry?);
+        }
+        
+        Ok(result)
+    }
+    
+    /// Resets the iterator to the beginning
+    pub fn reset(&mut self) {
+        self.position = 0;
+    }
+    
+    /// Gets the number of items in the iterator
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+    
+    /// Checks if the iterator is empty
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+    
+    /// Gets the current position in the iterator
+    pub fn position(&self) -> usize {
+        self.position
+    }
+    
+    /// Checks if the iterator has reached the end
+    pub fn is_end(&self) -> bool {
+        self.position >= self.items.len()
+    }
+}
+
+/// An iterator adapter that implements the Iterator trait
+pub struct StorageIterator<K, V> {
+    /// The storage iterator
+    iter: StorageIter<K, V>,
+}
+
+impl<K, V> StorageIterator<K, V>
+where
+    K: Codec,
+    V: Codec,
+{
+    /// Creates a new storage iterator adapter
+    pub fn new(iter: StorageIter<K, V>) -> Self {
+        StorageIterator { iter }
+    }
+}
+
+impl<K, V> Iterator for StorageIterator<K, V>
+where
+    K: Codec,
+    V: Codec,
+{
+    type Item = Result<(K, V)>;
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
     }
 }

@@ -1,114 +1,119 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
-
 #![no_std]
-#![no_main]
 
-extern crate alloc;
-extern crate wee_alloc;
+#[neo_contract::contract]
+pub mod contract_call {
+    use neo_contract::prelude::*;
 
-use neo_contract::{
-    builtin::{H160, Int256, ByteString, Array, Any},
-    Runtime,
-    contract, contract_author, contract_description,
-    contract_version,
-    storage, constructor, message,
-};
-use core::panic::PanicInfo;
-
-// Use wee_alloc as the global allocator
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-// Define a panic handler
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
-
-// Define the target contract hash as a constant
-const TARGET_CONTRACT: &str = "0x13a83e059c2eedd5157b766d3357bc826810905e";
-
-#[contract]
-#[contract_author("R3E Network")]
-#[contract_description("Contract Call Example")]
-#[contract_version("0.1.0")]
-mod contract_call {
-    use super::*;
-    
-    #[storage]
-    pub struct ContractCall {
-        // Storage for last received payment data
-        last_sender: Option<H160>,
-        last_amount: Int256,
+    // Event to log calls
+    #[event]
+    struct ContractCalled {
+        #[index]
+        target: Address,
+        method: String,
+        result: bool,
     }
-    
-    impl ContractCall {
+
+    #[storage]
+    struct ContractCaller {
+        owner: Item<Address>,
+        call_count: Item<u64>,
+        last_called: Item<Address>,
+    }
+
+    impl ContractCaller {
         #[constructor]
-        pub fn new() -> Self {
+        fn new(owner: Address) -> Self {
             Self {
-                last_sender: None,
-                last_amount: Int256::zero(),
+                owner: Item::new(owner),
+                call_count: Item::new(0),
+                last_called: Item::new(Address::zero()),
             }
         }
-        
-        #[message]
-        pub fn on_nep17_payment(&mut self, _from: H160, _amount: Int256, data: Int256) -> bool {
-            // Check if the data is valid
-            if data != Int256::from(123i32) {
-                return false;
-            }
+
+        // Call another contract's method
+        #[method]
+        fn call_contract_method(
+            &mut self, 
+            target: Address, 
+            method: String, 
+            args: Vec<u8>
+        ) -> bool {
+            // Ensure only the owner can call this method
+            let owner = self.owner.get().clone();
+            assert!(runtime::check_witness(&owner), "Only owner can call contracts");
+
+            // Increment call count
+            let count = *self.call_count.get();
+            self.call_count.set(count + 1);
             
-            // Get the executing script hash
-            let this = Runtime::executing_script_hash();
+            // Update last called contract
+            self.last_called.set(target);
             
-            // Get the calling script hash (token contract)
-            let token_hash = Runtime::calling_script_hash();
+            // Make the contract call with the serialized arguments
+            let result: bool = self.call_contract(&target, &method, args).unwrap_or(false);
             
-            // Parse the target contract hash
-            let target_contract = H160::from_hex_string(TARGET_CONTRACT);
+            // Emit event with the call result
+            runtime::emit_event(ContractCalled {
+                target,
+                method,
+                result,
+            });
             
-            // Call the token contract to get the balance
-            let mut args = Array::new();
-            args.push(Any::from(this));
-            
-            let balance_of = Runtime::call_contract(
-                token_hash,
-                ByteString::from("balanceOf"),
-                args
-            );
-            
-            // Convert the result to Int256
-            let balance = match balance_of.as_int256() {
-                Some(b) => b,
-                None => return false,
-            };
-            
-            // Store the payment information
-            self.last_sender = Some(token_hash);
-            self.last_amount = balance.clone();
-            
-            // Call the target contract with a real method name (transfer instead of dummyMethod)
-            let mut args = Array::new();
-            args.push(Any::from(this));
-            args.push(Any::from(target_contract)); // Send tokens to target_contract
-            args.push(Any::from(Int256::from(1i32))); // Send a small amount (1 token)
-            args.push(Any::from(ByteString::from("example data"))); // Data parameter
-            
-            Runtime::call_contract(
-                token_hash,
-                ByteString::from("transfer"),
-                args
-            );
-            
-            true
+            result
         }
         
-        // New method to get the last payment info
-        #[message]
+        // Call a token contract's transfer method
+        #[method]
+        fn call_token_transfer(
+            &mut self, 
+            token_contract: Address, 
+            from: Address, 
+            to: Address, 
+            amount: u64
+        ) -> bool {
+            // Ensure the caller is authorized for the from address
+            assert!(runtime::check_witness(&from), "Not authorized to transfer from this address");
+            
+            // Call the token contract's transfer method
+            let result: bool = self.call_contract(
+                &token_contract,
+                "transfer",
+                (from, to, amount, Option::<Vec<u8>>::None)
+            ).unwrap_or(false);
+            
+            // Update state on successful transfer
+            if result {
+                let count = *self.call_count.get();
+                self.call_count.set(count + 1);
+                self.last_called.set(token_contract);
+                
+                // Emit event
+                runtime::emit_event(ContractCalled {
+                    target: token_contract,
+                    method: "transfer".to_string(),
+                    result,
+                });
+            }
+            
+            result
+        }
+        
+        // Get the number of successful calls made
         #[safe]
-        pub fn get_last_payment(&self) -> (Option<H160>, Int256) {
-            (self.last_sender, self.last_amount.clone())
+        fn get_call_count(&self) -> u64 {
+            *self.call_count.get()
+        }
+        
+        // Get the last called contract
+        #[safe]
+        fn get_last_called(&self) -> Address {
+            self.last_called.get().clone()
+        }
+        
+        // Get the contract owner
+        #[safe]
+        fn get_owner(&self) -> Address {
+            self.owner.get().clone()
         }
     }
 }

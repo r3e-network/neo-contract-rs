@@ -3,316 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neo Contract RS - Rust Framework for Neo N3 Smart Contracts</title>
+    <title>Neo Contract Rust Documentation</title>
     <style>
-        :root {
-            --neo-green: #00e599;
-            --neo-dark: #242933;
-            --neo-light: #f7f7f7;
-            --neo-gray: #9e9e9e;
-        }
-        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
-            margin: 0;
-            padding: 0;
             color: #333;
-            background-color: var(--neo-light);
-        }
-        
-        .container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 20px;
         }
-        
-        header {
-            background-color: var(--neo-dark);
-            color: white;
-            padding: 40px 0;
+        h1, h2, h3, h4 {
+            color: #1e88e5;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            background-color: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        a {
+            color: #1e88e5;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .hero {
             text-align: center;
-        }
-        
-        .logo {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        
-        .logo span {
-            color: var(--neo-green);
-        }
-        
-        .tagline {
-            font-size: 1.2rem;
-            color: var(--neo-gray);
+            padding: 40px 0;
+            background-color: #f9f9f9;
+            border-radius: 8px;
             margin-bottom: 30px;
         }
-        
-        .cta-button {
-            display: inline-block;
-            background-color: var(--neo-green);
-            color: var(--neo-dark);
-            padding: 12px 30px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-        
-        .cta-button:hover {
-            background-color: #00d589;
-            transform: translateY(-2px);
-        }
-        
-        section {
-            padding: 60px 0;
-        }
-        
-        h2 {
-            text-align: center;
-            margin-bottom: 40px;
-            color: var(--neo-dark);
-            font-size: 2rem;
-        }
-        
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-        }
-        
-        .feature {
-            background-color: white;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-        }
-        
-        .feature:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-        
-        .feature h3 {
-            color: var(--neo-dark);
-            margin-top: 0;
-            margin-bottom: 15px;
-        }
-        
-        .feature-icon {
+        .hero h1 {
             font-size: 2.5rem;
-            margin-bottom: 20px;
-            color: var(--neo-green);
+            margin-bottom: 10px;
         }
-        
-        .code-sample {
-            background-color: var(--neo-dark);
-            color: white;
-            padding: 30px;
-            border-radius: 8px;
-            overflow-x: auto;
-            max-width: 90%;
-            margin: 40px auto;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        .hero p {
+            font-size: 1.2rem;
+            color: #666;
         }
-        
-        code {
-            font-family: 'Courier New', Courier, monospace;
-            display: block;
-        }
-        
-        .rust-keyword {
-            color: #ff79c6;
-        }
-        
-        .rust-type {
-            color: #8be9fd;
-        }
-        
-        .rust-fn {
-            color: #50fa7b;
-        }
-        
-        .rust-comment {
-            color: #6272a4;
-        }
-        
-        .rust-string {
-            color: #f1fa8c;
-        }
-        
-        .rust-macro {
-            color: #ffb86c;
-        }
-        
-        .docs {
-            background-color: var(--neo-dark);
-            color: white;
-            padding: 60px 0;
-            text-align: center;
-        }
-        
-        .doc-links {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
-            margin-top: 30px;
+            margin: 30px 0;
         }
-        
-        .doc-link {
-            background-color: rgba(255, 255, 255, 0.1);
-            padding: 15px 25px;
-            border-radius: 4px;
-            text-decoration: none;
-            color: white;
-            transition: all 0.3s ease;
+        .card {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        
-        .doc-link:hover {
-            background-color: var(--neo-green);
-            color: var(--neo-dark);
+        .card h3 {
+            margin-top: 0;
         }
-        
+        .card ul {
+            padding-left: 20px;
+        }
         footer {
-            background-color: var(--neo-dark);
-            color: var(--neo-gray);
-            padding: 20px 0;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
             text-align: center;
+            color: #666;
             font-size: 0.9rem;
-        }
-        
-        footer a {
-            color: var(--neo-green);
-            text-decoration: none;
-        }
-        
-        @media (max-width: 768px) {
-            .features {
-                grid-template-columns: 1fr;
-            }
-            
-            .logo {
-                font-size: 2rem;
-            }
-            
-            .tagline {
-                font-size: 1rem;
-            }
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <div class="logo">Neo Contract <span>RS</span></div>
-            <div class="tagline">A Rust Framework for Neo N3 Smart Contract Development</div>
-            <a href="https://github.com/R3E-Network/neo-contract-rs" class="cta-button">View on GitHub</a>
+    <div class="hero">
+        <h1>Neo Contract Rust</h1>
+        <p>A framework for writing Neo N3 smart contracts in Rust using an ink!-inspired syntax</p>
+    </div>
+
+    <h2>Overview</h2>
+    <p>
+        Neo Contract Rust is a comprehensive framework that enables developers to write smart contracts for the Neo N3 blockchain using Rust programming language. The framework provides a declarative attribute-based syntax inspired by Substrate's ink!, leveraging Rust's strong type system and memory safety while targeting the Neo N3 blockchain.
+    </p>
+
+    <div class="grid">
+        <div class="card">
+            <h3>Getting Started</h3>
+            <ul>
+                <li><a href="getting_started.html">Getting Started Guide</a></li>
+                <li><a href="writing_contracts.html">Writing Contracts</a></li>
+                <li><a href="ink_style_guide.html">ink! Style Guide</a></li>
+                <li><a href="nep17_tutorial.html">NEP-17 Token Tutorial</a></li>
+                <li><a href="deployment_guide.html">Deployment Guide</a></li>
+            </ul>
         </div>
-    </header>
-    
-    <section>
-        <div class="container">
-            <h2>Build Neo N3 Smart Contracts with Rust</h2>
-            <div class="features">
-                <div class="feature">
-                    <div class="feature-icon">🦀</div>
-                    <h3>Rust Powered</h3>
-                    <p>Write Neo N3 smart contracts using Rust's powerful type system, safety features, and modern syntax.</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🧩</div>
-                    <h3>NEP-17 Support</h3>
-                    <p>First-class support for creating NEP-17 fungible tokens with all standard methods and events.</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🔄</div>
-                    <h3>Contract Interactions</h3>
-                    <p>Easily interact with other contracts on the Neo N3 blockchain through a simple API.</p>
-                </div>
-            </div>
+        <div class="card">
+            <h3>Framework Components</h3>
+            <ul>
+                <li><a href="implementation_summary.html">Implementation Summary</a></li>
+                <li><a href="implementation_status.html">Implementation Status</a></li>
+                <li><a href="wasm_to_neo_conversion.html">WASM to Neo Conversion</a></li>
+                <li><a href="safe_methods.html">Safe Methods</a></li>
+                <li><a href="variables_and_constants.html">Variables and Constants</a></li>
+            </ul>
         </div>
-    </section>
-    
-    <section>
-        <div class="container">
-            <h2>Simple and Intuitive API</h2>
-            <div class="code-sample">
-                <code>
-<span class="rust-macro">#[neo_contract::contract]</span><br>
-<span class="rust-macro">#[neo_contract::contract_author("Your Name")]</span><br>
-<span class="rust-macro">#[neo_contract::contract_description("A simple token contract")]</span><br>
-<span class="rust-macro">#[neo_contract::contract_version("0.1.0")]</span><br>
-<span class="rust-keyword">mod</span> my_contract {<br>
-    <span class="rust-macro">#[neo(storage)]</span><br>
-    <span class="rust-keyword">pub struct</span> <span class="rust-type">MyContract</span> {<br>
-        total_supply: <span class="rust-type">Int256</span>,<br>
-        balances: <span class="rust-type">Map</span>&lt;<span class="rust-type">H160</span>, <span class="rust-type">Int256</span>&gt;,<br>
-    }<br>
-    <br>
-    <span class="rust-keyword">impl</span> <span class="rust-type">MyContract</span> {<br>
-        <span class="rust-macro">#[neo(constructor)]</span><br>
-        <span class="rust-keyword">pub fn</span> <span class="rust-fn">new</span>(initial_supply: <span class="rust-type">Int256</span>) -> <span class="rust-keyword">Self</span> {<br>
-            <span class="rust-comment">// Implementation...</span><br>
-            <span class="rust-keyword">Self</span> { total_supply: initial_supply, balances: <span class="rust-type">Map::new</span>() }<br>
-        }<br>
-        <br>
-        <span class="rust-macro">#[neo(message)]</span><br>
-        <span class="rust-keyword">pub fn</span> <span class="rust-fn">transfer</span>(&<span class="rust-keyword">mut</span> <span class="rust-keyword">self</span>, from: <span class="rust-type">H160</span>, to: <span class="rust-type">H160</span>, amount: <span class="rust-type">Int256</span>) -> <span class="rust-keyword">bool</span> {<br>
-            <span class="rust-comment">// Implementation...</span><br>
-            <span class="rust-keyword">true</span><br>
-        }<br>
-    }<br>
-}
-                </code>
-            </div>
+        <div class="card">
+            <h3>Development</h3>
+            <ul>
+                <li><a href="testing.html">Testing Contracts</a></li>
+                <li><a href="https://github.com/neo-project/neo-contract-rs">GitHub Repository</a></li>
+                <li><a href="https://docs.rs/neo-contract">API Documentation</a></li>
+                <li><a href="https://crates.io/crates/neo-contract">Crate</a></li>
+            </ul>
         </div>
-    </section>
-    
-    <section class="docs">
-        <div class="container">
-            <h2>Documentation</h2>
-            <p>Explore our comprehensive documentation to get started with Neo Contract RS</p>
-            <div class="doc-links">
-                <a href="./getting_started.md" class="doc-link">Getting Started</a>
-                <a href="./nep17_tutorial.md" class="doc-link">NEP-17 Tutorial</a>
-                <a href="./deployment_guide.md" class="doc-link">Deployment Guide</a>
-                <a href="https://github.com/R3E-Network/neo-contract-rs/tree/main/examples" class="doc-link">Example Contracts</a>
-            </div>
-        </div>
-    </section>
-    
-    <section>
-        <div class="container">
-            <h2>Features</h2>
-            <div class="features">
-                <div class="feature">
-                    <div class="feature-icon">📦</div>
-                    <h3>Attribute Macros</h3>
-                    <p>Use ink!-style attribute macros for a clear and declarative approach to contract development.</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🔒</div>
-                    <h3>Memory Safety</h3>
-                    <p>Benefit from Rust's memory safety guarantees while writing blockchain code.</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">⚡</div>
-                    <h3>Optimized WASM</h3>
-                    <p>Produce optimized WebAssembly code for efficient execution on the Neo N3 blockchain.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-    
+    </div>
+
+    <h2>Architecture</h2>
+    <p>
+        The Neo Contract Rust framework consists of several components that work together to provide a seamless experience for writing Neo N3 smart contracts in Rust:
+    </p>
+
+    <ul>
+        <li><strong>neo-contract</strong>: Core library for contract development with high-level abstractions</li>
+        <li><strong>neo-contract-proc-macros</strong>: Procedural macros for processing attributes</li>
+        <li><strong>neo-compiler</strong>: Tool to convert WebAssembly to Neo VM bytecode</li>
+        <li><strong>neo-contract-testing</strong>: Testing framework for Neo contracts</li>
+    </ul>
+
+    <p>
+        The workflow is:
+    </p>
+    <ol>
+        <li>Write Neo contracts in Rust using the framework's abstractions</li>
+        <li>Compile to WebAssembly (WASM)</li>
+        <li>Use neo-compiler to convert WASM to Neo N3 bytecode (.nef)</li>
+        <li>Deploy to Neo N3 blockchain</li>
+    </ol>
+
+    <h2>Examples</h2>
+    <p>
+        Explore various examples to understand how to use the framework:
+    </p>
+    <ul>
+        <li><a href="../examples/hello_world/">Hello World</a> - A simple contract that stores and retrieves a message</li>
+        <li><a href="../examples/nep17_token/">NEP-17 Token</a> - A standard token implementation</li>
+        <li><a href="../examples/contract_call/">Contract Call</a> - Demonstrates contract-to-contract interaction</li>
+        <li><a href="../examples/ink_style_complete/">ink! Style Examples</a> - Comprehensive examples of the ink! style syntax</li>
+    </ul>
+
     <footer>
-        <div class="container">
-            <p>© 2025 Neo Contract RS - A project by <a href="https://r3e.network">R3E Network</a></p>
-            <p>Licensed under MIT - <a href="https://github.com/R3E-Network/neo-contract-rs">GitHub Repository</a></p>
-        </div>
+        <p>Copyright © 2024 Neo Global Development (NGD)</p>
+        <p>Licensed under MIT and Apache-2.0</p>
     </footer>
 </body>
 </html>

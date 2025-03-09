@@ -3,10 +3,13 @@
 
 //! Fungible token implementation for the Neo blockchain
 
+use alloc::vec::Vec;
 use alloc::string::String;
-use crate::builtin::{H160, ByteString, Int256, Array, Any};
-use crate::storage::{StorageMap, Storable};
-use crate::Runtime;
+
+// Update to use prelude
+use crate::prelude::{H160, ByteString, Int256, Array, Any, StorageMap};
+use crate::policy::voting::Storable;  // Import Storable from the voting module
+use crate::runtime::Runtime;
 use crate::error::{Error, ErrorCode, Result};
 use crate::token::{Token, TokenEvents};
 
@@ -57,15 +60,12 @@ impl FungibleToken {
     /// Initialize the token with an initial supply and owner
     pub fn initialize(&self, owner: H160, initial_supply: Int256) -> Result<()> {
         // Check if already initialized
-        if self.owner.get(&ByteString::from("owner")).is_some() {
-            return Err(Error::new(
-                ErrorCode::AlreadyExists,
-                "Token already initialized"
-            ));
+        if let Ok(Some(_)) = self.owner.get(&ByteString::from("owner")) {
+            return Err(Error::with_message(ErrorCode::InvalidState, "Token already initialized"));
         }
         
         // Set owner
-        self.owner.put(&ByteString::from("owner"), &owner);
+        self.owner.set(&ByteString::from("owner"), &owner)?;
         
         // Mint initial supply to owner
         if initial_supply > Int256::zero() {
@@ -79,19 +79,13 @@ impl FungibleToken {
     pub fn mint(&self, to: &H160, amount: Int256) -> Result<()> {
         // Check amount
         if amount <= Int256::zero() {
-            return Err(Error::new(
-                ErrorCode::InvalidArgument,
-                "Amount must be positive"
-            ));
+            return Err(Error::with_message(ErrorCode::InvalidArgument, "Amount must be positive"));
         }
         
         // Check only owner can mint
         let owner = self.get_owner();
         if !Runtime::check_witness(&owner) {
-            return Err(Error::new(
-                ErrorCode::Unauthorized,
-                "Only owner can mint"
-            ));
+            return Err(Error::with_message(ErrorCode::Unauthorized, "Only owner can mint"));
         }
         
         // Update balance
@@ -112,35 +106,26 @@ impl FungibleToken {
     pub fn burn(&self, from: &H160, amount: Int256) -> Result<()> {
         // Check amount
         if amount <= Int256::zero() {
-            return Err(Error::new(
-                ErrorCode::InvalidArgument,
-                "Amount must be positive"
-            ));
+            return Err(Error::with_message(ErrorCode::InvalidArgument, "Amount must be positive"));
         }
         
         // Check owner or self authorization
         if !Runtime::check_witness(from) {
-            return Err(Error::new(
-                ErrorCode::Unauthorized,
-                "Not authorized to burn"
-            ));
+            return Err(Error::with_message(ErrorCode::Unauthorized, "Not authorized to burn"));
         }
         
         // Check balance
         let balance = self.balance_of(from);
         if balance < amount {
-            return Err(Error::new(
-                ErrorCode::InsufficientFunds,
-                "Insufficient balance for burn"
-            ));
+            return Err(Error::with_message(ErrorCode::InsufficientFunds, "Insufficient balance for burn"));
         }
         
         // Update balance
-        self.balances.put(from, &(balance - amount));
+        self.balances.set(from, &(balance - amount))?;
         
         // Update total supply
         let total_supply = self.total_supply();
-        self.metadata.total_supply.put(&ByteString::from("value"), &(total_supply - amount));
+        self.metadata.total_supply.set(&ByteString::from("value"), &(total_supply - amount))?;
         
         // Emit transfer event
         TokenEvents::emit_transfer(&(), Some(from.clone()), None, amount);
@@ -150,7 +135,10 @@ impl FungibleToken {
     
     /// Get the owner of the token contract
     pub fn get_owner(&self) -> H160 {
-        self.owner.get(&ByteString::from("owner")).unwrap_or_else(H160::zero)
+        match self.owner.get(&ByteString::from("owner")) {
+            Ok(Some(owner)) => owner,
+            _ => H160::zero(),
+        }
     }
     
     /// Set a new owner for the token contract
@@ -162,7 +150,9 @@ impl FungibleToken {
         }
         
         // Set new owner
-        self.owner.put(&ByteString::from("owner"), &new_owner);
+        if let Err(_) = self.owner.set(&ByteString::from("owner"), &new_owner) {
+            return false;
+        }
         
         true
     }
@@ -182,11 +172,17 @@ impl Token for FungibleToken {
     }
     
     fn total_supply(&self) -> Int256 {
-        self.metadata.total_supply.get(&ByteString::from("value")).unwrap_or_else(Int256::zero)
+        match self.metadata.total_supply.get(&ByteString::from("value")) {
+            Ok(Some(value)) => value,
+            _ => Int256::zero(),
+        }
     }
     
     fn balance_of(&self, account: &H160) -> Int256 {
-        self.balances.get(account).unwrap_or_else(Int256::zero)
+        match self.balances.get(account) {
+            Ok(Some(balance)) => balance,
+            _ => Int256::zero(),
+        }
     }
     
     fn transfer(&self, to: &H160, amount: Int256) -> bool {

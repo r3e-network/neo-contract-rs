@@ -1,209 +1,110 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
-
-//! Type-safe event system for Neo smart contracts
-//! This module provides a structured way to define and emit events
-//! in Neo smart contracts, ensuring type safety.
+//! Events for Neo Contract RS
+//!
+//! This module provides functionality for emitting events from smart contracts.
 
 use alloc::string::String;
 use alloc::vec::Vec;
-use core::marker::PhantomData;
+use crate::types::builtin::any::Any;
 
-use crate::builtin::{Any, Array, ByteString};
-use crate::Runtime;
-
-/// Trait for types that can be converted to an event parameter
-pub trait EventParam {
-    /// Convert the type to an `Any` value for event emission
-    fn to_event_param(&self) -> Any;
-}
-
-// Implement EventParam for common types
-impl EventParam for crate::builtin::H160 {
-    fn to_event_param(&self) -> Any {
-        Any::from(self.clone())
-    }
-}
-
-impl EventParam for crate::builtin::Int256 {
-    fn to_event_param(&self) -> Any {
-        Any::from(self.clone())
-    }
-}
-
-impl EventParam for ByteString {
-    fn to_event_param(&self) -> Any {
-        Any::from(self.clone())
-    }
-}
-
-impl EventParam for bool {
-    fn to_event_param(&self) -> Any {
-        Any::from(*self)
-    }
-}
-
-impl EventParam for u8 {
-    fn to_event_param(&self) -> Any {
-        Any::from(*self as i64)
-    }
-}
-
-impl EventParam for i32 {
-    fn to_event_param(&self) -> Any {
-        Any::from(*self as i64)
-    }
-}
-
-impl EventParam for i64 {
-    fn to_event_param(&self) -> Any {
-        Any::from(*self)
-    }
-}
-
-impl<T: EventParam> EventParam for Option<T> {
-    fn to_event_param(&self) -> Any {
-        match self {
-            Some(value) => value.to_event_param(),
-            None => Any::new(),
-        }
-    }
-}
-
-/// Base trait for event definitions
-pub trait Event {
-    /// Get the event name
-    fn name() -> ByteString;
-    
-    /// Convert event to parameters for emission
-    fn to_params(&self) -> Array<Any>;
-    
-    /// Emit the event
-    fn emit(&self) {
-        let name = Self::name();
-        let params = self.to_params();
-        Runtime::notify(&name, &params);
-    }
-}
-
-/// Helper struct for creating typed events
+/// Represents an event that can be emitted from a smart contract
 #[derive(Debug, Clone)]
-pub struct EventBuilder<T> {
-    name: ByteString,
-    _phantom: PhantomData<T>,
+pub struct Event {
+    /// The name of the event
+    pub name: String,
+    
+    /// The event parameters (name-value pairs)
+    pub params: Vec<(String, Any)>,
 }
 
-impl<T> EventBuilder<T> {
-    /// Create a new event builder
-    pub fn new(name: &str) -> Self {
-        Self {
-            name: ByteString::from(name),
-            _phantom: PhantomData,
+impl Event {
+    /// Creates a new event with the given name
+    pub fn new(name: impl Into<String>) -> Self {
+        Event {
+            name: name.into(),
+            params: Vec::new(),
         }
     }
     
-    /// Get the event name
-    pub fn name(&self) -> ByteString {
-        self.name.clone()
-    }
-}
-
-/// Macro for defining typed events
-#[macro_export]
-macro_rules! define_event {
-    (
-        $(#[$meta:meta])*
-        $vis:vis struct $name:ident {
-            $(
-                $(#[$field_meta:meta])*
-                $field_vis:vis $field_name:ident : $field_type:ty
-            ),* $(,)?
-        }
-    ) => {
-        $(#[$meta])*
-        $vis struct $name {
-            $(
-                $(#[$field_meta])*
-                $field_vis $field_name: $field_type,
-            )*
-            _builder: $crate::events::EventBuilder<Self>,
-        }
-        
-        impl $name {
-            /// Creates a new event instance
-            $vis fn new(
-                $($field_name: $field_type,)*
-            ) -> Self {
-                Self {
-                    $($field_name,)*
-                    _builder: $crate::events::EventBuilder::new(stringify!($name)),
-                }
-            }
-            
-            /// Emits this event
-            $vis fn emit(&self) {
-                $crate::events::Event::emit(self);
-            }
-        }
-        
-        impl $crate::events::Event for $name {
-            fn name() -> $crate::builtin::ByteString {
-                $crate::builtin::ByteString::from(stringify!($name))
-            }
-            
-            fn to_params(&self) -> $crate::builtin::Array<$crate::builtin::Any> {
-                let mut params = $crate::builtin::Array::new();
-                $(
-                    params.push($crate::events::EventParam::to_event_param(&self.$field_name));
-                )*
-                params
-            }
-        }
-    };
-}
-
-// Standard events
-
-/// Define the NEP-17 Transfer event
-#[derive(Debug, Clone)]
-pub struct Transfer {
-    /// The address tokens are transferred from (None for minting)
-    pub from: Option<crate::builtin::H160>,
-    /// The address tokens are transferred to (None for burning)
-    pub to: Option<crate::builtin::H160>,
-    /// The amount of tokens transferred
-    pub amount: crate::builtin::Int256,
-    /// Event builder
-    _builder: EventBuilder<Self>,
-}
-
-impl Transfer {
-    /// Create a new Transfer event
-    pub fn new(from: Option<crate::builtin::H160>, to: Option<crate::builtin::H160>, amount: crate::builtin::Int256) -> Self {
-        Self {
-            from,
-            to,
-            amount,
-            _builder: EventBuilder::new("Transfer"),
-        }
+    /// Adds a parameter to the event
+    pub fn add_param(&mut self, name: impl Into<String>, value: impl Into<Any>) {
+        self.params.push((name.into(), value.into()));
     }
     
-    /// Emit this event
+    /// Creates a new event with the given name and adds a parameter
+    pub fn with_param(mut self, name: impl Into<String>, value: impl Into<Any>) -> Self {
+        self.add_param(name, value);
+        self
+    }
+    
+    /// Returns the parameter with the given name
+    pub fn get_param(&self, name: &str) -> Option<&Any> {
+        self.params.iter()
+            .find(|(param_name, _)| param_name == name)
+            .map(|(_, value)| value)
+    }
+    
+    /// Emits the event
     pub fn emit(&self) {
-        Event::emit(self);
+        // In a real implementation, this would call into the Neo VM
+        // to emit the event. For now, we'll just provide the function
+        // signature, and the actual implementation will be provided
+        // by the WASM to Neo converter.
+        
+        // The Neo VM needs to know the event name and parameters
+        // The event name is self.name
+        // The parameters are in self.params
+        
+        // This is a placeholder and will be replaced with actual code
+        // that interfaces with the Neo VM
     }
 }
 
-impl Event for Transfer {
-    fn name() -> ByteString {
-        ByteString::from("Transfer")
+/// Helper function to create and emit an event
+pub fn emit(name: impl Into<String>, params: Vec<(String, Any)>) {
+    let mut event = Event::new(name);
+    for (param_name, param_value) in params {
+        event.add_param(param_name, param_value);
     }
+    event.emit();
+}
+
+/// NEP-17 transfer event
+pub fn nep17_transfer(from: Option<&[u8]>, to: Option<&[u8]>, amount: u64) {
+    let mut event = Event::new("Transfer");
     
-    fn to_params(&self) -> Array<Any> {
-        let mut params = Array::new();
-        params.push(self.from.to_event_param());
-        params.push(self.to.to_event_param());
-        params.push(self.amount.to_event_param());
-        params
-    }
+    // NEP-17 specifications require these parameters
+    event.add_param("from", match from {
+        Some(addr) => Any::byte_string(addr),
+        None => Any::null(),
+    });
+    
+    event.add_param("to", match to {
+        Some(addr) => Any::byte_string(addr),
+        None => Any::null(),
+    });
+    
+    event.add_param("amount", Any::integer(amount));
+    
+    event.emit();
+}
+
+/// NEP-11 transfer event
+pub fn nep11_transfer(from: Option<&[u8]>, to: Option<&[u8]>, amount: u64, token_id: &[u8]) {
+    let mut event = Event::new("Transfer");
+    
+    // NEP-11 specifications require these parameters
+    event.add_param("from", match from {
+        Some(addr) => Any::byte_string(addr),
+        None => Any::null(),
+    });
+    
+    event.add_param("to", match to {
+        Some(addr) => Any::byte_string(addr),
+        None => Any::null(),
+    });
+    
+    event.add_param("amount", Any::integer(amount));
+    event.add_param("tokenId", Any::byte_string(token_id));
+    
+    event.emit();
 }

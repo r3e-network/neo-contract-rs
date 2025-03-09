@@ -8,6 +8,11 @@ use syn::{
     Meta, NestedMeta, Pat, PatIdent,
 };
 
+/// Public interface for the contract attribute macro
+pub fn contract(attr: TokenStream, item: TokenStream) -> TokenStream {
+    generate(attr, item)
+}
+
 /// Process the contract attribute macro
 pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse the module containing the contract

@@ -1,0 +1,39 @@
+[package]
+name = "neo-contract-testing"
+version = "0.1.0"
+edition = "2021"
+authors = ["Neo Smart Contract Developers"]
+description = "Testing framework for Neo N3 smart contracts"
+license = "MIT"
+repository = "https://github.com/neo-project/neo-contract-rs"
+documentation = "https://github.com/neo-project/neo-contract-rs/docs"
+readme = "README.md"
+
+[dependencies]
+# Core dependencies
+neo-contract = { path = "../neo-contract", version = "0.1.0" }
+cfg-if = "1.0"
+
+# Optional dependencies for std environments
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+hex = { version = "0.4", optional = true }
+derive_more = { version = "0.99", optional = true }
+
+# For no_std environments
+wee_alloc = { version = "0.4", optional = true }
+
+[dev-dependencies]
+# For testing the testing framework
+criterion = { version = "0.3", features = ["html_reports"] }
+
+[features]
+default = ["std"]
+std = [
+    "neo-contract/std",
+    "serde",
+    "serde_json",
+    "hex",
+    "derive_more",
+]
+no_std = ["wee_alloc"]

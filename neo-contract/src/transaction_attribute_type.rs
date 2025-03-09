@@ -1,42 +1,82 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
+//! Transaction Attribute Types for Neo Contract RS
+//!
+//! This module defines the transaction attribute types used in Neo transactions.
 
-/// Represents the type of a transaction attribute.
+use core::fmt;
+
+/// Transaction attribute types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
 pub enum TransactionAttributeType {
-    /// Indicates that the transaction is of high priority.
+    /// High priority - indicates the transaction should have high priority
     HighPriority = 0x01,
-
-    /// Indicates that the transaction is an oracle response.
+    
+    /// Oracle response - used for oracle responses
     OracleResponse = 0x11,
-
-    /// Indicates that the transaction is not valid before a certain height.
+    
+    /// Not valid before - specifies a timestamp before which the transaction is not valid
     NotValidBefore = 0x20,
-
-    /// Indicates that the transaction conflicts with another transaction.
+    
+    /// Conflicts - specifies conflicting transactions
     Conflicts = 0x21,
-
-    /// Indicates that the transaction is aimed to service notary request with a number of keys.
-    NotaryAssisted = 0x22,
+    
+    /// Additional script - additional script to execute
+    AdditionalScript = 0x42,
+    
+    /// Network ID - ID of the network where the transaction is valid
+    NetworkID = 0x4C,
 }
 
-impl From<TransactionAttributeType> for u8 {
-    fn from(value: TransactionAttributeType) -> Self {
-        value as u8
+impl TransactionAttributeType {
+    /// Returns the byte value of the transaction attribute type
+    pub fn value(&self) -> u8 {
+        *self as u8
+    }
+    
+    /// Tries to convert a byte value to a TransactionAttributeType
+    pub fn from_value(value: u8) -> Option<Self> {
+        match value {
+            0x01 => Some(TransactionAttributeType::HighPriority),
+            0x11 => Some(TransactionAttributeType::OracleResponse),
+            0x20 => Some(TransactionAttributeType::NotValidBefore),
+            0x21 => Some(TransactionAttributeType::Conflicts),
+            0x42 => Some(TransactionAttributeType::AdditionalScript),
+            0x4C => Some(TransactionAttributeType::NetworkID),
+            _ => None,
+        }
+    }
+    
+    /// Returns a human-readable name for the transaction attribute type
+    pub fn name(&self) -> &'static str {
+        match self {
+            TransactionAttributeType::HighPriority => "High Priority",
+            TransactionAttributeType::OracleResponse => "Oracle Response",
+            TransactionAttributeType::NotValidBefore => "Not Valid Before",
+            TransactionAttributeType::Conflicts => "Conflicts",
+            TransactionAttributeType::AdditionalScript => "Additional Script",
+            TransactionAttributeType::NetworkID => "Network ID",
+        }
     }
 }
 
+impl fmt::Display for TransactionAttributeType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name())
+    }
+}
+
+/// Converts a TransactionAttributeType to a u8
+impl From<TransactionAttributeType> for u8 {
+    fn from(attribute_type: TransactionAttributeType) -> Self {
+        attribute_type.value()
+    }
+}
+
+/// Tries to convert a u8 to a TransactionAttributeType
 impl TryFrom<u8> for TransactionAttributeType {
     type Error = ();
-
+    
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0x01 => Ok(TransactionAttributeType::HighPriority),
-            0x11 => Ok(TransactionAttributeType::OracleResponse),
-            0x20 => Ok(TransactionAttributeType::NotValidBefore),
-            0x21 => Ok(TransactionAttributeType::Conflicts),
-            0x22 => Ok(TransactionAttributeType::NotaryAssisted),
-            _ => Err(()),
-        }
+        TransactionAttributeType::from_value(value).ok_or(())
     }
 }

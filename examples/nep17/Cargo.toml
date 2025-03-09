@@ -1,12 +1,22 @@
 [package]
-name = "nep17"
+name = "nep17-example"
 version = "0.1.0"
 edition = "2021"
+authors = ["Neo Smart Contract Developers"]
+description = "NEP-17 token example for Neo N3 using rust-contract-rs"
+license = "MIT"
 
 [lib]
-crate-type = ["cdylib"]
-
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-neo-contract = { path = "../../neo-contract" }
-wee_alloc = "0.4.5"
+neo-contract = { path = "../../neo-contract", version = "0.1.0" }
+
+[dev-dependencies]
+neo-contract-testing = { path = "../../neo-contract-testing", version = "0.1.0" }
+
+[features]
+default = ["std"]
+std = [
+    "neo-contract/std"
+]

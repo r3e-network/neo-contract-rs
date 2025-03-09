@@ -6,6 +6,11 @@ use syn::{
     parse_macro_input, AttributeArgs, Lit, NestedMeta,
 };
 
+/// Public interface for the supported_standards attribute macro
+pub fn supported_standards(attr: TokenStream, item: TokenStream) -> TokenStream {
+    generate(attr, item)
+}
+
 /// Process the supported_standards attribute macro
 pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse attribute arguments

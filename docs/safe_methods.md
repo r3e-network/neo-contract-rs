@@ -1,126 +1,205 @@
-# Safe Methods in Neo N3 Smart Contracts
+# Safe Methods in Neo Smart Contracts
 
-In Neo N3 smart contracts, methods can be categorized as either "safe" or "non-safe" based on whether they modify the contract's state.
+This guide explains how to use safe (read-only) methods in Neo smart contracts written with the Neo Contract Framework for Rust.
 
-## Understanding Safe vs. Non-Safe Methods
+## What Are Safe Methods?
 
-### Safe Methods
-Safe methods are read-only operations that do not modify the contract's storage state. These methods have the following characteristics:
-- They take `&self` (immutable reference) as the first parameter
-- They only perform read operations on the contract storage
-- They can be executed without requiring a full verification from the blockchain
+Safe methods are contract functions that do not modify the blockchain state. They only read data without making any modifications. In Neo, safe methods:
 
-### Non-Safe Methods
-Non-safe methods can potentially modify the contract's storage state. These methods have the following characteristics:
-- They take `&mut self` (mutable reference) as the first parameter
-- They can perform write operations on the contract storage
-- They require full verification from the blockchain to execute
+- Do not require consensus
+- Can be executed without network fees (free invocation)
+- Cannot change storage, emit events, or transfer assets
+- Return data to the caller efficiently
 
-## Using the `#[safe]` Attribute
+## Benefits of Safe Methods
 
-In neo-contract-rs, you can mark a method as safe by adding the `#[safe]` attribute:
+Using safe methods offers several advantages:
 
-```rust
-#[message]
-#[safe]
-pub fn balance_of(&self, account: H160) -> Int256 {
-    // Read-only implementation
-}
-```
+1. **Reduced Costs**: Users don't pay fees to call safe methods
+2. **Improved Performance**: Safe methods execute faster since they don't require consensus
+3. **Better UX**: Frontend applications can retrieve data without requiring wallet signatures
+4. **Enhanced Security**: Reduced attack surface for read-only operations
 
-The `#[safe]` attribute is transformed into a `"safe": true` flag in the contract manifest file, which informs the Neo Virtual Machine that the method can be executed without state changes, allowing for optimized execution.
+## Declaring Safe Methods
 
-## Usage Examples
-
-### Read-Only Methods (Should be marked as safe)
+In the Neo Contract Framework, you can mark a method as safe using the `#[safe]` attribute. Important: the `#[safe]` attribute automatically implies that the function is a method, so you don't need to also add the `#[method]` attribute.
 
 ```rust
-// Get token name - read-only method
-#[message]
-#[safe]
-pub fn get_name(&self) -> ByteString {
-    self.token_name.clone()
-}
-
-// Get token balance - read-only method
-#[message]
-#[safe]
-pub fn balance_of(&self, account: H160) -> Int256 {
-    match self.balances.get(&account) {
-        Some(balance) => balance.clone(),
-        None => Int256::zero(),
+#[neo_contract::contract]
+mod token_contract {
+    use neo_contract::prelude::*;
+    
+    #[storage]
+    struct TokenContract {
+        balances: Map<Address, u64>,
+        total_supply: Item<u64>,
+    }
+    
+    impl TokenContract {
+        // Regular method that modifies state - needs #[method]
+        #[method]
+        fn transfer(&mut self, from: Address, to: Address, amount: u64) -> bool {
+            // State-changing logic
+            true
+        }
+        
+        // Safe method that only reads state
+        // Note: no need for #[method] - #[safe] already implies it's a method
+        #[safe]
+        fn balance_of(&self, account: Address) -> u64 {
+            self.balances.get(&account).unwrap_or_default()
+        }
+        
+        // Another safe method - also no need for #[method]
+        #[safe]
+        fn total_supply(&self) -> u64 {
+            *self.total_supply.get()
+        }
     }
 }
 ```
 
-### State-Modifying Methods (Should NOT be marked as safe)
+## Method Attributes Summary
+
+Here's a summary of the attributes used to mark methods:
+
+1. `#[method]` - Marks a function as a contract method that can modify state (requires `&mut self`)
+2. `#[safe]` - Marks a function as a read-only contract method (requires `&self`)
+   - This implicitly includes method functionality, so don't use `#[method]` with it
+3. `#[constructor]` - Marks a function as the contract's constructor
+
+## How It Works
+
+When you mark a method with `#[safe]`, several things happen:
+
+1. The compiler includes the method in the contract manifest with the `safe: true` property
+2. The method receives `&self` (immutable reference) instead of `&mut self`
+3. The Neo VM sets appropriate call flags when the method is invoked
+
+## Requirements for Safe Methods
+
+For a method to be safely marked as `#[safe]`:
+
+1. It must receive `&self` (immutable reference) instead of `&mut self`
+2. It must not modify storage (all storage access must be read-only)
+3. It must not emit events
+4. It must not transfer assets or call methods that transfer assets
+5. It must not use unsafe Neo syscalls that modify state
+
+## Common Patterns
+
+### Read-Only Queries
+
+Safe methods are perfect for query operations:
 
 ```rust
-// Transfer tokens - modifies state
-#[message]
-pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
-    // Implementation that modifies state
-}
-
-// Mint new tokens - modifies state
-#[message]
-pub fn mint(&mut self, to: H160, amount: Int256) -> bool {
-    // Implementation that modifies state
+#[safe]
+fn get_token_info(&self) -> TokenInfo {
+    TokenInfo {
+        name: self.name.get().clone(),
+        symbol: self.symbol.get().clone(),
+        decimals: *self.decimals.get(),
+        total_supply: *self.total_supply.get(),
+    }
 }
 ```
 
-## Benefits of Using Safe Methods
+### View Methods for Collections
 
-1. **Performance**: Safe methods can be executed more efficiently as they don't need to update the blockchain state
-2. **Cost**: Calling safe methods typically requires less GAS as they don't modify storage
-3. **Security**: Clearly distinguishing between read-only and state-modifying operations enhances contract security
+For collections, you can provide safe accessors:
 
-## Contract Manifest Representation
+```rust
+#[safe]
+fn get_voter_weight(&self, address: Address) -> u64 {
+    self.voter_weights.get(&address).unwrap_or_default()
+}
 
-In the contract manifest JSON file, safe methods are represented with a `"safe": true` property:
+#[safe]
+fn get_proposal(&self, id: u64) -> Option<Proposal> {
+    self.proposals.get(&id).cloned()
+}
+```
 
-```json
-{
-  "methods": [
-    {
-      "name": "balance_of",
-      "parameters": [
-        {
-          "name": "account",
-          "type": "Hash160"
+### Pagination and Iterators
+
+For larger collections, you can implement paginated access:
+
+```rust
+#[safe]
+fn get_proposals(&self, start_idx: u64, count: u64) -> Vec<Proposal> {
+    let mut result = Vec::new();
+    let end_idx = start_idx + count;
+    
+    for idx in start_idx..end_idx {
+        if let Some(proposal) = self.proposals.get(&idx) {
+            result.push(proposal.clone());
         }
-      ],
-      "returntype": "Integer",
-      "offset": 0,
-      "safe": true
-    },
-    {
-      "name": "transfer",
-      "parameters": [
-        {
-          "name": "from",
-          "type": "Hash160"
-        },
-        {
-          "name": "to",
-          "type": "Hash160"
-        },
-        {
-          "name": "amount",
-          "type": "Integer"
-        }
-      ],
-      "returntype": "Boolean",
-      "offset": 0,
-      "safe": false
     }
-  ]
+    
+    result
 }
 ```
 
 ## Best Practices
 
-1. Always mark read-only methods with the `#[safe]` attribute
-2. Never mark state-modifying methods as safe
-3. Place the `#[safe]` attribute after the `#[message]` attribute for clarity
-4. Ensure that methods marked as safe never modify contract storage
+### Do's
+
+- **Do** mark all read-only methods with `#[safe]` instead of `#[method]`
+- **Do** use safe methods for all data retrieval operations when possible
+- **Do** return complete data structures when practical to minimize multiple calls
+- **Do** implement pagination for methods that might return large datasets
+
+### Don'ts
+
+- **Don't** mark methods as safe if they modify state (compiler will catch this)
+- **Don't** add both `#[method]` and `#[safe]` to the same function (redundant and confusing)
+- **Don't** make unsafe syscalls from safe methods
+- **Don't** confuse return value immutability with method safety
+- **Don't** perform excessively complex computations in safe methods (they still consume resources)
+
+## Testing Safe Methods
+
+When testing, you should verify that your safe methods are properly marked and behave correctly:
+
+```rust
+#[test]
+fn test_safe_methods() {
+    let mut fixture = setup::new_fixture();
+    let contract = deploy::deploy(&mut fixture, "MyContract", &[]);
+    
+    // Test that total_supply is marked as safe (no need for signing)
+    let supply: u64 = read::call(&mut fixture, &contract, "total_supply", &[]).unwrap();
+    assert_eq!(supply, 1000000);
+    
+    // For comparison, this requires signing:
+    let result: bool = invoke::call(&mut fixture, &contract, "transfer", &[
+        "NbTiM6h8r99kpRtb428XcsUk1TzKed2gTc".into(),
+        "NV8R5aLqogCPbJ6HgzXy2gU1j4ZG9Mji1e".into(),
+        100u64.into()
+    ]).unwrap();
+}
+```
+
+## Calling Safe Methods from Other Contracts
+
+When one contract calls a safe method on another contract, the safety property is maintained:
+
+```rust
+#[method]
+fn process_data(&mut self, token_contract: Address) -> u64 {
+    // This call doesn't change state on token_contract,
+    // so it remains safe even when called from a non-safe method
+    let balance = self.call_contract::<u64>(
+        &token_contract,
+        "balance_of",
+        (runtime::calling_script_hash(),)
+    ).unwrap_or_default();
+    
+    // Do something with the balance...
+    balance
+}
+```
+
+## Conclusion
+
+Safe methods are a powerful feature in Neo smart contracts. By properly marking your read-only methods with `#[safe]`, you provide users with fee-free access to contract data, improve performance, and enhance the overall user experience of your dApp. Remember that `#[safe]` already implies the method is exposed in the contract, so there's no need to also use `#[method]`.

@@ -4,9 +4,11 @@
 //! Security module for Neo smart contracts
 //! This module provides security-related utilities like reentrancy protection
 
-use crate::storage::{StorageMap, Storable, StorageKey};
-use crate::builtin::ByteString;
-use crate::error::{Error, ErrorCode, Result};
+// use crate::storage::{StorageMap, Storable, StorageKey};
+// use crate::builtin::ByteString;
+use crate::prelude::{StorageMap, ByteString};
+use crate::policy::voting::Storable;
+// use crate::error::{Error, ErrorCode, Result};
 use core::marker::PhantomData;
 
 pub mod reentrancy;

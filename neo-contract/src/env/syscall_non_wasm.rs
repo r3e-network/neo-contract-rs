@@ -1,6 +1,10 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
+//! System calls for non-WASM environments.
+//! This module provides access to the Neo N3 VM system calls from native code.
+//! These functions are only available in non-WASM environments.
+
 use alloc::vec::Vec;
 use crate::call_flags::CallFlags;
 use crate::types::builtin::array::Array;
@@ -14,16 +18,17 @@ use crate::types::contract::NeoCandidate;
 use crate::types::notification::Notification;
 use crate::types::placeholder::Placeholder;
 use crate::types::context::StorageContext;
+use crate::prelude::FindOptions;
 
 /// Get the executing script hash
 pub unsafe fn system_runtime_executing_script_hash() -> H160 {
-    // In a real implementation, this would call the runtime executing script hash syscall
+    // Stub implementation
     H160::zero()
 }
 
 /// Get the calling script hash
 pub unsafe fn system_runtime_calling_script_hash() -> H160 {
-    // In a real implementation, this would call the runtime calling script hash syscall
+    // Stub implementation
     H160::zero()
 }
 
@@ -35,19 +40,19 @@ pub unsafe fn system_runtime_entry_script_hash() -> H160 {
 
 /// Check if the witness is valid
 pub unsafe fn system_runtime_check_witness(hash: H160) -> bool {
-    // In a real implementation, this would call the runtime check witness syscall
+    // Stub implementation
     false
 }
 
 /// Get the platform
 pub unsafe fn system_runtime_platform() -> ByteString {
-    // In a real implementation, this would call the runtime platform syscall
+    // Stub implementation
     ByteString::from("NEO")
 }
 
 /// Get the gas left
 pub unsafe fn system_runtime_gas_left() -> i64 {
-    // In a real implementation, this would call the runtime gas left syscall
+    // Stub implementation
     0
 }
 
@@ -59,28 +64,28 @@ pub unsafe fn system_runtime_invocation_counter() -> i32 {
 
 /// Get the time
 pub unsafe fn system_runtime_time() -> u64 {
-    // In a real implementation, this would call the runtime time syscall
+    // Stub implementation
     0
 }
 
 /// Notify an event
-pub unsafe fn system_runtime_notify(event_name: ByteString, args: Array<Any>) {
-    // In a real implementation, this would call the runtime notify syscall
+pub unsafe fn system_runtime_notify(event_name: ByteString, args: Array) {
+    // Stub implementation
 }
 
 /// Log a message
 pub unsafe fn system_runtime_log(message: ByteString) {
-    // In a real implementation, this would call the runtime log syscall
+    // Stub implementation
 }
 
 /// Call a contract
 pub unsafe fn system_contract_call(
     hash: H160,
     method: ByteString,
-    call_flags: CallFlags,
-    args: Array<Any>,
+    flags: CallFlags,
+    args: Array,
 ) -> Any {
-    // In a real implementation, this would call the contract call syscall
+    // Stub implementation
     Any::default()
 }
 
@@ -99,34 +104,34 @@ pub unsafe fn system_contract_get_call_flags() -> CallFlags {
     CallFlags::All
 }
 
-/// Get the Neo candidates
-pub unsafe fn system_neo_get_candidates() -> Array<NeoCandidate> {
-    // In a real implementation, this would call the neo get candidates syscall
+/// Get candidates
+pub unsafe fn system_neo_get_candidates() -> Array {
+    // Stub implementation
     Array::new()
 }
 
-/// Get the Neo committee
-pub unsafe fn system_neo_get_committee() -> Array<H160> {
-    // In a real implementation, this would call the neo get committee syscall
+/// Get committee
+pub unsafe fn system_neo_get_committee() -> Array {
+    // Stub implementation
     Array::new()
 }
 
-/// Get the Neo next block validators
-pub unsafe fn system_neo_get_next_block_validators() -> Array<H160> {
-    // In a real implementation, this would call the neo get next block validators syscall
+/// Get next block validators
+pub unsafe fn system_neo_get_next_block_validators() -> Array {
+    // Stub implementation
     Array::new()
 }
 
 /// Get the storage context
 pub unsafe fn system_storage_get_context() -> StorageContext {
-    // In a real implementation, this would call the storage get context syscall
-    StorageContext::new()
+    // Stub implementation
+    StorageContext::default()
 }
 
 /// Get a read-only storage context
 pub unsafe fn system_storage_get_read_only_context() -> StorageContext {
-    // In a real implementation, this would call the storage get read only context syscall
-    StorageContext::new()
+    // Stub implementation
+    StorageContext::default()
 }
 
 /// Convert a storage context to a read-only storage context
@@ -137,114 +142,150 @@ pub unsafe fn system_storage_as_readonly(context: StorageContext) -> StorageCont
 
 /// Put a value in storage
 pub unsafe fn system_storage_put(context: StorageContext, key: ByteString, value: ByteString) {
-    // In a real implementation, this would call the storage put syscall
+    // Stub implementation
 }
 
 /// Get a value from storage
 pub unsafe fn system_storage_get(context: StorageContext, key: ByteString) -> ByteString {
-    // In a real implementation, this would call the storage get syscall
-    ByteString::empty()
+    // Stub implementation
+    ByteString::default()
 }
 
 /// Delete a value from storage
 pub unsafe fn system_storage_delete(context: StorageContext, key: ByteString) {
-    // In a real implementation, this would call the storage delete syscall
+    // Stub implementation
 }
 
 /// Find values in storage
 pub unsafe fn system_storage_find(context: StorageContext, prefix: ByteString) -> i32 {
-    // In a real implementation, this would call the storage find syscall
+    // Stub implementation
     0
 }
 
 /// Find values in storage with options
 pub unsafe fn system_storage_find_with_options(
-    _context: StorageContext,
-    _prefix: ByteString,
-    _options: crate::FindOptions,
+    context: StorageContext,
+    prefix: ByteString,
+    options: FindOptions,
 ) -> i32 {
-    // In a real implementation, this would call the storage find syscall with options
+    // Stub implementation
     0
 }
 
 /// Check a signature
 pub unsafe fn system_crypto_check_sign(public_key: ByteString, sign: ByteString) -> bool {
-    // In a real implementation, this would call the crypto check sign syscall
+    // Stub implementation
     false
 }
 
 /// Check multiple signatures
-pub unsafe fn system_crypto_check_multi_signs(public_keys: Array<ByteString>, signs: Array<ByteString>) -> bool {
-    // In a real implementation, this would call the crypto check multi signs syscall
+pub unsafe fn system_crypto_check_multi_signs(public_keys: Array, signs: Array) -> bool {
+    // Stub implementation
     false
 }
 
 /// Get the current trigger type
 pub unsafe fn system_runtime_trigger() -> u32 {
-    // In a real implementation, this would call the runtime trigger syscall
+    // Stub implementation
     0
 }
 
 /// Get the current network ID
 pub unsafe fn system_runtime_get_network() -> i32 {
-    // In a real implementation, this would call the runtime get network syscall
+    // Stub implementation
     0
 }
 
 /// Get random number
 pub unsafe fn system_runtime_get_random() -> u64 {
-    // In a real implementation, this would call the runtime get random syscall
+    // Stub implementation
     0
 }
 
 /// Get the notifications from a transaction
-pub unsafe fn system_runtime_get_notifications(_hash: H160) -> Array<Any> {
-    // In a real implementation, this would call the runtime get notifications syscall
+pub unsafe fn system_runtime_get_notifications(_hash: H160) -> Array {
+    // Stub implementation
     Array::new()
 }
 
 /// Enter the native contract context
 pub unsafe fn system_runtime_enter_script(_script_hash: H160) {
-    // In a real implementation, this would call the runtime enter script syscall
+    // Stub implementation
 }
 
 /// Get the invocation counter
 pub unsafe fn system_runtime_get_invocation_counter() -> i32 {
-    // In a real implementation, this would call the runtime get invocation counter syscall
+    // Stub implementation
     0
 }
 
 /// Check if the hash is a contract
 pub unsafe fn system_contract_is_contract(_hash: H160) -> bool {
-    // In a real implementation, this would call the contract is contract syscall
+    // Stub implementation
     false
 }
 
 /// Update the contract
 pub unsafe fn system_contract_update(_script: ByteString, _manifest: ByteString, _data: Any) -> bool {
-    // In a real implementation, this would call the contract update syscall
+    // Stub implementation
     false
 }
 
 /// Destroy the contract
 pub unsafe fn system_contract_destroy() {
-    // In a real implementation, this would call the contract destroy syscall
+    // Stub implementation
 }
 
 /// Verify signature with ECDSA
 pub unsafe fn system_crypto_verify_with_ecdsa(_message: ByteString, _pubkey: ByteString, _signature: ByteString, _curve: u32) -> bool {
-    // In a real implementation, this would call the crypto verify with ecdsa syscall
+    // Stub implementation
     false
 }
 
 /// Calculate SHA256 hash
 pub unsafe fn system_crypto_sha256(_data: ByteString) -> H256 {
-    // In a real implementation, this would call the crypto sha256 syscall
+    // Stub implementation
     H256::zero()
 }
 
 /// Calculate RIPEMD160 hash
 pub unsafe fn system_crypto_ripemd160(_data: ByteString) -> H160 {
-    // In a real implementation, this would call the crypto ripemd160 syscall
+    // Stub implementation
     H160::zero()
+}
+
+/// Generic hash function
+pub unsafe fn system_crypto_hash(data: ByteString, hash_type: u32) -> ByteString {
+    // Stub implementation
+    ByteString::default()
+}
+
+/// Check multisig
+pub unsafe fn system_crypto_check_multisig(message: ByteString, signatures: Array, public_keys: Array) -> bool {
+    // Stub implementation
+    false
+}
+
+/// Convert script hash to address
+pub unsafe fn system_crypto_to_address(script_hash: H160) -> ByteString {
+    // Stub implementation
+    ByteString::default()
+}
+
+/// Convert address to script hash
+pub unsafe fn system_crypto_to_script_hash(address: ByteString) -> H160 {
+    // Stub implementation
+    H160::zero()
+}
+
+/// Generate BLS signature
+pub unsafe fn system_crypto_bls_generate(message: ByteString, private_key: ByteString) -> ByteString {
+    // Stub implementation
+    ByteString::default()
+}
+
+/// Verify BLS signature
+pub unsafe fn system_crypto_bls_verify(message: ByteString, signature: ByteString, public_key: ByteString) -> bool {
+    // Stub implementation
+    false
 }

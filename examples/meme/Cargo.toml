@@ -1,0 +1,10 @@
+[package]
+name = "neo-meme-coin"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+neo-contract = { path = "../../neo-contract" }
+
+[lib]
+crate-type = ["cdylib"]

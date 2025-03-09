@@ -1,91 +1,117 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
+//! H160 type for Neo Contract RS
+//!
+//! This module defines the H160 type, which is used for addresses and script hashes in Neo.
 
-use alloc::string::String;
+use core::fmt;
+use core::ops::Deref;
+use core::convert::TryFrom;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use alloc::format;
-use core::fmt;
-use core::cmp::Ordering;
-use crate::utils::hex;
 
-/// H160 represents a 160-bit hash
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// H160 represents a 160-bit hash (20 bytes) like an address or script hash
+#[derive(PartialEq, Eq, Clone, Copy, Hash, Default)]
 pub struct H160(pub [u8; 20]);
 
 impl H160 {
-    /// Create a new H160
-    pub fn new(bytes: [u8; 20]) -> Self {
-        H160(bytes)
-    }
-
-    /// Create a zero H160
+    /// Creates a new H160 with all zeros
     pub fn zero() -> Self {
         H160([0; 20])
     }
-
-    /// Get the bytes of the H160
+    
+    /// Checks if the H160 is all zeros
+    pub fn is_zero(&self) -> bool {
+        self.0.iter().all(|&b| b == 0)
+    }
+    
+    /// Creates an H160 from a slice
+    pub fn from_slice(slice: &[u8]) -> Self {
+        let mut bytes = [0u8; 20];
+        if slice.len() >= 20 {
+            bytes.copy_from_slice(&slice[..20]);
+        } else {
+            bytes[..slice.len()].copy_from_slice(slice);
+        }
+        H160(bytes)
+    }
+    
+    /// Returns the bytes as a slice
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
-
-    /// Decode a hex string into a H160
-    pub fn hex_decode(hex: &str) -> Option<Self> {
-        let hex = if hex.starts_with("0x") {
-            &hex[2..]
-        } else {
-            hex
-        };
-
+    
+    /// Converts a hex string to H160
+    pub fn from_hex(hex: &str) -> Option<Self> {
+        // Remove 0x prefix if present
+        let hex = if hex.starts_with("0x") { &hex[2..] } else { hex };
+        
+        // Check length
         if hex.len() != 40 {
             return None;
         }
-
-        match hex::decode(hex) {
-            Ok(bytes) => {
-                let mut result = [0u8; 20];
-                result.copy_from_slice(&bytes);
-                Some(H160(result))
-            },
-            Err(_) => None
+        
+        // Parse bytes
+        let mut bytes = [0u8; 20];
+        for i in 0..20 {
+            let byte_str = &hex[i*2..i*2+2];
+            bytes[i] = u8::from_str_radix(byte_str, 16).ok()?;
         }
+        
+        Some(H160(bytes))
     }
     
-    /// Convert to a hex string
+    /// Converts the H160 to a hex string
     pub fn to_hex(&self) -> String {
-        hex::encode(&self.0)
+        let mut s = String::with_capacity(40);
+        for byte in &self.0 {
+            s.push_str(&format!("{:02x}", byte));
+        }
+        s
     }
+}
+
+impl Deref for H160 {
+    type Target = [u8; 20];
     
-    /// Convert to a hex string with 0x prefix
-    pub fn to_hex_string(&self) -> String {
-        format!("0x{}", self.to_hex())
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
+}
+
+impl AsRef<[u8]> for H160 {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl From<[u8; 20]> for H160 {
+    fn from(bytes: [u8; 20]) -> Self {
+        H160(bytes)
+    }
+}
+
+impl TryFrom<&[u8]> for H160 {
+    type Error = ();
     
-    /// Alias for hex_decode for compatibility
-    pub fn from_hex_string(hex: &str) -> Self {
-        Self::hex_decode(hex).unwrap_or_else(Self::zero)
+    fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+        if slice.len() < 20 {
+            return Err(());
+        }
+        
+        let mut bytes = [0u8; 20];
+        bytes.copy_from_slice(&slice[..20]);
+        Ok(H160(bytes))
     }
 }
 
-impl Default for H160 {
-    fn default() -> Self {
-        Self::zero()
-    }
-}
-
-impl PartialOrd for H160 {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for H160 {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.cmp(&other.0)
+impl fmt::Debug for H160 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "H160(0x{})", self.to_hex())
     }
 }
 
 impl fmt::Display for H160 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "0x{}", hex::encode(&self.0))
+        write!(f, "0x{}", self.to_hex())
     }
 }

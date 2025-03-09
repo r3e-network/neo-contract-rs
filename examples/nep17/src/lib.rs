@@ -1,160 +1,196 @@
-// Copyright @ 2024 - present, R3E Network
-// All Rights Reserved
-
 #![no_std]
-#![no_main]
 
-extern crate alloc;
-extern crate wee_alloc;
+#[neo_contract::contract]
+pub mod nep17_token {
+    use neo_contract::prelude::*;
 
-use neo_contract::{
-    builtin::{H160, Int256, ByteString, Map, Array, Any},
-    Runtime,
-    contract, contract_author, contract_email, contract_description,
-    contract_version,
-    storage, constructor, message, safe,
-};
-use alloc::vec::Vec;
-use core::panic::PanicInfo;
-
-// Use wee_alloc as the global allocator
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-// Define a panic handler
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
-
-#[contract]
-#[contract_author("R3E Network")]
-#[contract_email("dev@r3e.network")]
-#[contract_description("NEP-17 token example")]
-#[contract_version("0.1.0")]
-mod token {
-    use super::*;
-
-    // Helper function to emit a Transfer event
-    pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: Int256) {
-        // Create event name as ByteString
-        let event_name = ByteString::from("Transfer");
-        
-        // Create an Array to hold parameters
-        let mut event_data = Array::<Any>::new();
-        
-        // Add parameters as Any values
-        match from {
-            Some(addr) => event_data.push(Any::from(addr)),
-            None => event_data.push(Any::new()),
-        }
-        
-        match to {
-            Some(addr) => event_data.push(Any::from(addr)),
-            None => event_data.push(Any::new()),
-        }
-        
-        event_data.push(Any::from(amount));
-        
-        // Emit the event
-        Runtime::notify(&event_name, &event_data);
+    // Define the Transfer event
+    #[event]
+    struct Transfer {
+        #[index]
+        from: Option<Address>,
+        #[index]
+        to: Option<Address>,
+        amount: u64,
     }
 
+    // Token storage structure
     #[storage]
-    pub struct Token {
-        total: Int256,  
-        balances: Map<H160, Int256>,
-        token_name: ByteString,      
-        token_symbol: ByteString,    
-        token_decimals: Int256,      
+    struct Nep17Token {
+        // Token metadata
+        name: Item<String>,
+        symbol: Item<String>,
+        decimals: Item<u8>,
+        total_supply: Item<u64>,
+        
+        // Owner of the contract
+        owner: Item<Address>,
+        
+        // Balances mapping
+        balances: Map<Address, u64>,
     }
 
-    impl Token {
+    impl Nep17Token {
         #[constructor]
-        pub fn new(owner: H160, total_supply: Int256) -> Self {
+        fn new(
+            owner: Address,
+            name: String, 
+            symbol: String, 
+            decimals: u8, 
+            total_supply: u64
+        ) -> Self {
+            // Create balance for the owner with the total supply
             let mut balances = Map::new();
+            balances.insert(owner, total_supply);
             
-            // Store the total_supply to owner's balance
-            balances.put(owner.clone(), total_supply.clone());
-            
-            // Emit transfer event from null address to owner
-            emit_transfer(None, Some(owner), total_supply.clone());
+            // Emit transfer event from None (mint) to owner
+            Self::emit_transfer(None, Some(owner), total_supply);
             
             Self {
-                total: total_supply,  
+                name: Item::new(name),
+                symbol: Item::new(symbol),
+                decimals: Item::new(decimals),
+                total_supply: Item::new(total_supply),
+                owner: Item::new(owner),
                 balances,
-                token_name: ByteString::from("NEP17 Token"),
-                token_symbol: ByteString::from("NEP"),
-                token_decimals: Int256::from(8),
             }
         }
-
+        
         // NEP-17 methods
-        #[message]
-        #[safe]
-        pub fn name(&self) -> ByteString {
-            self.token_name.clone()
-        }
-
-        #[message]
-        #[safe]
-        pub fn symbol(&self) -> ByteString {
-            self.token_symbol.clone()
-        }
-
-        #[message]
-        #[safe]
-        pub fn decimals(&self) -> Int256 {
-            self.token_decimals.clone()
-        }
-
-        #[message]
-        #[safe]
-        pub fn total_supply(&self) -> Int256 {
-            self.total.clone()  
-        }
-
-        #[message]
-        #[safe]
-        pub fn balance_of(&self, account: H160) -> Int256 {
-            match self.balances.get(&account) {
-                Some(balance) => balance.clone(),
-                None => Int256::zero(),
-            }
-        }
-
-        #[message]
-        pub fn transfer(&mut self, from: H160, to: H160, amount: Int256, _data: ByteString) -> bool {
-            if !Runtime::check_witness(from.clone()) {
-                return false;
-            }
+        
+        // Transfer tokens from one address to another
+        #[method]
+        fn transfer(&mut self, from: Address, to: Address, amount: u64, data: Option<Vec<u8>>) -> bool {
+            // Check that the sender is authorized
+            assert!(runtime::check_witness(&from), "No authorization");
             
-            if amount <= Int256::zero() {
-                return false;
-            }
+            // Check that the recipient is valid
+            assert!(to != Address::zero(), "Invalid recipient address");
             
-            let from_balance = self.balance_of(from.clone());
-            if from_balance < amount {
-                return false;
-            }
+            // Get the sender's balance
+            let from_balance = self.balances.get(&from).unwrap_or_default();
             
-            if from != to {
-                let from_new_balance = from_balance - amount.clone();
-                if from_new_balance.is_zero() {
-                    self.balances.delete(&from);
+            // Check that the sender has enough tokens
+            assert!(from_balance >= amount, "Insufficient balance");
+            
+            // Update balances
+            if amount > 0 {
+                // Reduce sender's balance
+                let new_from_balance = from_balance - amount;
+                if new_from_balance > 0 {
+                    self.balances.insert(from, new_from_balance);
                 } else {
-                    self.balances.put(from.clone(), from_new_balance);
+                    self.balances.remove(&from);
                 }
                 
-                let to_balance = self.balance_of(to.clone());
-                let to_new_balance = to_balance + amount.clone();
-                self.balances.put(to.clone(), to_new_balance);
+                // Increase recipient's balance
+                let to_balance = self.balances.get(&to).unwrap_or_default();
+                self.balances.insert(to, to_balance + amount);
+                
+                // Emit transfer event
+                Self::emit_transfer(Some(from), Some(to), amount);
+                
+                // If the recipient is a contract, call onNEP17Payment
+                if self.is_contract(&to) {
+                    let _ = self.call_contract::<bool>(
+                        &to,
+                        "onNEP17Payment",
+                        (from, amount, data.unwrap_or_default()),
+                    );
+                }
             }
             
-            // Emit transfer event
-            emit_transfer(Some(from), Some(to), amount);
+            true
+        }
+        
+        // Get the token symbol
+        #[safe]
+        fn symbol(&self) -> String {
+            self.symbol.get().clone()
+        }
+        
+        // Get the token name
+        #[safe]
+        fn name(&self) -> String {
+            self.name.get().clone()
+        }
+        
+        // Get the token decimals
+        #[safe]
+        fn decimals(&self) -> u8 {
+            *self.decimals.get()
+        }
+        
+        // Get the total supply of tokens
+        #[safe]
+        fn total_supply(&self) -> u64 {
+            *self.total_supply.get()
+        }
+        
+        // Get the balance of an account
+        #[safe]
+        fn balance_of(&self, account: Address) -> u64 {
+            self.balances.get(&account).unwrap_or_default()
+        }
+        
+        // Mint new tokens (only owner)
+        #[method]
+        fn mint(&mut self, to: Address, amount: u64) -> bool {
+            // Ensure only the contract owner can mint
+            let owner = self.owner.get().clone();
+            assert!(runtime::check_witness(&owner), "Only owner can mint");
+            
+            // Update total supply
+            let current_supply = *self.total_supply.get();
+            self.total_supply.set(current_supply + amount);
+            
+            // Update recipient balance
+            let balance = self.balances.get(&to).unwrap_or_default();
+            self.balances.insert(to, balance + amount);
+            
+            // Emit transfer event (mint = transfer from None)
+            Self::emit_transfer(None, Some(to), amount);
             
             true
+        }
+        
+        // Burn tokens
+        #[method]
+        fn burn(&mut self, from: Address, amount: u64) -> bool {
+            // Ensure the token owner is authorizing the burn
+            assert!(runtime::check_witness(&from), "No authorization");
+            
+            // Get current balance
+            let balance = self.balances.get(&from).unwrap_or_default();
+            assert!(balance >= amount, "Insufficient balance to burn");
+            
+            // Update balance
+            let new_balance = balance - amount;
+            if new_balance > 0 {
+                self.balances.insert(from, new_balance);
+            } else {
+                self.balances.remove(&from);
+            }
+            
+            // Update total supply
+            let current_supply = *self.total_supply.get();
+            self.total_supply.set(current_supply - amount);
+            
+            // Emit transfer event (burn = transfer to None)
+            Self::emit_transfer(Some(from), None, amount);
+            
+            true
+        }
+        
+        // Helper method to check if an address is a contract
+        fn is_contract(&self, address: &Address) -> bool {
+            address != &Address::zero() && 
+            runtime::contract_exists(address)
+        }
+        
+        // Helper to emit transfer event
+        fn emit_transfer(from: Option<Address>, to: Option<Address>, amount: u64) {
+            runtime::emit_event(Transfer { from, to, amount });
         }
     }
 }

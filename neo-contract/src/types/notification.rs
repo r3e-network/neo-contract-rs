@@ -6,20 +6,21 @@ use crate::types::builtin::array::Array;
 use crate::types::builtin::h160::H160;
 use crate::types::builtin::string::ByteString;
 
-/// Notification represents a notification from a smart contract
-#[derive(Debug, Clone)]
+/// Notification represents a notification from a contract.
+/// It includes the script hash of the contract, the name of the event, and the state (arguments) of the event.
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Notification {
-    /// Script hash
+    /// The script hash of the contract that emitted the notification.
     pub script_hash: H160,
-    /// Event name
+    /// The name of the event.
     pub event_name: ByteString,
-    /// State
-    pub state: Array<ByteString>,
+    /// The arguments of the event.
+    pub state: Array,
 }
 
 impl Notification {
-    /// Create a new notification
-    pub fn new(script_hash: H160, event_name: ByteString, state: Array<ByteString>) -> Self {
+    /// Create a new notification.
+    pub fn new(script_hash: H160, event_name: ByteString, state: Array) -> Self {
         Self {
             script_hash,
             event_name,

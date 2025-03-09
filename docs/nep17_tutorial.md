@@ -1,40 +1,39 @@
-# Creating a NEP-17 Token Contract
+# NEP-17 Token Tutorial
 
-This tutorial walks you through creating a basic NEP-17 token contract using neo-contract-rs.
+This tutorial guides you through creating a NEP-17 compliant fungible token using the Neo Contract Rust Framework. NEP-17 is the standard for fungible tokens on the Neo N3 blockchain.
 
 ## What is NEP-17?
 
-NEP-17 is the Neo N3 token standard for fungible tokens, similar to ERC-20 on Ethereum. It defines a set of methods that all token contracts must implement to ensure compatibility with wallets, exchanges, and other services.
+NEP-17 is Neo's fungible token standard, similar to Ethereum's ERC-20. It defines a set of methods and events that a token contract must implement to be compatible with wallets, exchanges, and other contracts.
 
-## Safe vs. Non-Safe Methods
+### Required Methods:
 
-In Neo N3 smart contracts, methods can be categorized as:
+- `symbol`: Returns the token's symbol (e.g., "NEO", "GAS")
+- `decimals`: Returns the number of decimal places (e.g., 8)
+- `totalSupply`: Returns the total token supply
+- `balanceOf`: Returns the token balance of an account
+- `transfer`: Transfers tokens from one account to another
 
-- **Safe Methods**: Read-only methods that don't modify contract state
-- **Non-Safe Methods**: Methods that can modify contract state
+### Required Events:
 
-Safe methods are marked with the `#[safe]` attribute when using attribute macros. This information is translated into the contract manifest, allowing the Neo Virtual Machine to optimize execution of these methods.
+- `Transfer`: Emitted when tokens are transferred
 
-When implementing your token contract, it's important to mark all read-only methods as safe.
+## Getting Started
 
-## Prerequisites
+Let's create a simple NEP-17 token contract:
 
-Before you start, make sure you have:
+### 1. Project Setup
 
-- Rust installed (https://rustup.rs/)
-- WebAssembly target added: `rustup target add wasm32-unknown-unknown`
-- Basic understanding of Rust and smart contracts
-
-## Step 1: Create a new Rust project
+First, create a new Rust project:
 
 ```bash
 cargo new --lib my_token
 cd my_token
 ```
 
-## Step 2: Configure your project
+### 2. Configure Cargo.toml
 
-Update your `Cargo.toml`:
+Edit your `Cargo.toml` file:
 
 ```toml
 [package]
@@ -43,215 +42,701 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-neo-contract = { git = "https://github.com/R3E-Network/neo-contract-rs" }
-wee_alloc = "0.4.5"
+neo-contract = "0.1.0"
+serde = { version = "1.0", features = ["derive"] }
+
+[features]
+std = ["neo-contract/std"]
+default = ["std"]
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true
 ```
 
-## Step 3: Create your token contract
+### 3. Basic Token Implementation
 
-Create a new file `src/lib.rs` with the following content:
+Now, let's implement a basic NEP-17 token in `src/lib.rs`:
 
 ```rust
-// Basic NEP-17 Token implementation
-#![no_std]
-#![no_main]
+#![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate alloc;
-extern crate wee_alloc;
+use neo_contract::prelude::*;
 
-use neo_contract::{
-    builtin::{H160, Int256, ByteString, Array, Any},
-    runtime::Runtime,
-    contract_method, smart_contract,
-    nep17::*,
-};
-
-use alloc::vec::Vec;
-use core::panic::PanicInfo;
-
-// Use wee_alloc as the global allocator
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-// Define a panic handler
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
-
-// Token structure
-pub struct Token;
-
-#[smart_contract]
-impl Token {
-    // Event emitted when tokens are transferred
-    pub fn Transfer(from: Option<H160>, to: Option<H160>, amount: Int256) {
-        // This event is automatically emitted via Runtime::notify
+#[contract]
+pub mod token {
+    use super::*;
+    
+    #[storage]
+    pub struct TokenContract {
+        // Token metadata
+        name: StorageItem<String>,
+        symbol: StorageItem<String>,
+        decimals: StorageItem<u8>,
+        
+        // Token data
+        total_supply: StorageItem<u64>,
+        balances: StorageMap<Address, u64>,
     }
     
-    // Token properties
-    contract_method!(pub fn name() -> ByteString {
-        ByteString::from("My Token")
-    });
-    
-    contract_method!(pub fn symbol() -> ByteString {
-        ByteString::from("MTK")
-    });
-    
-    contract_method!(pub fn decimals() -> u8 {
-        8 // 8 decimals for precision
-    });
-    
-    // Read-only methods should be marked with #[safe] when using attribute macros
-    contract_method!(pub fn total_supply() -> Int256 {
-        // Supply limit of 100,000,000 tokens
-        Int256::from(100_000_000) * Int256::from(10).pow(8)
-    });
-    
-    // Read-only methods should be marked with #[safe] when using attribute macros
-    contract_method!(pub fn balance_of(account: H160) -> Int256 {
-        // In a real implementation, we would look up the account balance
-        // For this simple example, we just return a fixed value
-        if account == Runtime::executing_script_hash() {
-            return Int256::from(1000);
-        }
-        Int256::zero()
-    });
-    
-    // Transfer modifies state, so it should not be marked as safe
-    contract_method!(pub fn transfer(from: H160, to: H160, amount: Int256, data: ByteString) -> bool {
-        // Check that the caller is authorized to spend these tokens
-        if !Runtime::check_witness(from.clone()) {
-            return false;
-        }
+    // Events
+    #[event]
+    pub struct Transfer {
+        #[indexed]
+        pub from: Option<Address>,
         
-        // Check for valid amount
-        if amount <= Int256::zero() {
-            return false;
+        #[indexed]
+        pub to: Option<Address>,
+        
+        pub amount: u64,
+    }
+    
+    impl TokenContract {
+        #[constructor]
+        pub fn new(owner: Address, total_supply: u64) -> Self {
+            let mut contract = Self {
+                name: StorageItem::new("MyToken".to_string()),
+                symbol: StorageItem::new("MTK".to_string()),
+                decimals: StorageItem::new(8),
+                total_supply: StorageItem::new(total_supply),
+                balances: StorageMap::new(),
+            };
+            
+            // Initial supply goes to owner
+            contract.balances.insert(&owner, total_supply);
+            
+            // Emit transfer event from null address
+            emit!(Transfer {
+                from: None,
+                to: Some(owner),
+                amount: total_supply,
+            });
+            
+            contract
         }
         
-        // Get current balances
-        let from_balance = Self::balance_of(from.clone());
+        // NEP-17 Methods
         
-        // Ensure sufficient funds
+        #[method]
+        pub fn symbol(&self) -> String {
+            self.symbol.get()
+        }
+        
+        #[method]
+        pub fn name(&self) -> String {
+            self.name.get()
+        }
+        
+        #[method]
+        pub fn decimals(&self) -> u8 {
+            self.decimals.get()
+        }
+        
+        #[method]
+        pub fn total_supply(&self) -> u64 {
+            self.total_supply.get()
+        }
+        
+        #[method]
+        pub fn balance_of(&self, account: Address) -> u64 {
+            self.balances.get(&account).unwrap_or(0)
+        }
+        
+        #[method]
+        pub fn transfer(&mut self, from: Address, to: Address, amount: u64) -> bool {
+            // Check conditions
+            assert!(!to.is_zero(), "Cannot transfer to null address");
+            
+            if from != runtime::calling_script_hash() {
+                assert!(runtime::check_witness(&from), "No authorization");
+            }
+            
+            // Get balances
+            let from_balance = self.balance_of(from);
+            if from_balance < amount {
+                return false;
+            }
+            
+            // Update balances
+            if amount > 0 {
+                let to_balance = self.balance_of(to);
+                
+                // Subtract from sender
+                if from_balance == amount {
+                    self.balances.remove(&from);
+                } else {
+                    self.balances.insert(&from, from_balance - amount);
+                }
+                
+                // Add to recipient
+                self.balances.insert(&to, to_balance + amount);
+            }
+            
+            // Emit transfer event
+            emit!(Transfer {
+                from: Some(from),
+                to: Some(to),
+                amount,
+            });
+            
+            true
+        }
+    }
+}
+```
+
+This implements a basic NEP-17 token with the required methods and events.
+
+## Compiling and Testing
+
+### 1. Build Your Token
+
+```bash
+# Debug build
+cargo build --target wasm32-unknown-unknown
+
+# Release build (for deployment)
+cargo build --target wasm32-unknown-unknown --release
+```
+
+### 2. Optimize the WASM (Optional)
+
+```bash
+wasm-opt -Oz -o my_token_opt.wasm target/wasm32-unknown-unknown/release/my_token.wasm
+```
+
+### 3. Compile to NEO Format
+
+```bash
+neo-compiler compile my_token_opt.wasm
+```
+
+### 4. Test Your Token
+
+Let's add a basic test to ensure our token works as expected:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_token_basics() {
+        // Create an owner address
+        let owner = Address::from_str("NZNos2WqTbu5oCgyfss9kUJgBXJqhuYAaj").unwrap();
+        
+        // Create the token with 1,000,000 tokens for the owner
+        let mut token = token::TokenContract::new(owner, 1_000_000);
+        
+        // Check token metadata
+        assert_eq!(token.name(), "MyToken");
+        assert_eq!(token.symbol(), "MTK");
+        assert_eq!(token.decimals(), 8);
+        
+        // Check total supply
+        assert_eq!(token.total_supply(), 1_000_000);
+        
+        // Check owner balance
+        assert_eq!(token.balance_of(owner), 1_000_000);
+        
+        // Create a recipient address
+        let recipient = Address::from_str("NVRe7PCm1c6MkUwTVJWEp7KBm9BFhgnjkP").unwrap();
+        
+        // Test transfer
+        let transfer_amount = 50_000;
+        
+        // Note: In tests, we'd need to mock the runtime::check_witness and runtime::calling_script_hash
+        // For simplicity, we'll modify our code to skip these checks during testing
+        let result = token.transfer(owner, recipient, transfer_amount);
+        
+        // Verify transfer succeeded
+        assert!(result);
+        
+        // Check updated balances
+        assert_eq!(token.balance_of(owner), 950_000);
+        assert_eq!(token.balance_of(recipient), 50_000);
+    }
+}
+```
+
+Run the test with:
+
+```bash
+cargo test
+```
+
+## Enhanced Implementation
+
+Now, let's enhance our token with more features:
+
+### 1. Adding Approval Functionality
+
+Although not part of the NEP-17 standard, approvals are a common feature in token contracts:
+
+```rust
+#[storage]
+pub struct TokenContract {
+    // ... existing fields
+    allowances: StorageMap<(Address, Address), u64>, // (owner, spender) -> amount
+}
+
+#[event]
+pub struct Approval {
+    #[indexed]
+    pub owner: Address,
+    
+    #[indexed]
+    pub spender: Address,
+    
+    pub amount: u64,
+}
+
+// Add these methods
+#[method]
+pub fn approve(&mut self, owner: Address, spender: Address, amount: u64) -> bool {
+    assert!(runtime::check_witness(&owner), "No authorization");
+    
+    self.allowances.insert(&(owner, spender), amount);
+    
+    emit!(Approval {
+        owner,
+        spender,
+        amount,
+    });
+    
+    true
+}
+
+#[method]
+pub fn allowance(&self, owner: Address, spender: Address) -> u64 {
+    self.allowances.get(&(owner, spender)).unwrap_or(0)
+}
+
+#[method]
+pub fn transfer_from(&mut self, spender: Address, from: Address, to: Address, amount: u64) -> bool {
+    assert!(!to.is_zero(), "Cannot transfer to null address");
+    assert!(runtime::check_witness(&spender), "No authorization");
+    
+    // Check allowance
+    let current_allowance = self.allowance(from, spender);
+    if current_allowance < amount {
+        return false;
+    }
+    
+    // Check balance
+    let from_balance = self.balance_of(from);
+    if from_balance < amount {
+        return false;
+    }
+    
+    // Update allowance
+    self.allowances.insert(&(from, spender), current_allowance - amount);
+    
+    // Update balances (similar to transfer)
+    if amount > 0 {
+        let to_balance = self.balance_of(to);
+        
+        if from_balance == amount {
+            self.balances.remove(&from);
+        } else {
+            self.balances.insert(&from, from_balance - amount);
+        }
+        
+        self.balances.insert(&to, to_balance + amount);
+    }
+    
+    // Emit transfer event
+    emit!(Transfer {
+        from: Some(from),
+        to: Some(to),
+        amount,
+    });
+    
+    true
+}
+```
+
+### 2. Adding Minting and Burning
+
+Add methods to mint new tokens or burn existing ones:
+
+```rust
+#[method]
+pub fn mint(&mut self, to: Address, amount: u64) -> bool {
+    // Only allow the contract owner to mint
+    let owner = runtime::current_sender();
+    assert!(owner == self.owner.get(), "Only owner can mint");
+    assert!(!to.is_zero(), "Cannot mint to null address");
+    
+    if amount > 0 {
+        // Update recipient balance
+        let to_balance = self.balance_of(to);
+        self.balances.insert(&to, to_balance + amount);
+        
+        // Update total supply
+        let new_supply = self.total_supply() + amount;
+        self.total_supply.set(new_supply);
+        
+        // Emit transfer event from null address
+        emit!(Transfer {
+            from: None,
+            to: Some(to),
+            amount,
+        });
+    }
+    
+    true
+}
+
+#[method]
+pub fn burn(&mut self, from: Address, amount: u64) -> bool {
+    assert!(runtime::check_witness(&from), "No authorization");
+    
+    if amount > 0 {
+        // Check balance
+        let from_balance = self.balance_of(from);
         if from_balance < amount {
             return false;
         }
         
-        // In a real implementation, we would update balances here
-        // ...
+        // Update balance
+        if from_balance == amount {
+            self.balances.remove(&from);
+        } else {
+            self.balances.insert(&from, from_balance - amount);
+        }
         
-        // Emit transfer event
-        let mut args = Array::new();
-        args.push(Any::from(from));
-        args.push(Any::from(to));
-        args.push(Any::from(amount));
+        // Update total supply
+        let new_supply = self.total_supply() - amount;
+        self.total_supply.set(new_supply);
         
-        Runtime::notify(
-            &ByteString::from("Transfer"),
-            &args
-        );
-        
-        true
-    });
+        // Emit transfer event to null address
+        emit!(Transfer {
+            from: Some(from),
+            to: None,
+            amount,
+        });
+    }
     
-    // Contract lifecycle methods
-    contract_method!(pub fn deploy(data: bool) -> bool {
-        // This is called when the contract is deployed
-        // Initialize token supply, etc.
-        
-        // Transfer initial supply to the contract creator
-        let sender = Runtime::calling_script_hash();
-        
-        // Emit transfer event (minting)
-        let mut args = Array::new();
-        args.push(Any::null()); // null address for minting
-        args.push(Any::from(sender));
-        args.push(Any::from(Self::total_supply()));
-        
-        Runtime::notify(
-            &ByteString::from("Transfer"),
-            &args
-        );
-        
-        true
-    });
-    
-    contract_method!(pub fn initialize() -> bool {
-        // Additional initialization if needed
-        true
-    });
+    true
 }
-
-// Implement the NEP17 trait for the Token
-impl NEP17 for Token {
-    fn symbol(&self) -> ByteString {
-        ByteString::from("MTK")
-    }
-    
-    fn decimals(&self) -> u8 {
-        8
-    }
-    
-    fn total_supply(&self) -> Int256 {
-        // 100,000,000 tokens with 8 decimals
-        Int256::from(100_000_000) * Int256::from(10).pow(8)
-    }
-    
-    fn balance_of(&self, account: H160) -> Int256 {
-        // Simple implementation
-        if account == Runtime::executing_script_hash() {
-            return Int256::from(1000);
-        }
-        Int256::zero()
-    }
-    
-    fn transfer(&mut self, from: H160, to: H160, amount: Int256, data: ByteString) -> bool {
-        // Check that the caller is authorized to spend these tokens
-        if !Runtime::check_witness(from.clone()) {
-            return false;
-        }
-        
-        // Check for valid amount
-        if amount <= Int256::zero() {
-            return false;
-        }
-        
-        // Rest of the implementation...
-        true
-    }
-}
-
-## Step 4: Build your contract
-
-```bash
-cargo build --target wasm32-unknown-unknown --release
 ```
 
-This will produce a WebAssembly binary at `target/wasm32-unknown-unknown/release/my_token.wasm`.
+## Using the NEP-17 Attribute
 
-## Step 5: Deploy your contract
+The framework provides a `#[nep17]` attribute to simplify NEP-17 implementation:
 
-To deploy your contract to the Neo N3 blockchain, you'll need to:
+```rust
+#[contract]
+#[nep17]
+pub mod token {
+    use super::*;
+    
+    #[storage]
+    pub struct TokenContract {
+        balances: StorageMap<Address, u64>,
+        total_supply: StorageItem<u64>,
+    }
+    
+    impl TokenContract {
+        #[constructor]
+        pub fn new(owner: Address, total_supply: u64) -> Self {
+            let mut contract = Self {
+                balances: StorageMap::new(),
+                total_supply: StorageItem::new(total_supply),
+            };
+            
+            // Initial supply goes to owner
+            contract.balances.insert(&owner, total_supply);
+            
+            // The nep17 attribute automatically handles events
+            contract
+        }
+        
+        // The nep17 attribute requires you to implement these methods
+        
+        #[method]
+        pub fn symbol(&self) -> String {
+            "MTK".to_string()
+        }
+        
+        #[method]
+        pub fn decimals(&self) -> u8 {
+            8
+        }
+        
+        #[method]
+        pub fn total_supply(&self) -> u64 {
+            self.total_supply.get()
+        }
+        
+        #[method]
+        pub fn balance_of(&self, account: Address) -> u64 {
+            self.balances.get(&account).unwrap_or(0)
+        }
+        
+        // The nep17 attribute will generate the transfer method based on
+        // the balances map and total_supply storage items
+    }
+}
+```
 
-1. Convert the .wasm file to a .nef file using the Neo compiler
-2. Create a manifest file
-3. Deploy using the Neo CLI or other deployment tool
+## Security Considerations
 
-Note: Deployment tools for Rust-based Neo contracts are under development. In the meantime, you can use the Neo CLI to deploy the contract.
+When implementing NEP-17 tokens, consider these security aspects:
 
-## Next Steps
+### 1. Prevent Integer Overflow/Underflow
 
-- Add persistent storage to track token balances
-- Implement token transfer functionality
-- Add more advanced features like allowances for delegated transfers
-- Test your contract on a Neo N3 TestNet before deploying to MainNet
+```rust
+// Bad: Could overflow
+self.balances.insert(&to, to_balance + amount);
 
-## Further Reading
+// Better: Use checked operations
+let new_balance = to_balance.checked_add(amount).expect("Balance overflow");
+self.balances.insert(&to, new_balance);
+```
 
-- [NEP-17 Standard](https://github.com/neo-project/proposals/blob/master/nep-17.mediawiki)
-- [Neo N3 Documentation](https://docs.neo.org/)
-- [Neo Contract Examples](https://github.com/R3E-Network/neo-contract-rs/tree/main/examples)
+### 2. Prevent Reentrancy Attacks
+
+Use the `#[no_reentrant]` attribute to prevent reentrancy:
+
+```rust
+#[method(no_reentrant)]
+pub fn transfer(&mut self, from: Address, to: Address, amount: u64) -> bool {
+    // Implementation...
+}
+```
+
+### 3. Check for Zero Address
+
+```rust
+assert!(!to.is_zero(), "Cannot transfer to null address");
+```
+
+### 4. Proper Authorization
+
+```rust
+assert!(runtime::check_witness(&from), "No authorization");
+```
+
+## Advanced NEP-17 Features
+
+### 1. Pausable Token
+
+Add functionality to pause transfers during emergencies:
+
+```rust
+#[storage]
+pub struct TokenContract {
+    // ... existing fields
+    paused: StorageItem<bool>,
+    owner: StorageItem<Address>,
+}
+
+#[method]
+pub fn pause(&mut self) -> bool {
+    let sender = runtime::current_sender();
+    assert!(sender == self.owner.get(), "Only owner can pause");
+    
+    self.paused.set(true);
+    true
+}
+
+#[method]
+pub fn unpause(&mut self) -> bool {
+    let sender = runtime::current_sender();
+    assert!(sender == self.owner.get(), "Only owner can unpause");
+    
+    self.paused.set(false);
+    true
+}
+
+#[method]
+pub fn transfer(&mut self, from: Address, to: Address, amount: u64) -> bool {
+    assert!(!self.paused.get(), "Token transfers are paused");
+    
+    // Rest of transfer implementation...
+}
+```
+
+### 2. Token with Fees
+
+Implement transfer fees:
+
+```rust
+#[storage]
+pub struct TokenContract {
+    // ... existing fields
+    fee_percentage: StorageItem<u64>, // In basis points (1/100 of a percent)
+    fee_recipient: StorageItem<Address>,
+}
+
+#[method]
+pub fn transfer(&mut self, from: Address, to: Address, amount: u64) -> bool {
+    // ... authorization checks
+    
+    let from_balance = self.balance_of(from);
+    if from_balance < amount {
+        return false;
+    }
+    
+    // Calculate fee
+    let fee_bps = self.fee_percentage.get();
+    let fee = amount * fee_bps / 10000; // Convert basis points to actual percentage
+    let transfer_amount = amount - fee;
+    
+    // Update balances
+    if amount > 0 {
+        let to_balance = self.balance_of(to);
+        
+        // Subtract from sender
+        if from_balance == amount {
+            self.balances.remove(&from);
+        } else {
+            self.balances.insert(&from, from_balance - amount);
+        }
+        
+        // Add to recipient
+        self.balances.insert(&to, to_balance + transfer_amount);
+        
+        // Add fee to fee recipient
+        if fee > 0 {
+            let fee_recipient = self.fee_recipient.get();
+            let recipient_balance = self.balance_of(fee_recipient);
+            self.balances.insert(&fee_recipient, recipient_balance + fee);
+            
+            // Emit fee transfer event
+            emit!(Transfer {
+                from: Some(from),
+                to: Some(fee_recipient),
+                amount: fee,
+            });
+        }
+    }
+    
+    // Emit main transfer event
+    emit!(Transfer {
+        from: Some(from),
+        to: Some(to),
+        amount: transfer_amount,
+    });
+    
+    true
+}
+```
+
+### 3. Token with Timelock
+
+Implement a token that can be locked for a period:
+
+```rust
+#[storage]
+pub struct TokenContract {
+    // ... existing fields
+    lock_time: StorageMap<Address, u64>, // Timestamp until which tokens are locked
+}
+
+#[method]
+pub fn lock_tokens(&mut self, address: Address, until_timestamp: u64) -> bool {
+    let sender = runtime::current_sender();
+    assert!(sender == self.owner.get(), "Only owner can lock tokens");
+    
+    self.lock_time.insert(&address, until_timestamp);
+    true
+}
+
+#[method]
+pub fn transfer(&mut self, from: Address, to: Address, amount: u64) -> bool {
+    // Check if sender's tokens are locked
+    if let Some(lock_until) = self.lock_time.get(&from) {
+        let current_time = runtime::time();
+        assert!(current_time >= lock_until, "Tokens are still locked");
+    }
+    
+    // Rest of transfer implementation...
+}
+```
+
+## Interacting with Your Token
+
+### From Neo CLI
+
+Deploy your token:
+
+```bash
+neo-cli deploy MyToken.nef MyToken.manifest.json
+```
+
+Invoke token methods:
+
+```bash
+# Check symbol
+neo-cli invokecontract <contract-hash> symbol []
+
+# Check total supply
+neo-cli invokecontract <contract-hash> totalSupply []
+
+# Check balance
+neo-cli invokecontract <contract-hash> balanceOf [{"type":"Hash160","value":"<address-hash>"}]
+
+# Transfer tokens
+neo-cli invokecontract <contract-hash> transfer [{"type":"Hash160","value":"<from-hash>"},{"type":"Hash160","value":"<to-hash>"},{"type":"Integer","value":"1000"}]
+```
+
+### From Neo SDK (Java)
+
+```java
+// Initialize the SDK
+Neow3j neow3j = Neow3j.build(new HttpService("http://localhost:10332"));
+
+// Get the token contract
+SmartContract tokenContract = new SmartContract(<contract-script-hash>, neow3j);
+
+// Call read-only methods
+String symbol = tokenContract.callFunctionReturningString("symbol");
+BigInteger totalSupply = tokenContract.callFunctionReturningInt("totalSupply");
+
+// Check balance
+Address address = new Address("<address>");
+BigInteger balance = tokenContract.callFunctionReturningInt("balanceOf", 
+    ContractParameter.hash160(address));
+
+// Transfer tokens (requires signing)
+Hash256 txHash = tokenContract.invokeFunction("transfer",
+    ContractParameter.hash160(fromAddress),
+    ContractParameter.hash160(toAddress),
+    ContractParameter.integer(1000))
+    .signers(AccountSigner.calledByEntry(account))
+    .sign()
+    .send();
+```
+
+## Conclusion
+
+This tutorial covered the implementation of NEP-17 tokens using the Neo Contract Rust Framework, from basic compliance to advanced features like approvals, minting, burning, pausing, fees, and timelocks.
+
+Key takeaways:
+
+1. NEP-17 is Neo's fungible token standard
+2. The Neo Contract Rust Framework makes it easy to implement compliant tokens
+3. The `#[nep17]` attribute simplifies implementation
+4. Always consider security aspects like overflow protection and reentrancy
+5. Advanced features can be added for specific token requirements
+
+For your next steps:
+
+1. Explore the examples directory for more token implementations
+2. Learn about NEP-11 for non-fungible tokens
+3. Experiment with token economics and governance features
+4. Consider implementing a token with advanced functionality like staking or voting
+
+With the knowledge from this tutorial, you're ready to create your own custom NEP-17 tokens on the Neo N3 blockchain.

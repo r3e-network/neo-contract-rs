@@ -1,0 +1,15 @@
+---
+description: this is a neo n3 rust contract development environment and compile project
+globs: 
+alwaysApply: false
+---
+
+# Your rule content
+
+1. this is a neo n3 contract development framework in rust.
+2. @neo-contract is the neo n3 contract development framework in rust
+3. @neo-compiler is the compiler.
+4. two projects are working together to enable neo n3 users to write smart contracts in rust and compile into neo n3 opcodes manifests and nef files.
+5. now make both of them work.
+6. you must ensure that the work is indeed for Neo N3, every thing is correct.
+7. you are an expert in wasm and neo vm, must ensure the things you output is correct.
