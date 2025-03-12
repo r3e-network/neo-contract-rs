@@ -1,185 +1,136 @@
-# Neo Contract Rust Examples
+# Neo N3 Smart Contract Examples in Rust
 
-This directory contains example smart contracts written using the Neo Contract Rust framework. These examples demonstrate various features and patterns for developing Neo N3 smart contracts with Rust.
+This directory contains various example smart contracts for the Neo N3 blockchain built using the Neo Contract Rust framework. These examples demonstrate different use cases and serve as reference implementations for developers getting started with Neo N3 smart contract development using Rust.
 
-## Examples Overview
+## Modern Neo Contract Annotations
 
-### Basic Examples
+Many examples have been updated to use Neo's modern annotation system, which provides:
 
-- **[hello_world](./hello_world/)**: A simple contract that demonstrates basic storage and method definition.
-- **[transfer](./transfer/)**: Shows how to handle NEP-17 token transfers within a contract.
+- **Enhanced Security**: Protection against re-entrancy attacks with `#[no_reentry]`
+- **Gas Optimization**: Better efficiency with properly marked `#[safe]` methods
+- **Structured Events**: Typed event definitions with `#[neo_contract::event(...)]`
+- **Clear API Definitions**: Explicit method visibility with `#[method]`
 
-### Token Standards
+For details on the annotation system and how to update existing contracts, see the [Annotation Update Guide](./ANNOTATION_UPDATE_GUIDE.md).
 
-- **[nep17](./nep17/)**: A basic implementation of the NEP-17 fungible token standard.
-- **[nep17_token](./nep17_token/)**: An extended NEP-17 token implementation with additional features.
+## Example Categories
 
-### Ink! Style Examples
+The examples are organized into the following categories:
 
-- **[ink_style_token](./ink_style_token/)**: NEP-17 token implementation using the ink! style syntax.
-- **[ink_style_token_with_attributes](./ink_style_token_with_attributes/)**: Similar to the above, but with attribute macros.
-- **[ink_style_complete](./ink_style_complete/)**: A comprehensive example showing the full power of ink! style syntax.
+### DeFi (Decentralized Finance)
 
-### Advanced Patterns
+Located in the [defi](./defi) directory, these examples showcase financial applications:
 
-- **[contract_call](./contract_call/)**: Demonstrates how to make calls between contracts.
-- **[csharp_features](./csharp_features/)**: Shows how to implement features commonly found in C# contracts.
+- **DEX (Decentralized Exchange)**: Implements an automated market maker with liquidity pools, swapping, and fee collection.
+- **Lending**: Demonstrates a lending platform with deposits, loans, interest rates, and collateralization.
+- **Staking**: Implements a staking platform with rewards distribution and time-locked stakes.
+- **Secure Vault**: A multi-token secure storage vault with advanced security features including time-locks, multi-signature approvals, and emergency controls. Demonstrates best practices for storage patterns and security.
 
-### Real-world Applications
+### NFTs (Non-Fungible Tokens)
 
-- **[neoburger](./neoburger/)**: Implementation of the NeoBurger protocol.
-- **[neoburger_agent](./neoburger_agent/)**: Agent contract for the NeoBurger protocol.
-- **[neoburger_governance](./neoburger_governance/)**: Governance contract for the NeoBurger protocol.
+Located in the [nft](./nft) directory, these examples demonstrate NFT implementations:
 
-## Building Examples
+- **Basic NFT**: A simple implementation of the NEP-11 non-fungible token standard.
+- **Storage-Optimized NFT**: An advanced implementation of NEP-11 that demonstrates efficient storage patterns and gas optimization techniques.
+- **Marketplace**: A comprehensive NFT marketplace with fixed-price listings, auctions, offers, and royalties.
 
-Each example directory contains its own code and potentially a Makefile for building. To build an example:
+### Gambling and Lotteries
 
-1. Navigate to the example directory:
-   ```
-   cd examples/hello_world
-   ```
+Located in the [gambling](./gambling) directory, these examples showcase random number generation and chance-based contracts:
 
-2. If a Makefile is present, build using:
-   ```
-   make
-   ```
-   or
-   ```
-   make BUILD_MODE=release
-   ```
+- **Lottery**: Implements a round-based lottery system with ticket purchases and random winner selection.
 
-3. If no Makefile is present, build manually:
+### Blockchain Interaction
+
+- **Ledger Example** ([ledger_example](./ledger_example/)): Demonstrates comprehensive use of the Ledger API for blockchain-dependent functionality including time-based vesting, block-based rewards, transaction validation, and rate limiting. Includes extensive testing implementation showcasing the techniques from the [Ledger API Testing Guide](../docs/ledger_api_testing.md).
+- **Ledger Workshop Example** ([ledger_workshop_example](./ledger_workshop_example/)): A hands-on implementation of an escrow contract showcasing practical use of blockchain time and block data. Created as part of the [Ledger API Workshop](../docs/ledger_api_workshop.md) for learning blockchain-dependent contract development. Uses modern Neo annotation syntax.
+- **Transaction Patterns** ([tx_patterns](./tx_patterns/)): Demonstrates common transaction patterns including confirmation validation, rate limiting, and multi-step transactions.
+- **Cross-Contract Communication** ([cross_contract](./cross_contract/)): Examples of contract-to-contract interaction patterns including contract registry and proxy patterns.
+
+### Simple Examples
+
+Located in the [simple](./simple) directory, these are basic examples to get started:
+
+- **Hello World** ([hello_world](./hello_world/)): A minimal smart contract that stores and retrieves a greeting message. Uses modern Neo annotation syntax.
+- **Domain Name Service**: Demonstrates a simple name service for registering and resolving domain names.
+- **Simple Token** ([simple_token](./simple_token/)): Basic implementation of the NEP-17 fungible token standard. Uses modern Neo annotation syntax.
+- **Event Demo** ([event_demo](./event_demo/)): Demonstrates structured events using Neo annotation syntax.
+- **NEP-17 Token** ([nep17](./nep17/)): Standard-compliant fungible token with Neo annotation syntax.
+
+## Neo Annotation Examples
+
+The following examples showcase the modern Neo Contract annotation system:
+
+| Example | Features Demonstrated |
+|---------|------------------------|
+| [Simple Token](./simple_token/) | `#[neo_contract::event]`, `#[method]`, `#[safe]`, basic token functionality |
+| [Event Demo](./event_demo/) | Various event types, structured parameters, array events |
+| [NEP-17 Token](./nep17/) | Standard-compliant token with all annotations |
+| [Ledger Workshop](./ledger_workshop_example/) | Complex contract with security annotations and Ledger API |
+
+## Using the Examples
+
+Each example includes:
+
+1. A README with detailed explanation of the contract's purpose and functionality
+2. Source code with comments explaining key concepts
+3. Build instructions for both development and production
+
+### Building an Example
+
+Most examples can be built using:
+
    ```bash
-   # Compile to WASM
-   cargo build --target wasm32-unknown-unknown
+# For development and testing
+cargo check -p example-name --features std
+cargo build -p example-name --features std
 
-   # Convert to NEF
-   ../../bin/neo-wasm -input target/wasm32-unknown-unknown/debug/hello_world.wasm -output build -name hello_world
-   ```
-
-## Example Contract: Hello World
-
-Here's a simple example of a Hello World contract:
-
-```rust
-#![cfg_attr(not(feature = "std"), no_std)]
-
-use neo_contract::prelude::*;
-
-#[neo_contract]
-pub mod contract {
-    use super::*;
-
-    #[neo_storage]
-    struct HelloWorld {
-        message: StorageItem<String>,
-    }
-
-    impl HelloWorld {
-        pub fn new() -> Self {
-            Self {
-                message: StorageItem::new(b"message"),
-            }
-        }
-
-        #[neo_method(return_value = String)]
-        #[safe]
-        pub fn get_message(&self) -> String {
-            self.message.get().unwrap_or_else(|| "Hello, Neo!".to_string())
-        }
-
-        #[neo_method]
-        pub fn set_message(&mut self, message: String) {
-            self.message.set(&message);
-        }
-    }
-}
+# For production/deployment
+cargo build -p example-name --release
 ```
 
-## Example Contract: NEP-17 Token
+Replace `example-name` with the actual crate name from the example's Cargo.toml file.
 
-Here's a simplified example of a NEP-17 token contract:
+## Storage Patterns and Optimization
 
-```rust
-#![cfg_attr(not(feature = "std"), no_std)]
+Many examples demonstrate efficient storage patterns as described in the [Storage Guide](../docs/storage_guide.md):
 
-use neo_contract::prelude::*;
+- **Composite Key Pattern**: Using structured keys to organize related data
+- **Storage Prefix Pattern**: Using prefixes to prevent key collisions
+- **Lazy Loading Pattern**: Loading data only when needed
+- **Pagination Pattern**: Efficiently handling large collections
+- **Batch Operation Pattern**: Grouping operations to reduce gas costs
 
-#[neo_contract]
-pub mod token {
-    use super::*;
+For dedicated examples showcasing storage optimization, see:
+- [Storage-Optimized NFT](./nft/storage_optimized/) - Optimized NFT implementation
+- [Secure Vault](./defi/secure_vault/) - Advanced storage patterns with security features
 
-    #[neo_storage]
-    struct Token {
-        total_supply: StorageItem<u64>,
-        balances: StorageMap<Address, u64>,
-    }
+## Ledger API and Blockchain Data
 
-    impl Token {
-        pub fn new() -> Self {
-            Self {
-                total_supply: StorageItem::new(b"total_supply"),
-                balances: StorageMap::new(b"balances"),
-            }
-        }
+Examples consistently use the Neo N3 Ledger API to access blockchain data:
 
-        #[neo_method(return_value = u64)]
-        #[safe]
-        pub fn total_supply(&self) -> u64 {
-            self.total_supply.get().unwrap_or(0)
-        }
+- `Ledger::current_index()` - Get current block index
+- `Ledger::current_hash()` - Get current block hash  
+- `Ledger::current_timestamp()` - Get current timestamp
+- `Ledger::get_block()` - Get block by index or hash
+- `Ledger::get_transaction()` - Get transaction by hash
 
-        #[neo_method(return_value = u64)]
-        #[safe]
-        pub fn balance_of(&self, account: Address) -> u64 {
-            self.balances.get(&account).unwrap_or(0)
-        }
+For a dedicated example showcasing Ledger API usage and comprehensive testing strategies, see the [ledger_example](./ledger_example/) directory. This example demonstrates proper techniques for testing time-dependent and block-dependent smart contract logic, following best practices from the [Ledger API Testing Guide](../docs/ledger_api_testing.md).
 
-        #[neo_method(return_value = bool)]
-        pub fn transfer(&mut self, from: Address, to: Address, amount: u64, data: Vec<u8>) -> bool {
-            // Verify sender
-            assert!(runtime::check_witness(&from), "No authorization");
-            
-            // Get balances
-            let from_balance = self.balance_of(from);
-            let to_balance = self.balance_of(to);
-            
-            // Check sufficient funds
-            assert!(from_balance >= amount, "Insufficient funds");
-            
-            // Handle zero transfer
-            if amount == 0 {
-                events::transfer(from, to, 0);
-                return true;
-            }
-            
-            // Update balances
-            if from_balance == amount {
-                self.balances.delete(&from);
-            } else {
-                self.balances.set(&from, &(from_balance - amount));
-            }
-            
-            self.balances.set(&to, &(to_balance + amount));
-            
-            // Emit event
-            events::transfer(from, to, amount);
-            
-            // Post transfer hook
-            if to.is_contract() {
-                contract::call(
-                    &to,
-                    "onNEP17Payment",
-                    &[from, amount, data],
-                    CallFlags::ALL,
-                );
-            }
-            
-            true
-        }
-    }
-}
-```
+## Known Issues
 
-Check the individual example directories for more detailed code and documentation.
+Some examples may experience compilation issues due to ongoing development of the Neo Contract Rust framework. Common issues include:
+
+1. Procedural macro resolution failures with `#[neo_contract::contract]`, `#[method]`, and other annotations
+2. Storage trait implementation issues
+3. Runtime function signature mismatches
+
+Please refer to the [troubleshooting guide](../docs/troubleshooting.md) for detailed solutions.
+
+## Contributing
+
+We welcome contributions to improve these examples or add new ones. Please follow the project's contribution guidelines when submitting changes or additions.
+
+## License
+
+These examples are provided under the same license as the Neo Contract Rust framework.

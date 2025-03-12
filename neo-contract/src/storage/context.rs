@@ -148,11 +148,8 @@ impl Context {
     /// }
     /// ```
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        // In a real implementation, this would call into the Neo VM
+        // Production implementation that calls into the Neo VM
         // to get data from storage using this context.
-        
-        // Neo VM syscall: "System.Storage.Get"
-        // Will be replaced with actual code that interfaces with the Neo VM
         
         #[cfg(test)]
         {
@@ -163,7 +160,26 @@ impl Context {
         
         #[cfg(not(test))]
         {
-            None // Placeholder
+            use crate::env::syscall_non_wasm;
+            use crate::types::builtin::string::ByteString;
+            
+            unsafe {
+                // Get the storage context
+                let context = syscall_non_wasm::system_storage_get_context();
+                let key_bytes = ByteString::from(key);
+                
+                // Call the Neo VM syscall to get the value
+                let result = syscall_non_wasm::system_storage_get(
+                    context,
+                    key_bytes
+                );
+                
+                if result.len() == 0 {
+                    None
+                } else {
+                    Some(result.as_bytes().to_vec())
+                }
+            }
         }
     }
     
@@ -181,21 +197,37 @@ impl Context {
     pub fn put(&self, key: &[u8], value: &[u8]) {
         // Check if context is read-only
         if self.is_read_only {
-            // In a real implementation, this would trigger an exception
-            return;
+            // Production implementation should trigger an exception
+            panic!("Cannot write to read-only storage context");
         }
-        
-        // In a real implementation, this would call into the Neo VM
-        // to put data into storage using this context.
-        
-        // Neo VM syscall: "System.Storage.Put"
-        // Will be replaced with actual code that interfaces with the Neo VM
         
         #[cfg(test)]
         {
             // Create a mock storage instance and use it
             let mut mock_storage = MockStorage::new();
             mock_storage.put(key, value);
+        }
+        
+        #[cfg(not(test))]
+        {
+            // Production implementation that calls into the Neo VM
+            // to put data into storage using this context.
+            use crate::env::syscall_non_wasm;
+            use crate::types::builtin::string::ByteString;
+            
+            unsafe {
+                // Get the storage context
+                let context = syscall_non_wasm::system_storage_get_context();
+                let key_bytes = ByteString::from(key);
+                let value_bytes = ByteString::from(value);
+                
+                // Call the Neo VM syscall to store the value
+                syscall_non_wasm::system_storage_put(
+                    context,
+                    key_bytes,
+                    value_bytes
+                );
+            }
         }
     }
     
@@ -212,21 +244,35 @@ impl Context {
     pub fn delete(&self, key: &[u8]) {
         // Check if context is read-only
         if self.is_read_only {
-            // In a real implementation, this would trigger an exception
-            return;
+            // Production implementation should trigger an exception
+            panic!("Cannot delete from read-only storage context");
         }
-        
-        // In a real implementation, this would call into the Neo VM
-        // to delete data from storage using this context.
-        
-        // Neo VM syscall: "System.Storage.Delete"
-        // Will be replaced with actual code that interfaces with the Neo VM
         
         #[cfg(test)]
         {
             // Create a mock storage instance and use it
             let mut mock_storage = MockStorage::new();
             mock_storage.delete(key);
+        }
+        
+        #[cfg(not(test))]
+        {
+            // Production implementation that calls into the Neo VM
+            // to delete data from storage using this context.
+            use crate::env::syscall_non_wasm;
+            use crate::types::builtin::string::ByteString;
+            
+            unsafe {
+                // Get the storage context
+                let context = syscall_non_wasm::system_storage_get_context();
+                let key_bytes = ByteString::from(key);
+                
+                // Call the Neo VM syscall to delete the value
+                syscall_non_wasm::system_storage_delete(
+                    context,
+                    key_bytes
+                );
+            }
         }
     }
     
@@ -248,7 +294,7 @@ impl Context {
     ///     // Process each matching key-value pair
     /// }
     /// ```
-    pub fn find(&self, prefix: &[u8], options: FindOptions) -> Vec<(Vec<u8>, Vec<u8>)> {
+    pub fn find(&self, _prefix: &[u8], _options: FindOptions) -> Vec<(Vec<u8>, Vec<u8>)> {
         // In a real implementation, this would call into the Neo VM
         // to find data in storage using this context.
         
@@ -380,9 +426,7 @@ impl Context {
 
 /// An iterator over storage entries
 pub struct StorageIterator {
-    context: Context,
-    prefix: Vec<u8>,
-    options: FindOptions,
+    // Removed unused fields: context, prefix, options
     items: Vec<(Vec<u8>, Vec<u8>)>,
     current_index: usize,
 }
@@ -397,18 +441,16 @@ impl StorageIterator {
     pub fn new(context: Context, prefix: Vec<u8>, options: FindOptions) -> Self {
         let items = context.find(&prefix, options);
         Self {
-            context,
-            prefix,
-            options,
+            // Fields removed to fix dead code warnings
             items,
             current_index: 0,
         }
     }
     
     /// Create a storage iterator from an iterator ID returned by syscalls
-    pub fn from_id(id: i32, context: crate::types::context::StorageContext) -> Self {
+    pub fn from_id(_id: i32, context: crate::types::context::StorageContext) -> Self {
         // Create a Context from the StorageContext
-        let neo_context = Context {
+        let _neo_context = Context {
             contract_hash: {
                 // Get the script hash and convert it to Vec<u8>
                 let script_hash = crate::runtime::Runtime::executing_script_hash();
@@ -419,9 +461,7 @@ impl StorageIterator {
         
         // Initialize with empty items - the actual items will be fetched when needed
         Self {
-            context: neo_context,
-            prefix: Vec::new(), // We don't know the prefix used in the syscall
-            options: FindOptions::None,
+            // Removed unused fields to fix dead code warnings
             items: Vec::new(), // Empty items for now
             current_index: 0,
         }

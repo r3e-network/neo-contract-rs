@@ -68,35 +68,30 @@ pub mod token {
         }
         
         /// Get the token name
-        #[method]
         #[safe]
         pub fn name(&self) -> String {
             self.name.get().unwrap_or_default()
         }
         
         /// Get the token symbol
-        #[method]
         #[safe]
         pub fn symbol(&self) -> String {
             self.symbol.get().unwrap_or_default()
         }
         
         /// Get the number of decimals
-        #[method]
         #[safe]
         pub fn decimals(&self) -> u8 {
             self.decimals.get().unwrap_or(8)
         }
         
         /// Get the total token supply
-        #[method]
         #[safe]
         pub fn total_supply(&self) -> u64 {
             self.total_supply.get().unwrap_or_default()
         }
         
         /// Get the balance of an address
-        #[method]
         #[safe]
         pub fn balance_of(&self, account: Address) -> u64 {
             self.balances.get(&account).unwrap_or_default()

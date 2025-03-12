@@ -1,4 +1,8 @@
-//! # MOON DOGE - Meme Coin Example
+#![no_std]
+
+extern crate alloc;
+
+//! # MOON DOGE - Meme Coin Example for Neo N3
 //!
 //! A NEP-17 token implementation with typical meme coin features:
 //! - Tax on transfers for buyback and burn
@@ -10,6 +14,7 @@
 #[neo_contract::contract]
 mod moon_doge {
     use neo_contract::prelude::*;
+    use alloc::string::String;
     
     /// Events emitted by the token contract
     #[event]
@@ -21,10 +26,56 @@ mod moon_doge {
         amount: u64,
     }
     
+    /// Implementation for properly emitting the Transfer event using Neo N3 standards
+    impl Transfer {
+        /// Static method to emit the Transfer event in Neo N3 format
+        pub fn emit(from: Option<Address>, to: Option<Address>, amount: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("Transfer");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            match from {
+                Some(addr) => event_data.push(Any::from(addr)),
+                None => event_data.push(Any::from(ByteArray::new())), // null for minting
+            }
+            
+            match to {
+                Some(addr) => event_data.push(Any::from(addr)),
+                None => event_data.push(Any::from(ByteArray::new())), // null for burning
+            }
+            
+            event_data.push(Any::from(amount));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
     #[event]
     struct TokensBurned {
         #[index]
         amount: u64,
+    }
+    
+    /// Implementation for properly emitting the TokensBurned event using Neo N3 standards
+    impl TokensBurned {
+        /// Static method to emit the TokensBurned event in Neo N3 format
+        pub fn emit(amount: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("TokensBurned");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(amount));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
     #[event]
@@ -33,12 +84,52 @@ mod moon_doge {
         recipients: u64,
     }
     
+    /// Implementation for properly emitting the RewardsDistributed event using Neo N3 standards
+    impl RewardsDistributed {
+        /// Static method to emit the RewardsDistributed event in Neo N3 format
+        pub fn emit(total_amount: u64, recipients: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("RewardsDistributed");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(total_amount));
+            event_data.push(Any::from(recipients));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
     #[event]
     struct TaxRatesUpdated {
         liquidity_tax: u16,
         marketing_tax: u16,
         buyback_tax: u16,
         reflection_tax: u16,
+    }
+    
+    /// Implementation for properly emitting the TaxRatesUpdated event using Neo N3 standards
+    impl TaxRatesUpdated {
+        /// Static method to emit the TaxRatesUpdated event in Neo N3 format
+        pub fn emit(liquidity_tax: u16, marketing_tax: u16, buyback_tax: u16, reflection_tax: u16) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("TaxRatesUpdated");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(liquidity_tax));
+            event_data.push(Any::from(marketing_tax));
+            event_data.push(Any::from(buyback_tax));
+            event_data.push(Any::from(reflection_tax));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
     /// Token storage
@@ -121,31 +212,54 @@ mod moon_doge {
             
             // Create instance with initial values
             let mut instance = Self {
-                name: Item::new(name.to_string()),
-                symbol: Item::new(symbol.to_string()),
-                decimals: Item::new(decimals),
-                total_supply: Item::new(initial_supply),
-                circulating_supply: Item::new(initial_supply),
+                name: Item::new("name"),
+                symbol: Item::new("symbol"),
+                decimals: Item::new("decimals"),
+                total_supply: Item::new("total_supply"),
+                circulating_supply: Item::new("circulating_supply"),
                 balances: Map::new(),
-                liquidity_tax: Item::new(liquidity_tax),
-                marketing_tax: Item::new(marketing_tax),
-                buyback_tax: Item::new(buyback_tax), 
-                reflection_tax: Item::new(reflection_tax),
-                owner: Item::new(owner),
-                marketing_wallet: Item::new(marketing_wallet),
-                team_wallet: Item::new(team_wallet),
-                dex_pair: Item::new(Hash160::zero()),
+                liquidity_tax: Item::new("liquidity_tax"),
+                marketing_tax: Item::new("marketing_tax"),
+                buyback_tax: Item::new("buyback_tax"),
+                reflection_tax: Item::new("reflection_tax"),
+                owner: Item::new("owner"),
+                marketing_wallet: Item::new("marketing_wallet"),
+                team_wallet: Item::new("team_wallet"),
+                dex_pair: Item::new("dex_pair"),
                 tax_exempt: Map::new(),
-                total_rewards_distributed: Item::new(0),
+                total_rewards_distributed: Item::new("total_rewards_distributed"),
                 excluded_from_rewards: Map::new(),
-                reward_cycle_blocks: Item::new(5000), // Distribute rewards every ~5000 blocks
-                last_reward_block: Item::new(runtime::get_block().index),
-                max_transaction_amount: Item::new(max_tx),
-                max_wallet_balance: Item::new(max_wallet),
-                trading_enabled: Item::new(false),
-                total_transactions: Item::new(0),
-                total_holders: Item::new(0),
+                reward_cycle_blocks: Item::new("reward_cycle_blocks"),
+                last_reward_block: Item::new("last_reward_block"),
+                max_transaction_amount: Item::new("max_transaction_amount"),
+                max_wallet_balance: Item::new("max_wallet_balance"),
+                trading_enabled: Item::new("trading_enabled"),
+                total_transactions: Item::new("total_transactions"),
+                total_holders: Item::new("total_holders"),
             };
+            
+            // Set initial values
+            instance.name.set(name.to_string());
+            instance.symbol.set(symbol.to_string());
+            instance.decimals.set(decimals);
+            instance.total_supply.set(initial_supply);
+            instance.circulating_supply.set(initial_supply);
+            instance.liquidity_tax.set(liquidity_tax);
+            instance.marketing_tax.set(marketing_tax);
+            instance.buyback_tax.set(buyback_tax);
+            instance.reflection_tax.set(reflection_tax);
+            instance.owner.set(owner);
+            instance.marketing_wallet.set(marketing_wallet);
+            instance.team_wallet.set(team_wallet);
+            instance.dex_pair.set(Hash160::zero());
+            instance.total_rewards_distributed.set(0);
+            instance.reward_cycle_blocks.set(5000); // Distribute rewards every ~5000 blocks
+            instance.last_reward_block.set(Runtime::get_block().index);
+            instance.max_transaction_amount.set(max_tx);
+            instance.max_wallet_balance.set(max_wallet);
+            instance.trading_enabled.set(false);
+            instance.total_transactions.set(0);
+            instance.total_holders.set(1);
             
             // Set up tax exemptions for key addresses
             instance.tax_exempt.insert(owner, true);
@@ -153,50 +267,56 @@ mod moon_doge {
             instance.tax_exempt.insert(team_wallet, true);
             
             // Exclude contract and key addresses from rewards
-            let contract_address = runtime::executing_script_hash();
+            let contract_address = Runtime::executing_script_hash();
             instance.excluded_from_rewards.insert(contract_address, true);
             instance.excluded_from_rewards.insert(marketing_wallet, true);
             instance.excluded_from_rewards.insert(team_wallet, true);
             
             // Mint initial supply to owner
             instance.balances.insert(owner, initial_supply);
-            instance.emit(Transfer {
-                from: None,
-                to: Some(owner),
-                amount: initial_supply,
-            });
             
-            instance.total_holders.set(1);
+            // Emit transfer event with proper Neo N3 format
+            Transfer::emit(None, Some(owner), initial_supply);
             
             instance
         }
         
         /// NEP-17 methods
         
+        /// Get the token symbol
+        #[method]
         #[safe]
         fn symbol(&self) -> String {
-            self.symbol.get().clone()
+            self.symbol.get().unwrap_or_default()
         }
         
+        /// Get the token decimals
+        #[method]
         #[safe]
         fn decimals(&self) -> u8 {
-            *self.decimals.get()
+            self.decimals.get().unwrap_or_default()
         }
         
+        /// Get the total token supply
+        #[method]
         #[safe]
         fn total_supply(&self) -> u64 {
-            *self.total_supply.get()
+            self.total_supply.get().unwrap_or_default()
         }
         
+        /// Get the token balance for an account
+        #[method]
         #[safe]
         fn balance_of(&self, account: Address) -> u64 {
             self.balances.get(&account).unwrap_or_default()
         }
         
+        /// Transfer tokens from one account to another
         #[method]
+        #[no_reentry]
         fn transfer(&mut self, from: Address, to: Address, amount: u64) -> bool {
             // Check signatures
-            assert!(runtime::check_witness(&from), "Invalid signature");
+            assert!(Runtime::check_witness(&from), "Invalid signature");
             
             // Self-transfers are allowed but pointless
             if from == to {
@@ -204,9 +324,9 @@ mod moon_doge {
             }
             
             // Check if trading is enabled
-            let owner = *self.owner.get();
+            let owner = self.owner.get().unwrap_or_default();
             if from != owner && to != owner {
-                assert!(*self.trading_enabled.get(), "Trading not yet enabled");
+                assert!(self.trading_enabled.get().unwrap_or_default(), "Trading not yet enabled");
             }
             
             // Check if transfer amount is valid
@@ -219,11 +339,11 @@ mod moon_doge {
             // Check anti-whale limits
             if !self.is_tax_exempt(&from) && !self.is_tax_exempt(&to) {
                 // Max transaction check
-                let max_tx = *self.max_transaction_amount.get();
+                let max_tx = self.max_transaction_amount.get().unwrap_or_default();
                 assert!(amount <= max_tx, "Transaction exceeds max amount");
                 
                 // Max wallet check (only for receiving)
-                let max_wallet = *self.max_wallet_balance.get();
+                let max_wallet = self.max_wallet_balance.get().unwrap_or_default();
                 let to_balance = self.balances.get(&to).unwrap_or_default();
                 assert!(to_balance + amount <= max_wallet, "Would exceed max wallet balance");
             }
@@ -239,12 +359,12 @@ mod moon_doge {
             
             // Update holder count if needed
             if self.balances.get(&to).unwrap_or_default() == amount {
-                let holders = *self.total_holders.get();
+                let holders = self.total_holders.get().unwrap_or_default();
                 self.total_holders.set(holders + 1);
             }
             
             // Update transaction count
-            let tx_count = *self.total_transactions.get();
+            let tx_count = self.total_transactions.get().unwrap_or_default();
             self.total_transactions.set(tx_count + 1);
             
             // Check if reward distribution is due
@@ -257,9 +377,10 @@ mod moon_doge {
         
         /// Set the DEX pair contract hash
         #[method]
+        #[no_reentry]
         fn set_dex_pair(&mut self, pair_hash: Hash160) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can set DEX pair");
+            let caller = Runtime::calling_script_hash();
+            assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can set DEX pair");
             
             self.dex_pair.set(pair_hash);
             true
@@ -267,9 +388,10 @@ mod moon_doge {
         
         /// Set tax exemption for an address
         #[method]
+        #[no_reentry]
         fn set_tax_exempt(&mut self, address: Address, exempt: bool) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can set tax exemption");
+            let caller = Runtime::calling_script_hash();
+            assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can set tax exemption");
             
             self.tax_exempt.insert(address, exempt);
             true
@@ -277,6 +399,7 @@ mod moon_doge {
         
         /// Update tax rates
         #[method]
+        #[no_reentry]
         fn update_tax_rates(
             &mut self, 
             liquidity_tax: u16, 
@@ -284,8 +407,8 @@ mod moon_doge {
             buyback_tax: u16, 
             reflection_tax: u16
         ) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can update tax rates");
+            let caller = Runtime::calling_script_hash();
+            assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can update tax rates");
             
             // Ensure total tax is not too high
             let total_tax = liquidity_tax + marketing_tax + buyback_tax + reflection_tax;
@@ -296,21 +419,18 @@ mod moon_doge {
             self.buyback_tax.set(buyback_tax);
             self.reflection_tax.set(reflection_tax);
             
-            self.emit(TaxRatesUpdated {
-                liquidity_tax,
-                marketing_tax,
-                buyback_tax,
-                reflection_tax,
-            });
+            // Emit event with proper Neo N3 format
+            TaxRatesUpdated::emit(liquidity_tax, marketing_tax, buyback_tax, reflection_tax);
             
             true
         }
         
         /// Enable trading
         #[method]
+        #[no_reentry]
         fn enable_trading(&mut self) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can enable trading");
+            let caller = Runtime::calling_script_hash();
+            assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can enable trading");
             
             self.trading_enabled.set(true);
             true
@@ -318,16 +438,17 @@ mod moon_doge {
         
         /// Update anti-whale settings
         #[method]
+        #[no_reentry]
         fn update_whale_limits(&mut self, max_tx_pct: u16, max_wallet_pct: u16) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can update whale limits");
+            let caller = Runtime::calling_script_hash();
+            assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can update whale limits");
             
             // Validate percentages
             assert!(max_tx_pct >= 50, "Max tx too small"); // At least 0.5%
             assert!(max_wallet_pct >= 100, "Max wallet too small"); // At least 1%
             
             // Calculate limits
-            let total_supply = *self.total_supply.get();
+            let total_supply = self.total_supply.get().unwrap_or_default();
             let max_tx = (total_supply * max_tx_pct as u64) / 10000;
             let max_wallet = (total_supply * max_wallet_pct as u64) / 10000;
             
@@ -339,9 +460,10 @@ mod moon_doge {
         
         /// Exclude/include address from rewards
         #[method]
+        #[no_reentry]
         fn set_reward_exclusion(&mut self, address: Address, excluded: bool) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can set reward exclusion");
+            let caller = Runtime::calling_script_hash();
+            assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can set reward exclusion");
             
             self.excluded_from_rewards.insert(address, excluded);
             true
@@ -349,9 +471,10 @@ mod moon_doge {
         
         /// Update reward cycle
         #[method]
+        #[no_reentry]
         fn set_reward_cycle(&mut self, blocks: u64) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can set reward cycle");
+            let caller = Runtime::calling_script_hash();
+            assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can set reward cycle");
             
             assert!(blocks >= 1000 && blocks <= 50000, "Invalid cycle length");
             self.reward_cycle_blocks.set(blocks);
@@ -360,9 +483,10 @@ mod moon_doge {
         
         /// Force reward distribution
         #[method]
+        #[no_reentry]
         fn distribute_rewards(&mut self) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can force distribution");
+            let caller = Runtime::calling_script_hash();
+            assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can force distribution");
             
             self.do_distribute_rewards();
             true
@@ -370,9 +494,10 @@ mod moon_doge {
         
         /// Burn tokens from own balance
         #[method]
+        #[no_reentry]
         fn burn(&mut self, amount: u64) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(runtime::check_witness(&caller), "Invalid signature");
+            let caller = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&caller), "Invalid signature");
             
             // Check sender balance
             let balance = self.balances.get(&caller).unwrap_or_default();
@@ -382,47 +507,44 @@ mod moon_doge {
             self.balances.insert(caller, balance - amount);
             
             // Update supplies
-            let current_supply = *self.total_supply.get();
-            let circulating = *self.circulating_supply.get();
+            let current_supply = self.total_supply.get().unwrap_or_default();
+            let circulating = self.circulating_supply.get().unwrap_or_default();
             
             self.total_supply.set(current_supply - amount);
             self.circulating_supply.set(circulating - amount);
             
-            // Emit events
-            self.emit(Transfer {
-                from: Some(caller),
-                to: None,
-                amount,
-            });
+            // Emit transfer event with proper Neo N3 format
+            Transfer::emit(Some(caller), None, amount);
             
-            self.emit(TokensBurned {
-                amount,
-            });
+            // Emit tokens burned event with proper Neo N3 format
+            TokensBurned::emit(amount);
             
             true
         }
         
         /// Get token statistics
+        #[method]
         #[safe]
         fn get_stats(&self) -> (u64, u64, u64, u64, u64, u64) {
             (
-                *self.total_supply.get(),
-                *self.circulating_supply.get(),
-                *self.total_transactions.get(),
-                *self.total_holders.get(),
-                *self.total_rewards_distributed.get(),
-                *self.last_reward_block.get(),
+                self.total_supply.get().unwrap_or_default(),
+                self.circulating_supply.get().unwrap_or_default(),
+                self.total_transactions.get().unwrap_or_default(),
+                self.total_holders.get().unwrap_or_default(),
+                self.total_rewards_distributed.get().unwrap_or_default(),
+                self.last_reward_block.get().unwrap_or_default(),
             )
         }
         
         /// Get tax information
+        #[method]
         #[safe]
         fn get_tax_info(&self) -> (u16, u16, u16, u16) {
             (
-                *self.liquidity_tax.get(),
-                *self.marketing_tax.get(),
-                *self.buyback_tax.get(),
-                *self.reflection_tax.get(),
+                self.liquidity_tax.get().unwrap_or_default(),
+                self.marketing_tax.get().unwrap_or_default(),
+                self.buyback_tax.get().unwrap_or_default(),
+                self.reflection_tax.get().unwrap_or_default(),
             )
         }
         
@@ -437,21 +559,17 @@ mod moon_doge {
             self.balances.insert(from, from_balance - amount);
             self.balances.insert(to, to_balance + amount);
             
-            // Emit transfer event
-            self.emit(Transfer {
-                from: Some(from),
-                to: Some(to),
-                amount,
-            });
+            // Emit transfer event with proper Neo N3 format
+            Transfer::emit(Some(from), Some(to), amount);
         }
         
         /// Process a transfer with tax
         fn taxed_transfer(&mut self, from: Address, to: Address, amount: u64) {
             // Calculate tax amounts
-            let liquidity_tax = *self.liquidity_tax.get() as u64;
-            let marketing_tax = *self.marketing_tax.get() as u64;
-            let buyback_tax = *self.buyback_tax.get() as u64;
-            let reflection_tax = *self.reflection_tax.get() as u64;
+            let liquidity_tax = self.liquidity_tax.get().unwrap_or_default() as u64;
+            let marketing_tax = self.marketing_tax.get().unwrap_or_default() as u64;
+            let buyback_tax = self.buyback_tax.get().unwrap_or_default() as u64;
+            let reflection_tax = self.reflection_tax.get().unwrap_or_default() as u64;
             
             let total_tax_bps = liquidity_tax + marketing_tax + buyback_tax + reflection_tax;
             let total_tax_amount = (amount * total_tax_bps) / 10000;
@@ -472,81 +590,62 @@ mod moon_doge {
             self.balances.insert(from, from_balance - amount);
             self.balances.insert(to, to_balance + net_amount);
             
-            // Emit main transfer event
-            self.emit(Transfer {
-                from: Some(from),
-                to: Some(to),
-                amount: net_amount,
-            });
+            // Emit main transfer event with proper Neo N3 format
+            Transfer::emit(Some(from), Some(to), net_amount);
             
             // Process tax allocations
             
             // 1. Liquidity tax
             if liquidity_amount > 0 {
-                let dex_pair = *self.dex_pair.get();
+                let dex_pair = self.dex_pair.get().unwrap_or_default();
                 if dex_pair != Hash160::zero() {
                     // If DEX pair is set, send to pair for auto-liquidity
                     let pair_balance = self.balances.get(&dex_pair).unwrap_or_default();
                     self.balances.insert(dex_pair, pair_balance + liquidity_amount);
                     
-                    self.emit(Transfer {
-                        from: Some(from),
-                        to: Some(dex_pair),
-                        amount: liquidity_amount,
-                    });
+                    // Emit transfer event with proper Neo N3 format
+                    Transfer::emit(Some(from), Some(dex_pair), liquidity_amount);
                 } else {
                     // Otherwise, send to owner
-                    let owner = *self.owner.get();
+                    let owner = self.owner.get().unwrap_or_default();
                     let owner_balance = self.balances.get(&owner).unwrap_or_default();
                     self.balances.insert(owner, owner_balance + liquidity_amount);
                     
-                    self.emit(Transfer {
-                        from: Some(from),
-                        to: Some(owner),
-                        amount: liquidity_amount,
-                    });
+                    // Emit transfer event with proper Neo N3 format
+                    Transfer::emit(Some(from), Some(owner), liquidity_amount);
                 }
             }
             
             // 2. Marketing tax
             if marketing_amount > 0 {
-                let marketing_wallet = *self.marketing_wallet.get();
+                let marketing_wallet = self.marketing_wallet.get().unwrap_or_default();
                 let wallet_balance = self.balances.get(&marketing_wallet).unwrap_or_default();
                 self.balances.insert(marketing_wallet, wallet_balance + marketing_amount);
                 
-                self.emit(Transfer {
-                    from: Some(from),
-                    to: Some(marketing_wallet),
-                    amount: marketing_amount,
-                });
+                // Emit transfer event with proper Neo N3 format
+                Transfer::emit(Some(from), Some(marketing_wallet), marketing_amount);
             }
             
             // 3. Buyback tax
             if buyback_amount > 0 {
                 // For buyback/burn, tokens go to contract itself
-                let contract_address = runtime::executing_script_hash();
+                let contract_address = Runtime::executing_script_hash();
                 let contract_balance = self.balances.get(&contract_address).unwrap_or_default();
                 self.balances.insert(contract_address, contract_balance + buyback_amount);
                 
-                self.emit(Transfer {
-                    from: Some(from),
-                    to: Some(contract_address),
-                    amount: buyback_amount,
-                });
+                // Emit transfer event with proper Neo N3 format
+                Transfer::emit(Some(from), Some(contract_address), buyback_amount);
             }
             
             // 4. Reflection tax
             if reflection_amount > 0 {
                 // Accumulate in contract for later distribution
-                let contract_address = runtime::executing_script_hash();
+                let contract_address = Runtime::executing_script_hash();
                 let contract_balance = self.balances.get(&contract_address).unwrap_or_default();
                 self.balances.insert(contract_address, contract_balance + reflection_amount);
                 
-                self.emit(Transfer {
-                    from: Some(from),
-                    to: Some(contract_address),
-                    amount: reflection_amount,
-                });
+                // Emit transfer event with proper Neo N3 format
+                Transfer::emit(Some(from), Some(contract_address), reflection_amount);
             }
         }
         
@@ -557,9 +656,9 @@ mod moon_doge {
         
         /// Try to distribute rewards if conditions are met
         fn try_distribute_rewards(&mut self) {
-            let current_block = runtime::get_block().index;
-            let last_reward_block = *self.last_reward_block.get();
-            let cycle_blocks = *self.reward_cycle_blocks.get();
+            let current_block = Runtime::get_block().index;
+            let last_reward_block = self.last_reward_block.get().unwrap_or_default();
+            let cycle_blocks = self.reward_cycle_blocks.get().unwrap_or_default();
             
             if current_block >= last_reward_block + cycle_blocks {
                 self.do_distribute_rewards();
@@ -569,7 +668,7 @@ mod moon_doge {
         /// Distribute rewards to holders
         fn do_distribute_rewards(&mut self) {
             // Get contract address and balance
-            let contract_address = runtime::executing_script_hash();
+            let contract_address = Runtime::executing_script_hash();
             let reflection_balance = self.balances.get(&contract_address).unwrap_or_default();
             
             // Only distribute if we have tokens to distribute
@@ -614,29 +713,22 @@ mod moon_doge {
                             // Update holder's balance
                             self.balances.insert(address, balance + reward);
                             
-                            // Emit transfer event
-                            self.emit(Transfer {
-                                from: Some(contract_address),
-                                to: Some(address),
-                                amount: reward,
-                            });
+                            // Emit transfer event with proper Neo N3 format
+                            Transfer::emit(Some(contract_address), Some(address), reward);
                         }
                     }
                     
                     // Update reward stats
-                    let total_rewards = *self.total_rewards_distributed.get();
+                    let total_rewards = self.total_rewards_distributed.get().unwrap_or_default();
                     self.total_rewards_distributed.set(total_rewards + total_distribution);
                     
-                    // Emit rewards event
-                    self.emit(RewardsDistributed {
-                        total_amount: total_distribution,
-                        recipients: eligible_holders,
-                    });
+                    // Emit rewards event with proper Neo N3 format
+                    RewardsDistributed::emit(total_distribution, eligible_holders);
                 }
             }
             
             // Update last reward block
-            self.last_reward_block.set(runtime::get_block().index);
+            self.last_reward_block.set(Runtime::get_block().index);
         }
     }
 }

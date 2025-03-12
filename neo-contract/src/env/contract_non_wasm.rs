@@ -85,7 +85,7 @@ pub unsafe fn system_contract_create(
 
 /// Get the call flags
 pub unsafe fn system_contract_get_call_flags() -> CallFlags {
-    CallFlags::All
+    CallFlags::ALL
 }
 
 /// Get the Neo candidates

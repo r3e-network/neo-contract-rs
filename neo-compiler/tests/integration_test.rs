@@ -5,10 +5,10 @@
 
 use std::fs;
 use std::path::Path;
-use assert_fs::prelude::*;
-use assert_fs::TempDir;
-use predicates::prelude::*;
-use neo_compiler::{compile_with_options, CompilerOptions};
+use neo_compiler::{compile_with_options, CompilerOptions, ManifestOverride};
+
+// Add dependency on tempfile for temporary directory management
+use tempfile;
 
 // Path to a test fixture WASM file for testing
 // In a real implementation, this would point to an actual WASM file
@@ -24,15 +24,15 @@ fn test_basic_compilation() -> anyhow::Result<()> {
     }
 
     // Create a temporary directory for output files
-    let temp_dir = TempDir::new()?;
+    let temp_dir = tempfile::tempdir()?;
     
     // Set compiler options
     let options = CompilerOptions {
         optimize: true,
         manifest_template: None,
-        manifest_overrides: Vec::new(),
+        manifest_overrides: None, // Using None instead of Some(Vec::new())
         output_dir: Some(temp_dir.path().to_path_buf()),
-        name: Some("test_contract".to_string()),
+        contract_name: Some("test_contract".to_string()),
         debug: false,
     };
     
@@ -51,8 +51,6 @@ fn test_basic_compilation() -> anyhow::Result<()> {
     let manifest_data = fs::read_to_string(&result.manifest_path)?;
     assert!(manifest_data.contains("\"name\""), "Manifest does not contain name field");
     assert!(manifest_data.contains("\"abi\""), "Manifest does not contain ABI field");
-    
-    temp_dir.close()?;
     Ok(())
 }
 
@@ -65,7 +63,7 @@ fn test_manifest_overrides() -> anyhow::Result<()> {
     }
 
     // Create a temporary directory for output files
-    let temp_dir = TempDir::new()?;
+    let temp_dir = tempfile::tempdir()?;
     
     // Custom name for testing
     let custom_name = "custom_contract_name";
@@ -74,14 +72,14 @@ fn test_manifest_overrides() -> anyhow::Result<()> {
     let options = CompilerOptions {
         optimize: true,
         manifest_template: None,
-        manifest_overrides: vec![
-            neo_compiler::ManifestOverride {
-                path: "name".to_string(),
-                value: serde_json::Value::String(custom_name.to_string()),
+        manifest_overrides: Some(vec![
+            ManifestOverride {
+                key: "name".to_string(),
+                value: custom_name.to_string(), // Using String instead of Value::String
             },
-        ],
+        ]),
         output_dir: Some(temp_dir.path().to_path_buf()),
-        name: Some("test_contract".to_string()),
+        contract_name: Some("test_contract".to_string()),
         debug: false,
     };
     
@@ -93,7 +91,7 @@ fn test_manifest_overrides() -> anyhow::Result<()> {
     assert!(manifest_data.contains(&format!("\"name\":\"{custom_name}\"")), 
             "Manifest does not contain the overridden name");
     
-    temp_dir.close()?;
+    // tempfile::TempDir automatically cleans up when it goes out of scope
     Ok(())
 }
 

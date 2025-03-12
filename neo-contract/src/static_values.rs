@@ -5,7 +5,9 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use crate::utils::hex;
 
-/// ByteArray represents a static byte array
+/// ByteArray represents a static byte array in Neo N3
+/// Uses repr(transparent) to ensure FFI compatibility with Neo VM
+#[repr(transparent)]
 pub struct ByteArray {
     pub value: Vec<u8>,
 }

@@ -33,7 +33,7 @@ impl RoleManagement {
         let index_str = ByteString::from(alloc::format!("{}", index));
         args.push(Any::from(index_str));
         
-        let result = Runtime::call_contract(
+        let _result = Runtime::call_contract(
             Self::hash(),
             method,
             args

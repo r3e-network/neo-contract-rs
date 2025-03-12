@@ -5,12 +5,15 @@
 use core::fmt;
 use core::ops::Deref;
 use core::convert::TryFrom;
-use alloc::string::{String, ToString};
-use alloc::vec::Vec;
+use alloc::string::String;
+
 use alloc::format;
 
 /// H160 represents a 160-bit hash (20 bytes) like an address or script hash
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Default)]
+/// H160 represents a 160-bit hash value, commonly used for Neo addresses
+/// Uses repr(transparent) to ensure FFI compatibility with Neo VM
+#[repr(transparent)]
 pub struct H160(pub [u8; 20]);
 
 impl H160 {

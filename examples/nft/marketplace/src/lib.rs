@@ -132,6 +132,7 @@ mod nft_marketplace {
     }
     
     /// Events emitted by the marketplace
+    /// The #[event] attribute marks this as a standard event in the contract manifest
     #[event]
     struct ListingCreated {
         #[index]
@@ -146,12 +147,57 @@ mod nft_marketplace {
         expires_at: u64,
     }
     
+    /// Implementation for properly emitting the ListingCreated event using Neo N3 standards
+    impl ListingCreated {
+        /// Static method to emit the ListingCreated event in Neo N3 format
+        pub fn emit(listing_id: u64, seller: Address, nft_contract: Hash160, token_id: ByteArray, 
+                    price: u64, payment_token: Hash160, listing_type: u8, expires_at: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("ListingCreated");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(listing_id));
+            event_data.push(Any::from(seller));
+            event_data.push(Any::from(nft_contract));
+            event_data.push(Any::from(token_id));
+            event_data.push(Any::from(price));
+            event_data.push(Any::from(payment_token));
+            event_data.push(Any::from(listing_type));
+            event_data.push(Any::from(expires_at));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
     #[event]
     struct ListingCancelled {
         #[index]
         listing_id: u64,
         #[index]
         seller: Address,
+    }
+    
+    /// Implementation for properly emitting the ListingCancelled event using Neo N3 standards
+    impl ListingCancelled {
+        /// Static method to emit the ListingCancelled event in Neo N3 format
+        pub fn emit(listing_id: u64, seller: Address) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("ListingCancelled");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(listing_id));
+            event_data.push(Any::from(seller));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
     #[event]
@@ -168,6 +214,31 @@ mod nft_marketplace {
         payment_token: Hash160,
     }
     
+    /// Implementation for properly emitting the ListingSold event using Neo N3 standards
+    impl ListingSold {
+        /// Static method to emit the ListingSold event in Neo N3 format
+        pub fn emit(listing_id: u64, seller: Address, buyer: Address, nft_contract: Hash160, 
+                   token_id: ByteArray, price: u64, payment_token: Hash160) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("ListingSold");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(listing_id));
+            event_data.push(Any::from(seller));
+            event_data.push(Any::from(buyer));
+            event_data.push(Any::from(nft_contract));
+            event_data.push(Any::from(token_id));
+            event_data.push(Any::from(price));
+            event_data.push(Any::from(payment_token));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
     #[event]
     struct AuctionBid {
         #[index]
@@ -175,6 +246,26 @@ mod nft_marketplace {
         #[index]
         bidder: Address,
         amount: u64,
+    }
+    
+    /// Implementation for properly emitting the AuctionBid event using Neo N3 standards
+    impl AuctionBid {
+        /// Static method to emit the AuctionBid event in Neo N3 format
+        pub fn emit(listing_id: u64, bidder: Address, amount: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("AuctionBid");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(listing_id));
+            event_data.push(Any::from(bidder));
+            event_data.push(Any::from(amount));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
     #[event]
@@ -347,7 +438,7 @@ mod nft_marketplace {
             
             // Check if expiration is in the future
             if expires_at > 0 {
-                assert!(expires_at > runtime::time(), "Expiration must be in the future");
+                assert!(expires_at > Ledger::current_timestamp(), "Expiration must be in the future");
             }
             
             // Verify NFT ownership
@@ -380,7 +471,7 @@ mod nft_marketplace {
                 price,
                 listing_type: ListingType::FixedPrice,
                 status: ListingStatus::Active,
-                created_at: runtime::time(),
+                created_at: Ledger::current_timestamp(),
                 expires_at,
                 royalty_percentage,
                 royalty_recipient,
@@ -399,17 +490,17 @@ mod nft_marketplace {
             
             assert!(transferred, "NFT transfer failed");
             
-            // Emit event
-            self.emit(ListingCreated {
+            // Emit event with proper Neo N3 format
+            ListingCreated::emit(
                 listing_id,
                 seller,
                 nft_contract,
                 token_id,
                 price,
                 payment_token,
-                listing_type: 0, // Fixed Price
-                expires_at,
-            });
+                0, // Fixed Price
+                expires_at
+            );
             
             listing_id
         }
@@ -440,7 +531,7 @@ mod nft_marketplace {
             assert!(duration <= max_duration, "Auction duration too long");
             
             // Calculate expiration time
-            let expires_at = runtime::time() + duration;
+            let expires_at = Ledger::current_timestamp() + duration;
             
             // Verify NFT ownership
             let owner: Address = self.call_contract(
@@ -472,7 +563,7 @@ mod nft_marketplace {
                 price: start_price, // Starting price
                 listing_type: ListingType::Auction,
                 status: ListingStatus::Active,
-                created_at: runtime::time(),
+                created_at: Ledger::current_timestamp(),
                 expires_at,
                 royalty_percentage,
                 royalty_recipient,
@@ -491,8 +582,8 @@ mod nft_marketplace {
             
             assert!(transferred, "NFT transfer failed");
             
-            // Emit event
-            self.emit(ListingCreated {
+            // Emit event with proper Neo N3 format
+            ListingCreated::emit(
                 listing_id,
                 seller,
                 nft_contract,
@@ -522,7 +613,7 @@ mod nft_marketplace {
             assert!(listing.listing_type == ListingType::FixedPrice, "Listing is not fixed price");
             
             // Check if listing has expired
-            if listing.expires_at > 0 && listing.expires_at <= runtime::time() {
+            if listing.expires_at > 0 && listing.expires_at <= Ledger::current_timestamp() {
                 // Update listing status to expired
                 listing.status = ListingStatus::Expired;
                 self.listings.insert(listing_id, listing);
@@ -566,8 +657,8 @@ mod nft_marketplace {
             // Remove from active listings
             self.active_listings.remove(&(listing.nft_contract, listing.token_id.clone()));
             
-            // Emit event
-            self.emit(ListingSold {
+            // Emit event with proper Neo N3 format
+            ListingSold::emit(
                 listing_id,
                 seller: listing.owner,
                 buyer,
@@ -596,7 +687,7 @@ mod nft_marketplace {
             assert!(listing.listing_type == ListingType::Auction, "Listing is not an auction");
             
             // Check if auction has ended
-            assert!(listing.expires_at > runtime::time(), "Auction has ended");
+            assert!(listing.expires_at > Ledger::current_timestamp(), "Auction has ended");
             
             // Check bid amount
             assert!(amount >= listing.price, "Bid amount below starting price");
@@ -633,7 +724,7 @@ mod nft_marketplace {
                 listing_id,
                 bidder,
                 amount,
-                timestamp: runtime::time(),
+                timestamp: Ledger::current_timestamp(),
             };
             
             // Store bid as highest
@@ -641,19 +732,19 @@ mod nft_marketplace {
             
             // Extend auction if bid is placed near the end
             let extension_time = *self.auction_extension_time.get();
-            let time_left = listing.expires_at - runtime::time();
+            let time_left = listing.expires_at - Ledger::current_timestamp();
             
             if time_left < extension_time {
-                listing.expires_at = runtime::time() + extension_time;
+                listing.expires_at = Ledger::current_timestamp() + extension_time;
                 self.listings.insert(listing_id, listing);
             }
             
-            // Emit event
-            self.emit(AuctionBid {
+            // Emit event with proper Neo N3 format
+            AuctionBid::emit(
                 listing_id,
                 bidder,
-                amount,
-            });
+                amount
+            );
             
             true
         }
@@ -667,7 +758,7 @@ mod nft_marketplace {
             // Validate listing
             assert!(listing.status == ListingStatus::Active, "Auction is not active");
             assert!(listing.listing_type == ListingType::Auction, "Listing is not an auction");
-            assert!(listing.expires_at <= runtime::time(), "Auction has not ended yet");
+            assert!(listing.expires_at <= Ledger::current_timestamp(), "Auction has not ended yet");
             
             // Check if there was a winning bid
             if let Some(winning_bid) = self.highest_bids.get(&listing_id) {
@@ -768,11 +859,11 @@ mod nft_marketplace {
             // Remove from active listings
             self.active_listings.remove(&(listing.nft_contract, listing.token_id.clone()));
             
-            // Emit event
-            self.emit(ListingCancelled {
+            // Emit event with proper Neo N3 format
+            ListingCancelled::emit(
                 listing_id,
-                seller: listing.owner,
-            });
+                listing.owner
+            );
             
             true
         }
@@ -797,7 +888,7 @@ mod nft_marketplace {
             assert!(expires_in > 0, "Offer must have an expiration time");
             
             // Calculate expiration time
-            let expires_at = runtime::time() + expires_in;
+            let expires_at = Ledger::current_timestamp() + expires_in;
             
             // Transfer offer amount to contract
             let transferred: bool = self.call_contract(
@@ -813,7 +904,7 @@ mod nft_marketplace {
                 listing_id,
                 offerer,
                 amount,
-                created_at: runtime::time(),
+                created_at: Ledger::current_timestamp(),
                 expires_at,
             };
             
@@ -902,7 +993,7 @@ mod nft_marketplace {
             let offer = self.offers.get(&offer_key).expect("Offer not found");
             
             // Verify offer hasn't expired
-            assert!(offer.expires_at > runtime::time(), "Offer has expired");
+            assert!(offer.expires_at > Ledger::current_timestamp(), "Offer has expired");
             
             // Transfer NFT to offerer
             let nft_transferred: bool = self.call_contract(

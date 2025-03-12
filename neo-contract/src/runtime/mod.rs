@@ -68,7 +68,7 @@ impl Runtime {
     }
 
     /// Notify an event
-    pub fn notify(event_name: &ByteString, args: &Array) {
+    pub fn notify(event_name: &ByteString, _args: &Array) {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe { 
             // Convert from builtin::ByteString to types::builtin::ByteString
@@ -93,21 +93,21 @@ impl Runtime {
     }
 
     /// Call a contract
-    pub fn call_contract(hash: H160, method: ByteString, args: Array) -> Any {
+    pub fn call_contract(hash: H160, method: ByteString, _args: Array) -> Any {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
             // Convert from builtin::H160 to types::builtin::H160
-            let hash_converted = crate::types::builtin::h160::H160(hash.to_vec());
+            let hash_converted = crate::types::builtin::h160::H160::from_slice(hash.as_bytes());
             // Convert from builtin::ByteString to types::builtin::ByteString
             let method_converted = crate::types::builtin::string::ByteString(method.to_vec());
             // Convert from builtin::Array to types::builtin::Array
             let args_converted = crate::types::builtin::array::Array::new();
             // TODO: Convert args properly
             
-            let result = crate::env::syscall_non_wasm::system_contract_call(
+            let _result = crate::env::syscall_non_wasm::system_contract_call(
                 hash_converted,
                 method_converted,
-                CallFlags::All,  // Default to All flags
+                CallFlags::ALL,  // Default to All flags
                 args_converted
             );
             
@@ -119,7 +119,7 @@ impl Runtime {
         #[cfg(target_arch = "wasm32")]
         unsafe {
             // Convert from builtin::H160 to types::builtin::H160
-            let hash_converted = crate::types::builtin::h160::H160(hash.to_vec());
+            let hash_converted = crate::types::builtin::h160::H160::from_slice(hash.as_bytes());
             // Convert from builtin::ByteString to types::builtin::ByteString
             let method_converted = crate::types::builtin::string::ByteString(method.to_vec());
             // Convert from builtin::Array to types::builtin::Array
@@ -129,7 +129,7 @@ impl Runtime {
             let result = crate::env::syscall::system_contract_call(
                 hash_converted,
                 method_converted,
-                CallFlags::All,  // Default to All flags
+                CallFlags::ALL,  // Default to All flags
                 args_converted
             );
             
@@ -140,16 +140,16 @@ impl Runtime {
     }
     
     /// Call a contract with specific flags
-    pub fn call_contract_with_flags(hash: H160, method: ByteString, flags: CallFlags, args: Array) -> Any {
+    pub fn call_contract_with_flags(hash: H160, method: ByteString, flags: CallFlags, _args: Array) -> Any {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe { 
             // Convert from builtin::H160 to types::builtin::H160
-            let hash_converted = crate::types::builtin::h160::H160(hash.to_vec());
+            let hash_converted = crate::types::builtin::h160::H160::from_slice(hash.as_bytes());
             let method_converted = crate::types::builtin::string::ByteString(method.to_vec());
             let args_converted = crate::types::builtin::array::Array::new();
             // TODO: Convert args properly
             
-            let result = crate::env::syscall_non_wasm::system_contract_call(
+            let _result = crate::env::syscall_non_wasm::system_contract_call(
                 hash_converted, 
                 method_converted, 
                 flags, 
@@ -157,13 +157,13 @@ impl Runtime {
             );
             
             // Convert from types::builtin::Any to builtin::Any
-            Any::default()
+            Any::integer(0) // Default to integer 0
         }
         
         #[cfg(target_arch = "wasm32")]
         unsafe { 
             // Convert from builtin::H160 to types::builtin::H160
-            let hash_converted = crate::types::builtin::h160::H160(hash.to_vec());
+            let hash_converted = crate::types::builtin::h160::H160::from_slice(hash.as_bytes());
             
             // Convert from builtin::ByteString to types::builtin::ByteString
             let method_converted = crate::types::builtin::string::ByteString(method.to_vec());
@@ -363,12 +363,12 @@ impl Runtime {
     }
     
     /// Update the contract
-    pub fn update(script: ByteString, manifest: ByteString, data: Any) -> bool {
+    pub fn update(script: ByteString, manifest: ByteString, _data: Any) -> bool {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe { 
             let script_converted = crate::types::builtin::string::ByteString(script.to_vec());
             let manifest_converted = crate::types::builtin::string::ByteString(manifest.to_vec());
-            let data_converted = crate::types::builtin::any::Any::default(); // TODO: Implement proper conversion
+            let data_converted = crate::types::builtin::any::Any::integer(0); // TODO: Implement proper conversion
             crate::env::syscall_non_wasm::system_contract_update(script_converted, manifest_converted, data_converted)
         }
         
@@ -419,9 +419,9 @@ impl Runtime {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe { 
             let hash_converted = crate::types::builtin::h160::H160(hash.as_bytes().try_into().unwrap());
-            let result = crate::env::syscall_non_wasm::system_runtime_get_notifications(hash_converted);
+            let _result = crate::env::syscall_non_wasm::system_runtime_get_notifications(hash_converted);
             // Convert from types::builtin::Array to builtin::Array
-            let mut converted_array = Array::new();
+            let converted_array = Array::new();
             // TODO: Implement proper conversion between Array types
             converted_array
         }
@@ -431,10 +431,10 @@ impl Runtime {
             // Convert from builtin::H160 to types::builtin::H160
             let hash_converted = crate::types::builtin::h160::H160(hash.as_bytes().try_into().unwrap());
             
-            let result = crate::env::syscall::system_runtime_get_notifications(hash_converted);
+            let _result = crate::env::syscall::system_runtime_get_notifications(hash_converted);
             
             // Convert from types::builtin::Array to builtin::Array
-            let mut converted_array = Array::new();
+            let converted_array = Array::new();
             // TODO: Implement proper conversion between Array types
             
             converted_array
@@ -569,7 +569,7 @@ impl Runtime {
     /// Calculate RIPEMD160 hash
     pub fn ripemd160(data: &ByteString) -> H160 {
         #[cfg(not(target_arch = "wasm32"))]
-        unsafe { 
+        unsafe {
             let data_converted = crate::types::builtin::string::ByteString(data.to_vec());
             let result = crate::env::syscall_non_wasm::system_crypto_ripemd160(data_converted);
             // Convert from types::builtin::H160 to builtin::H160
@@ -577,7 +577,7 @@ impl Runtime {
         }
         
         #[cfg(target_arch = "wasm32")]
-        unsafe { 
+        unsafe {
             // Convert from builtin::ByteString to types::builtin::ByteString
             let data_converted = crate::types::builtin::string::ByteString(data.to_vec());
             
@@ -585,6 +585,23 @@ impl Runtime {
             
             // Convert from types::builtin::H160 to builtin::H160
             H160::try_from(result.0.as_slice()).unwrap()
+        }
+    }
+    
+    /// Get the current block hash
+    pub fn current_block_hash() -> H256 {
+        #[cfg(not(target_arch = "wasm32"))]
+        unsafe {
+            let result = crate::env::syscall_non_wasm::system_runtime_get_current_block_hash();
+            // Convert from types::builtin::H256 to builtin::H256
+            H256::try_from(&result.0[..]).unwrap()
+        }
+        
+        #[cfg(target_arch = "wasm32")]
+        unsafe {
+            let result = crate::env::syscall::system_runtime_get_current_block_hash();
+            // Convert from types::builtin::H256 to builtin::H256
+            H256::try_from(result.0.as_slice()).unwrap()
         }
     }
 }

@@ -3,14 +3,13 @@
 
 //! NEP-17 token implementation for the Neo N3 blockchain
 
-use alloc::vec::Vec;
-use alloc::string::String;
+
 
 // Update imports to use prelude
 use crate::prelude::{H160, ByteString, Int256, Array, Any, StorageMap};
-use crate::policy::voting::Storable;  // Import Storable from the voting module where we defined it
+
 use crate::runtime::Runtime;
-use crate::error::{Error, Result};  // Remove ErrorCode since we're using the enum variants directly
+use crate::error::{Error, ErrorCode, Result};  // Add ErrorCode import for error creation
 use crate::token::{Token, TokenEvents, NEP17Token};
 
 /// NEP-17 token implementation
@@ -60,12 +59,12 @@ impl NEP17TokenContract {
     /// Initialize the token with an initial supply and owner
     pub fn initialize(&self, owner: H160, initial_supply: Int256) -> Result<()> {
         // Check if already initialized
-        if self.owner.get(&ByteString::from("owner")).is_some() {
-            return Err(Error::AlreadyExists("Token already initialized"));
+        if self.owner.get(&ByteString::from("owner")).is_ok() {
+            return Err(Error::with_message(ErrorCode::InvalidState, "Token already initialized"));
         }
         
         // Set owner
-        self.owner.put(&ByteString::from("owner"), &owner);
+        let _ = self.owner.put(&ByteString::from("owner"), &owner);
         
         // Mint initial supply to owner
         if initial_supply > Int256::zero() {
@@ -79,22 +78,22 @@ impl NEP17TokenContract {
     pub fn mint(&self, to: &H160, amount: Int256) -> Result<()> {
         // Check amount
         if amount <= Int256::zero() {
-            return Err(Error::InvalidArgument("Amount must be positive"));
+            return Err(Error::with_message(ErrorCode::InvalidArgument, "Amount must be positive"));
         }
         
         // Check only owner can mint
         let owner = self.get_owner();
         if !Runtime::check_witness(&owner) {
-            return Err(Error::Unauthorized("Only owner can mint"));
+            return Err(Error::with_message(ErrorCode::Unauthorized, "Only owner can mint"));
         }
         
         // Update balance
         let balance = self.balance_of(to);
-        self.balances.put(to, &(balance + amount));
+        let _ = self.balances.put(to, &(balance + amount));
         
         // Update total supply
         let total_supply = self.total_supply();
-        self.metadata.total_supply.put(&ByteString::from("value"), &(total_supply + amount));
+        let _ = self.metadata.total_supply.put(&ByteString::from("value"), &(total_supply + amount));
         
         // Emit transfer event
         TokenEvents::emit_transfer(&(), None, Some(to.clone()), amount);
@@ -106,26 +105,26 @@ impl NEP17TokenContract {
     pub fn burn(&self, from: &H160, amount: Int256) -> Result<()> {
         // Check amount
         if amount <= Int256::zero() {
-            return Err(Error::InvalidArgument("Amount must be positive"));
+            return Err(Error::with_message(ErrorCode::InvalidArgument, "Amount must be positive"));
         }
         
         // Check owner or self authorization
         if !Runtime::check_witness(from) {
-            return Err(Error::Unauthorized("Not authorized to burn"));
+            return Err(Error::with_message(ErrorCode::Unauthorized, "Not authorized to burn"));
         }
         
         // Check balance
         let balance = self.balance_of(from);
         if balance < amount {
-            return Err(Error::InsufficientFunds("Insufficient balance for burn"));
+            return Err(Error::with_message(ErrorCode::InsufficientFunds, "Insufficient balance for burn"));
         }
         
         // Update balance
-        self.balances.put(from, &(balance - amount));
+        let _ = self.balances.put(from, &(balance - amount));
         
         // Update total supply
         let total_supply = self.total_supply();
-        self.metadata.total_supply.put(&ByteString::from("value"), &(total_supply - amount));
+        let _ = self.metadata.total_supply.put(&ByteString::from("value"), &(total_supply - amount));
         
         // Emit transfer event
         TokenEvents::emit_transfer(&(), Some(from.clone()), None, amount);
@@ -159,11 +158,17 @@ impl Token for NEP17TokenContract {
     }
     
     fn total_supply(&self) -> Int256 {
-        self.metadata.total_supply.get(&ByteString::from("value")).unwrap_or_else(Int256::zero)
+        match self.metadata.total_supply.get(&ByteString::from("value")) {
+            Ok(Some(value)) => value,
+            _ => Int256::zero()
+        }
     }
-    
+
     fn balance_of(&self, account: &H160) -> Int256 {
-        self.balances.get(account).unwrap_or_else(Int256::zero)
+        match self.balances.get(account) {
+            Ok(Some(value)) => value,
+            _ => Int256::zero()
+        }
     }
     
     fn transfer(&self, to: &H160, amount: Int256) -> bool {
@@ -192,9 +197,9 @@ impl Token for NEP17TokenContract {
         }
         
         // Update balances
-        self.balances.put(&sender, &(from_balance - amount));
+        let _ = self.balances.put(&sender, &(from_balance - amount));
         let to_balance = self.balance_of(to);
-        self.balances.put(to, &(to_balance + amount));
+        let _ = self.balances.put(to, &(to_balance + amount));
         
         // Handle neo domain verification
         self.on_nep17_payment(to, amount);
@@ -228,9 +233,9 @@ impl Token for NEP17TokenContract {
         }
         
         // Update balances
-        self.balances.put(from, &(from_balance - amount));
+        let _ = self.balances.put(from, &(from_balance - amount));
         let to_balance = self.balance_of(to);
-        self.balances.put(to, &(to_balance + amount));
+        let _ = self.balances.put(to, &(to_balance + amount));
         
         // Handle neo domain verification
         self.on_nep17_payment(to, amount);
@@ -244,7 +249,10 @@ impl Token for NEP17TokenContract {
 
 impl NEP17Token for NEP17TokenContract {
     fn get_owner(&self) -> H160 {
-        self.owner.get(&ByteString::from("owner")).unwrap_or_else(H160::zero)
+        match self.owner.get(&ByteString::from("owner")) {
+            Ok(Some(value)) => value,
+            _ => H160::zero()
+        }
     }
     
     fn set_owner(&self, new_owner: H160) -> bool {
@@ -255,7 +263,7 @@ impl NEP17Token for NEP17TokenContract {
         }
         
         // Set new owner
-        self.owner.put(&ByteString::from("owner"), &new_owner);
+        let _ = self.owner.put(&ByteString::from("owner"), &new_owner);
         
         true
     }
@@ -268,11 +276,11 @@ impl NEP17TokenContract {
         if Runtime::is_contract(to) {
             // Try to call onNEP17Payment method on receiving contract
             let method = ByteString::from("onNEP17Payment");
-            let mut args = Array::<Any>::new();
+            let mut args = Array::new();
             
             args.push(Any::from(Runtime::executing_script_hash()));
             args.push(Any::from(amount));
-            args.push(Any::from(Any::new()));  // data parameter
+            args.push(Any::null());  // data parameter
             
             // Call the contract, ignoring any errors
             let _ = Runtime::call_contract(

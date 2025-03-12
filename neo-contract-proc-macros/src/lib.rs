@@ -69,6 +69,8 @@ pub fn contract(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
+/// use neo_contract_proc_macros::method;
+///
 /// #[method]
 /// fn transfer(&mut self, from: Address, to: Address, amount: u64) -> bool {
 ///     // Implementation that modifies state
@@ -90,6 +92,8 @@ pub fn method(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
+/// use neo_contract_proc_macros::safe;
+///
 /// #[safe]
 /// fn balance_of(&self, account: Address) -> u64 {
 ///     self.balances.get(&account).unwrap_or_default()
@@ -108,6 +112,8 @@ pub fn safe(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
+/// use neo_contract_proc_macros::constructor;
+///
 /// #[constructor]
 /// fn new(owner: Address, name: String) -> Self {
 ///     Self {
@@ -129,6 +135,8 @@ pub fn constructor(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
+/// use neo_contract_proc_macros::storage;
+///
 /// #[storage]
 /// struct TokenContract {
 ///     owner: Item<Address>,
@@ -148,6 +156,8 @@ pub fn storage(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
+/// use neo_contract_proc_macros::event;
+///
 /// #[event]
 /// struct Transfer {
 ///     #[index]
@@ -169,6 +179,8 @@ pub fn event(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
+/// use neo_contract_proc_macros::event;
+///
 /// #[event]
 /// struct Transfer {
 ///     #[index]
@@ -191,6 +203,8 @@ pub fn index(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
+/// use neo_contract_proc_macros::method;
+///
 /// #[method]
 /// #[no_reentrant]
 /// fn transfer(&mut self, from: Address, to: Address, amount: u64) -> bool {
@@ -351,6 +365,46 @@ pub fn string_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn string(attr: TokenStream, item: TokenStream) -> TokenStream {
     static_field::string::string(attr, item)
+}
+
+/// Marks a function with a specific NEO VM opcode.
+///
+/// This attribute is used for low-level integration with the NEO VM.
+/// It specifies which opcode should be used when the function is called.
+///
+/// # Example
+///
+/// ```rust
+/// use neo_contract_proc_macros::op_code;
+///
+/// #[op_code(SYSCALL, "Neo.Storage.Get")]
+/// fn storage_get(context: &StorageContext, key: &[u8]) -> Option<Vec<u8>> {
+///     // Implementation
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn op_code(attr: TokenStream, item: TokenStream) -> TokenStream {
+    structure::op_code(attr, item)
+}
+
+/// Marks a function as a syscall to the NEO VM.
+///
+/// This attribute is used for low-level integration with the NEO VM.
+/// It specifies which syscall should be invoked when the function is called.
+///
+/// # Example
+///
+/// ```rust
+/// use neo_contract_proc_macros::syscall;
+///
+/// #[syscall("Neo.Storage.Get")]
+/// fn storage_get(context: &StorageContext, key: &[u8]) -> Option<Vec<u8>> {
+///     // Implementation
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn syscall(attr: TokenStream, item: TokenStream) -> TokenStream {
+    structure::syscall(attr, item)
 }
 
 // Internal modules

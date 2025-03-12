@@ -1,13 +1,7 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use alloc::vec::Vec;
-use crate::prelude::*;
-use crate::types::builtin::array::Array;
-use crate::types::builtin::string::ByteString;
-use crate::types::builtin::h256::H256;
-use crate::types::builtin::h160::H160;
-use crate::types::builtin::any::Any;
+use crate::prelude::{Array, ByteString, H256, H160};
 
 /// Named curve hash type for cryptographic functions
 #[derive(Debug, Clone, Copy)]
@@ -242,15 +236,15 @@ pub fn check_sign(public_key: ByteString, sign: ByteString) -> bool {
 }
 
 /// Check multiple signatures
-pub fn check_multi_signs(public_keys: Array, signs: Array) -> bool {
+pub fn check_multi_signs(_public_keys: Array, _signs: Array) -> bool {
     #[cfg(not(target_arch = "wasm32"))]
     unsafe {
         // Convert public keys to ByteString array
-        let mut public_keys_converted = Array::new();
+        let public_keys_converted = Array::new();
         // TODO: Implement proper conversion between public_keys and public_keys_converted
         
         // Convert signatures to ByteString array
-        let mut signs_converted = Array::new();
+        let signs_converted = Array::new();
         // TODO: Implement proper conversion between signs and signs_converted
         
         crate::env::syscall_non_wasm::system_crypto_check_multi_signs(public_keys_converted, signs_converted)

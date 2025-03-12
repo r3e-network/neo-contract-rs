@@ -1,7 +1,7 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use alloc::vec::Vec;
+
 use crate::types::builtin::h256::H256;
 use crate::types::builtin::string::ByteString;
 

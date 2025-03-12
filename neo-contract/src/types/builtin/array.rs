@@ -8,24 +8,29 @@ use alloc::vec::Vec;
 use super::any::Any;
 
 /// Array represents a dynamic array of values in Neo
-#[derive(Clone, Default)]
-pub struct Array(pub Vec<Any>);
+/// 
+/// T is a phantom type parameter that helps with type safety
+/// while maintaining compatibility with Neo N3 VM representation
+#[derive(Clone, Default, PartialEq, Eq)]
+pub struct Array<T = Any>(pub Vec<Any>, core::marker::PhantomData<T>);
 
-impl Array {
+impl<T> Array<T> {
     /// Creates a new empty Array
     pub fn new() -> Self {
-        Array(Vec::new())
+        Array(Vec::new(), core::marker::PhantomData)
     }
     
     /// Creates an Array with the given capacity
     pub fn with_capacity(capacity: usize) -> Self {
-        Array(Vec::with_capacity(capacity))
+        Array(Vec::with_capacity(capacity), core::marker::PhantomData)
     }
     
-    /// Creates an Array from a vector of Any values
+    /// Creates an Array from a vector
     pub fn from_vec(vec: Vec<Any>) -> Self {
-        Array(vec)
+        Array(vec, core::marker::PhantomData)
     }
+    
+    // Note: We've already defined from_vec above, so this is removed
     
     /// Returns the length of the Array
     pub fn len(&self) -> usize {
@@ -38,7 +43,7 @@ impl Array {
     }
     
     /// Pushes a value to the end of the Array
-    pub fn push<T: Into<Any>>(&mut self, value: T) {
+    pub fn push<IntoAny: Into<Any>>(&mut self, value: IntoAny) {
         self.0.push(value.into());
     }
     
@@ -58,7 +63,7 @@ impl Array {
     }
     
     /// Sets a value at the given index
-    pub fn set<T: Into<Any>>(&mut self, index: usize, value: T) -> Result<(), &'static str> {
+    pub fn set<IntoAny: Into<Any>>(&mut self, index: usize, value: IntoAny) -> Result<(), &'static str> {
         if index < self.0.len() {
             self.0[index] = value.into();
             Ok(())
@@ -73,7 +78,7 @@ impl Array {
     }
     
     /// Inserts a value at the given index
-    pub fn insert<T: Into<Any>>(&mut self, index: usize, value: T) {
+    pub fn insert<IntoAny: Into<Any>>(&mut self, index: usize, value: IntoAny) {
         self.0.insert(index, value.into());
     }
     
@@ -93,7 +98,7 @@ impl Array {
     }
     
     /// Resizes the Array to the given length with the given value
-    pub fn resize<T: Into<Any> + Clone>(&mut self, len: usize, value: T) {
+    pub fn resize<IntoAny: Into<Any> + Clone>(&mut self, len: usize, value: IntoAny) {
         let value = value.into();
         if len > self.0.len() {
             let additional = len - self.0.len();
@@ -144,13 +149,13 @@ impl IndexMut<usize> for Array {
     }
 }
 
-impl From<Vec<Any>> for Array {
+impl<T> From<Vec<Any>> for Array<T> {
     fn from(vec: Vec<Any>) -> Self {
-        Array(vec)
+        Array(vec, core::marker::PhantomData)
     }
 }
 
-impl fmt::Debug for Array {
+impl<T> fmt::Debug for Array<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Array(")?;
         f.debug_list().entries(self.0.iter()).finish()?;
@@ -158,7 +163,7 @@ impl fmt::Debug for Array {
     }
 }
 
-impl IntoIterator for Array {
+impl<T> IntoIterator for Array<T> {
     type Item = Any;
     type IntoIter = alloc::vec::IntoIter<Self::Item>;
     
@@ -167,7 +172,7 @@ impl IntoIterator for Array {
     }
 }
 
-impl<'a> IntoIterator for &'a Array {
+impl<'a, T> IntoIterator for &'a Array<T> {
     type Item = &'a Any;
     type IntoIter = core::slice::Iter<'a, Any>;
     
@@ -176,7 +181,7 @@ impl<'a> IntoIterator for &'a Array {
     }
 }
 
-impl<'a> IntoIterator for &'a mut Array {
+impl<'a, T> IntoIterator for &'a mut Array<T> {
     type Item = &'a mut Any;
     type IntoIter = core::slice::IterMut<'a, Any>;
     

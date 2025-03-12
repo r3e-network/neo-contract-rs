@@ -15,6 +15,7 @@ pub struct Oracle;
 pub const MINIMUM_RESPONSE_FEE: u64 = 10_000_000;
 
 /// Callback type that will be invoked when the Oracle request is fulfilled
+#[allow(dead_code)]
 pub struct OracleCallback<T> {
     /// URL for the request
     url: ByteString,

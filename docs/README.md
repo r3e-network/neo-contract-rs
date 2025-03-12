@@ -1,114 +1,40 @@
-# Neo Contract Framework for Rust
+# Neo Contract Rust Documentation
 
-This repository contains a framework for writing Neo N3 smart contracts in Rust with an ink!-style syntax. The framework compiles Rust code to WebAssembly as an intermediate representation, then converts the WebAssembly bytecode to Neo VM bytecode.
+This directory contains documentation for the Neo Contract Rust framework, which enables developers to write smart contracts for the Neo N3 blockchain using the Rust programming language.
 
-## Documentation
+## Getting Started
 
-### Getting Started
+- [Installation Guide](./installation.md) - Setting up your development environment
+- [Quick Start](./quickstart.md) - Build your first Neo N3 smart contract in Rust
+- [Contract Structure](./contract_structure.md) - Understanding the basic structure of Neo Rust contracts
 
-- [Getting Started](getting_started.md) - Setup instructions and your first contract
-- [Ink Style Guide](ink_style_guide.md) - How to write contracts using ink!-style syntax
+## Core Concepts
 
-### Technical Details
+- [Storage Model](./storage_model.md) - Working with blockchain storage in Neo contracts
+- [Contract Methods](./contract_methods.md) - Defining and implementing contract methods
+- [Events and Notifications](./events.md) - Emitting events from your contracts
+- [Ledger API Guide](./ledger_api_guide.md) - Accessing blockchain data (blocks, transactions, time)
 
-- [WebAssembly to Neo Conversion](wasm_to_neo_conversion.md) - How WebAssembly is converted to Neo VM bytecode
-- [Implementation Summary](implementation_summary.md) - Current state of the framework and roadmap
-- [Safe Methods](safe_methods.md) - Writing read-only contract methods
+## Advanced Topics
 
-### Tutorials
+- [Access Control](./access_control.md) - Managing permissions in your contracts
+- [Contract Interactions](./contract_interactions.md) - Calling other contracts
+- [NEP Standards](./nep_standards.md) - Implementing Neo Enhancement Proposals
+- [Testing Contracts](./testing.md) - Testing your contracts effectively
 
-- [NEP-17 Token Tutorial](nep17_tutorial.md) - Creating a fungible token contract
+## Troubleshooting
 
-## Architecture
+- [Common Issues](./troubleshooting.md) - Solutions for frequently encountered issues
+- [Debugging Guide](./debugging.md) - Strategies for debugging Neo Rust contracts
 
-The Neo Contract Framework consists of three main components:
+## Examples
 
-1. **Neo Contract SDK**: Rust crate providing macros, traits, and utilities for writing Neo smart contracts
-2. **Neo Compiler**: Tool that compiles Rust smart contracts to Neo VM bytecode
-3. **Neo Contract Macros**: Procedural macros for the ink!-style syntax
-
-### Compilation Process
-
-```
-┌─────────────────┐     ┌───────────────┐     ┌─────────────┐
-│                 │     │               │     │             │
-│   Rust Source   │ --> │   WebAssembly │ --> │   Neo VM    │
-│  (ink!-style)   │     │    (.wasm)    │     │  Bytecode   │
-│                 │     │               │     │             │
-└─────────────────┘     └───────────────┘     └─────────────┘
-         │                     │                     │
-         ▼                     ▼                     ▼
-┌─────────────────┐     ┌───────────────┐     ┌─────────────┐
-│                 │     │               │     │             │
-│    Rust SDK     │     │  WASM Parser  │     │ NEF File &  │
-│    & Macros     │     │  & Converter  │     │  Manifest   │
-│                 │     │               │     │             │
-└─────────────────┘     └───────────────┘     └─────────────┘
-```
-
-## Example Contract
-
-Here's a simple NEP-17 token contract written using the Neo Contract Framework:
-
-```rust
-#[contract]
-mod token {
-    use neo_contract::prelude::*;
-    
-    #[storage]
-    struct TokenContract {
-        total_supply: Item<u64>,
-        balances: Map<Address, u64>,
-    }
-    
-    impl TokenContract {
-        #[constructor]
-        fn new(owner: Address, supply: u64) -> Self {
-            let mut balances = Map::new();
-            balances.insert(owner, supply);
-            
-            Self {
-                total_supply: Item::new(supply),
-                balances,
-            }
-        }
-        
-        #[method]
-        fn transfer(&mut self, from: Address, to: Address, amount: u64) -> bool {
-            assert!(runtime::check_witness(&from), "No authorization");
-            assert!(to != Address::zero(), "Invalid to address");
-            
-            let from_balance = self.balances.get(&from).unwrap_or_default();
-            assert!(from_balance >= amount, "Insufficient balance");
-            
-            // Update balances
-            self.balances.insert(from, from_balance - amount);
-            let to_balance = self.balances.get(&to).unwrap_or_default();
-            self.balances.insert(to, to_balance + amount);
-            
-            // Emit transfer event
-            events::transfer(&from, &to, amount);
-            
-            true
-        }
-        
-        #[safe]
-        fn balance_of(&self, account: Address) -> u64 {
-            self.balances.get(&account).unwrap_or_default()
-        }
-        
-        #[safe]
-        fn total_supply(&self) -> u64 {
-            *self.total_supply.get()
-        }
-    }
-}
-```
+For practical implementation examples, please see the [examples](../examples) directory, which contains sample contracts demonstrating various use cases and patterns.
 
 ## Contributing
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for details on how to contribute to this project.
+We welcome contributions to improve this documentation. Please see the [contribution guidelines](../CONTRIBUTING.md) for more information on how to contribute.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+This documentation is provided under the same license as the Neo Contract Rust framework.

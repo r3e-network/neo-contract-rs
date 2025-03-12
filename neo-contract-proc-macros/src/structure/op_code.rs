@@ -8,7 +8,7 @@ use syn::{
 };
 
 /// Process the op_code attribute macro
-pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse the function
     let mut item_fn = parse_macro_input!(item as ItemFn);
     

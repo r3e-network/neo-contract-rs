@@ -4,16 +4,21 @@ A framework for writing Neo N3 smart contracts in Rust using an ink!-style API. 
 
 ## Overview
 
-The Neo Contract Framework for Rust consists of three main components:
+The Neo Contract Framework for Rust consists of the following main components:
 
 1. **neo-contract**: The core library that provides the ink!-style API for writing smart contracts
-2. **neo-contract-proc-macros**: Procedural macros for the attribute-based interface
+2. **neo-macros**: Procedural macros for the attribute-based interface
 3. **neo-compiler**: A compiler that converts WebAssembly to Neo VM bytecode
+4. **neo-contract-testing**: Testing utilities for Neo smart contracts
 
 The framework follows this compilation flow:
 ```
 Rust code → WebAssembly → Neo VM bytecode → NEF file + Manifest
 ```
+
+## Current Status
+
+**Important Note**: This framework is currently in active development. Some examples may experience compilation issues due to ongoing development of the procedural macros and framework components. The code is provided as a reference for contract structure and patterns, but may require updates to compile successfully.
 
 ## Features
 
@@ -128,26 +133,70 @@ impl MyContract {
 
 ## Examples
 
-Check out the examples directory for various contract examples:
+We've updated and expanded our examples directory with comprehensive READMEs and improved code structure. Check out the [examples directory](examples/) for various contract implementations, including:
 
+### Basic Examples
 - [Hello World](examples/hello_world/): A simple greeting contract
+- [Simple Token](examples/simple_token/): A basic token implementation
+- [Event Demo](examples/event_demo/): Demonstrates event emission
+- [Compilation Example](examples/compilation_example/): Shows compilation workflow with a counter contract
+
+### Token Standards
 - [NEP-17 Token](examples/nep17/): A fungible token implementation
+- [NFT](examples/nft/): Non-fungible token implementation
+
+### Governance and DeFi
+- [DAO](examples/dao/): A decentralized autonomous organization
+- [DeFi](examples/defi/): Decentralized finance examples
+
+### Advanced Patterns
 - [Contract Call](examples/contract_call/): Demonstrates calling other contracts
-- [ink! Style Token](examples/ink_style_token/): Token implementation using ink! style
-- [ink! Style Complete](examples/ink_style_complete/): A comprehensive contract example
+- [ink! Style Contracts](examples/ink_style_complete/): Comprehensive ink! style implementations
+
+Each example includes detailed READMEs explaining the contract's structure, functionality, and usage patterns.
+
+## Known Issues and Workarounds
+
+Common issues you may encounter when working with examples:
+
+1. **Procedural Macro Issues**: The `#[contract]`, `#[method]`, `#[safe]`, and `#[constructor]` macros may not resolve correctly
+   - **Workaround**: Use the `std` feature during development
+   
+2. **Storage Trait Issues**: The `Storage` trait and `StorageContext` may not be found
+   - **Workaround**: Import explicitly: `use neo_contract::types::storage::Storage`
+   
+3. **Runtime Function Signature Mismatches**: Function signatures may change between versions
+   - **Workaround**: Check the current implementation in the framework source
+
+For detailed solutions to common errors, see our [Troubleshooting Guide](docs/troubleshooting.md).
 
 ## Documentation
 
-For more detailed documentation:
+The framework includes comprehensive documentation to help you get started and understand advanced concepts:
 
-- [Getting Started](docs/getting_started.md): Introduction to the framework
-- [Storage and Variables](docs/storage_and_variables.md): Guide to storage and state management
-- [NEP-17 Tutorial](docs/nep17_tutorial.md): Creating fungible tokens
-- [Testing Guide](docs/testing_guide.md): Comprehensive testing strategies
-- [Neo Compiler Implementation](docs/neo_compiler_implementation.md): Details on the WASM to Neo VM compiler
-- [ink! Style Guide](docs/ink_style_guide.md): Patterns for ink!-style smart contracts
-- [Deployment Guide](docs/deployment_guide.md): Deploying contracts to Neo networks
-- [Safe Methods](docs/safe_methods.md): Using and implementing safe (read-only) methods
+- [Documentation Index](docs/index.md) - Central hub for all documentation
+- [Getting Started](docs/quickstart.md) - Quick start guide
+- [Storage and Variables](docs/storage_guide.md) - Working with on-chain storage
+- [Ledger API Guide](docs/ledger_api_guide.md) - Accessing blockchain data
+- [Contract Security Guide](docs/contract_security_guide.md) - Security best practices
+- [Contract Testing Guide](docs/contract_testing_guide.md) - Testing your contracts
+- [Ledger API Testing](docs/ledger_api_testing.md) - Testing blockchain data dependent contracts
+- [Advanced Storage Patterns](docs/advanced_storage.md) - Efficient storage solutions
+- [Gas Optimization](docs/gas_optimization.md) - Optimizing gas usage
+- [Events Guide](docs/events_guide.md) - Working with events and notifications
+- [Transaction Patterns](docs/transaction_patterns.md) - Transaction validation and processing
+- [Cross-Contract Communication](docs/cross_contract_guide.md) - Contract-to-contract interaction
+- [NEP-17 Tutorial](docs/nep17_guide.md) - Creating fungible tokens
+- [Neo Contract Annotations](docs/neo_contract_annotations.md) - Using Neo's modern annotation system
+- [Ledger API Workshop](docs/ledger_api_workshop.md) - Hands-on tutorial for blockchain-dependent contracts
+- [Neo Compiler Implementation](docs/compiler.md) - How the compiler works
+- [ink! Style Guide](docs/ink_style.md) - Coding style recommendations
+- [Deployment Guide](docs/deployment.md) - Deploying your contracts
+- [Safe Methods](docs/safe_methods.md) - Read-only contract methods
+- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
+- [Documentation Updates](docs/DOCUMENTATION_UPDATES.md) - Summary of recent documentation enhancements
+
+All documentation is organized in the [docs directory](docs/) with a comprehensive structure to help you find the information you need. The documentation covers everything from basic concepts to advanced topics like security, testing, and optimization.
 
 ## Architecture
 
@@ -160,14 +209,7 @@ The framework architecture consists of:
    - Helper traits for standard implementations
    - Security utilities and access control
 
-2. **neo-contract-proc-macros**:
-   - Contract attribute macros for ink!-style contracts
-   - Storage struct processing for state management
-   - Method visibility and safety attributes
-   - ABI generation for contract interfaces
-   - Event definition and emission
-
-3. **neo-compiler**:
+2. **neo-compiler**:
    - WebAssembly parsing and analysis
    - WASM to Neo VM bytecode conversion
    - Intermediate representation optimization

@@ -6,17 +6,26 @@
 //! most commonly used components without having to import them individually.
 
 // Core types
-pub use crate::builtin::{H160, H256, Int256, ByteString, Array, Map, Any};
+pub use crate::types::builtin::{h160::H160, h256::H256, int256::Int256, string::ByteString, array::Array, map::Map, any::Any};
 
 // Runtime
-pub use crate::Runtime;
+pub use crate::runtime::Runtime;
 
 // Contract attributes
 pub use crate::{
-    contract, storage, constructor, message, event,
+    contract, storage, constructor, method, event,
     contract_author, contract_description, contract_version, 
-    supported_standards, safe, no_reentrant, no_reentrant_method
+    supported_standards, safe, no_reentrant, manifest_extra,
+    contract_permission, contract_trust, index
 };
+
+// Internal macro components used by other macros
+#[doc(hidden)]
+pub use crate::neo_method as manifest_method;
+
+// Neo contract module marker
+#[doc(hidden)]
+pub struct neo_contract_module;
 
 // Native contracts
 pub use crate::contract::native::{gas, legder, neo, oracle, policy};
@@ -40,4 +49,12 @@ pub use alloc::string::String;
 pub use core::panic;
 
 // Re-export commonly used storage helpers
+pub use crate::storage::{StorageContext, StorageMap, StorageKey};
+
+// Neo N3 Event utilities
+pub use crate::event::{EventBuilder, emit_transfer, emit_event2, emit_event3, emit_event_array, 
+    null_or_value, EventEmitter, StandardEventEmitter, register_transfer_event};
+
+// Neo N3 specific utilities
+pub use crate::manifest::{ContractManifest, ContractABI, ContractMethod, ContractEvent};
 pub use crate::storage::{StorageMap, StorageMapEntry};

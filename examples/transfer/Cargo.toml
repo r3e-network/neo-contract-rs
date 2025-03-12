@@ -9,3 +9,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 neo-contract = { path = "../../neo-contract" }
+neo-macros = { path = "../../neo-macros" }

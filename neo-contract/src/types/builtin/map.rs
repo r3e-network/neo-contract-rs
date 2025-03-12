@@ -7,23 +7,26 @@ use alloc::vec::Vec;
 use super::any::Any;
 
 /// Map represents a key-value dictionary in Neo
+/// 
+/// K and V are phantom type parameters that help with type safety
+/// while maintaining compatibility with Neo N3 VM representation
 #[derive(Clone, Default)]
-pub struct Map(pub Vec<(Any, Any)>);
+pub struct Map<K = Any, V = Any>(pub Vec<(Any, Any)>, core::marker::PhantomData<(K, V)>);
 
-impl Map {
+impl<K, V> Map<K, V> {
     /// Creates a new empty Map
     pub fn new() -> Self {
-        Map(Vec::new())
+        Map(Vec::new(), core::marker::PhantomData)
     }
     
     /// Creates a Map with the given capacity
     pub fn with_capacity(capacity: usize) -> Self {
-        Map(Vec::with_capacity(capacity))
+        Map(Vec::with_capacity(capacity), core::marker::PhantomData)
     }
     
     /// Creates a Map from a vector of key-value pairs
     pub fn from_vec(vec: Vec<(Any, Any)>) -> Self {
-        Map(vec)
+        Map(vec, core::marker::PhantomData)
     }
     
     /// Returns the number of key-value pairs in the Map
@@ -57,7 +60,7 @@ impl Map {
     }
     
     /// Sets a value for the given key
-    pub fn set<K: Into<Any>, V: Into<Any>>(&mut self, key: K, value: V) {
+    pub fn set<KeyType: Into<Any>, ValueType: Into<Any>>(&mut self, key: KeyType, value: ValueType) {
         let key = key.into();
         let value = value.into();
         
@@ -120,23 +123,23 @@ impl Map {
     }
 }
 
-impl From<Vec<(Any, Any)>> for Map {
+impl<K, V> From<Vec<(Any, Any)>> for Map<K, V> {
     fn from(vec: Vec<(Any, Any)>) -> Self {
-        Map(vec)
+        Map(vec, core::marker::PhantomData)
     }
 }
 
-impl<K: Into<Any>, V: Into<Any>> FromIterator<(K, V)> for Map {
-    fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> Self {
+impl<K1, V1, K2: Into<Any>, V2: Into<Any>> FromIterator<(K2, V2)> for Map<K1, V1> {
+    fn from_iter<T: IntoIterator<Item = (K2, V2)>>(iter: T) -> Self {
         let vec = iter
             .into_iter()
             .map(|(k, v)| (k.into(), v.into()))
             .collect();
-        Map(vec)
+        Map(vec, core::marker::PhantomData)
     }
 }
 
-impl fmt::Debug for Map {
+impl<K, V> fmt::Debug for Map<K, V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Map({{")?;
         for (i, (k, v)) in self.0.iter().enumerate() {

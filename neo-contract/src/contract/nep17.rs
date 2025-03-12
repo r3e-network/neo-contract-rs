@@ -1,11 +1,7 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use alloc::string::String;
-use alloc::vec::Vec;
-use crate::types::builtin::h160::H160;
-use crate::types::builtin::int256::Int256;
-use crate::types::builtin::string::ByteString;
+use crate::prelude::{H160, Int256, ByteString};
 
 /// NEP-17 represents a fungible token in Neo N3
 pub trait NEP17 {

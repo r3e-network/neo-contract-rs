@@ -9,6 +9,7 @@
 #[repr(u8)]
 pub enum OpCode {
     // Constants
+    // COMMENT opcode removed - not supported in Neo N3
     /// Pushes a 1-byte signed integer onto the stack.
     PUSHINT8 = 0x00,
     /// Pushes a 2-bytes signed integer onto the stack.
@@ -434,6 +435,7 @@ impl OpCode {
     /// Convert a byte to an OpCode
     pub fn from_byte(byte: u8) -> Option<Self> {
         match byte {
+            // 0xFE => Removed COMMENT opcode as it's not supported in Neo N3
             0x00 => Some(OpCode::PUSHINT8),
             0x01 => Some(OpCode::PUSHINT16),
             0x02 => Some(OpCode::PUSHINT32),
@@ -637,6 +639,7 @@ impl OpCode {
     /// Get the size of operand for this opcode
     pub fn operand_size(&self) -> usize {
         match self {
+            // COMMENT opcode removed as it's not supported in Neo N3
             OpCode::PUSHINT8 => 1,
             OpCode::PUSHINT16 => 2,
             OpCode::PUSHINT32 => 4,
@@ -696,6 +699,7 @@ impl OpCode {
     /// Get the size prefix for operands with variable size
     pub fn size_prefix(&self) -> Option<usize> {
         match self {
+            // COMMENT opcode removed as it's not supported in Neo N3
             OpCode::PUSHDATA1 => Some(1),
             OpCode::PUSHDATA2 => Some(2),
             OpCode::PUSHDATA4 => Some(4),

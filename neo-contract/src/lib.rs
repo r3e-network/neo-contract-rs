@@ -4,7 +4,6 @@
 //! It is inspired by the ink! smart contract framework for Substrate.
 
 #![no_std]
-#![cfg_attr(feature = "std", feature(alloc_error_handler))]
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::redundant_closure)]
 #![allow(clippy::too_many_arguments)]
@@ -21,8 +20,10 @@ pub mod attributes;
 pub mod call_flags;
 pub mod codec;
 pub mod error;
-pub mod events;
+pub mod events; // Old events module - kept for backward compatibility
+pub mod event;  // New Neo N3 standard event utilities
 pub mod find_options;
+pub mod manifest;
 pub mod role;
 pub mod static_values;
 pub mod transaction_attribute_type;
@@ -49,10 +50,26 @@ pub use types::builtin::array::Array;
 pub use types::builtin::any::Any;
 pub use types::builtin::map::Map;
 
+// Re-export all Neo N3 attribute macros
+pub use neo_macros::{
+    // Basic contract structure macros
+    event, index, storage, constructor, method, safe,
+    // Contract macros
+    contract, no_reentrant,
+    // Manifest related macros
+    manifest_extra, supported_standards, contract_permission, contract_trust
+};
+
 // Module re-exports for convenience - env module already has these
 // pub use env::{storage, runtime as env_runtime, blockchain, contract};
 // Re-export Runtime struct for backward compatibility
 pub use self::runtime::Runtime;
+
+// Re-export manifest functions for proc-macros
+pub use self::manifest::{register_contract, register_method, register_event, register_supported_standard};
+
+// Re-export event helpers for easier Neo N3 standard event emission
+pub use self::event::{EventBuilder, emit_transfer, emit_event2, emit_event3, emit_event_array, register_transfer_event, null_or_value, EventEmitter, StandardEventEmitter};
 
 // Contract module
 pub mod contract;
@@ -84,6 +101,9 @@ pub mod prelude {
     pub use crate::types::builtin::any::Any;
     pub use crate::types::builtin::map::Map;
     
+    // Manifest module for Neo N3 registration
+    pub use crate::manifest;
+    
     pub use crate::call_flags::CallFlags;
     pub use crate::error::{Error, ErrorCode, Result};
     pub use crate::events;
@@ -100,37 +120,30 @@ pub mod prelude {
         pagination::{Page, Paginator},
     };
     
-    pub use crate::macros::*;
+    // macros are imported directly where needed
     
     // Attribute macros
-    pub use neo_contract_proc_macros::{
-        contract,
+    pub use neo_macros::{contract,
         contract_permission,
         contract_trust,
         manifest_extra,
         supported_standards,
         no_reentrant,
         safe,
+        method,
+        constructor,
+        storage,
     };
     
     // Commonly used alloc types
     pub use alloc::{string::String, vec::Vec, boxed::Box};
 }
 
-// This section is needed for the proc macros
-pub use neo_contract_proc_macros::{
-    contract,
-    contract_permission,
-    contract_trust,
-    manifest_extra,
-    supported_standards,
-    no_reentrant,
-    safe,
-};
+// Note: macros are already imported above, so we don't need to import them again
 
 // Add a re-export for neo_method to make it available for the safe attribute
 #[doc(hidden)]
-pub use neo_contract_proc_macros::method as neo_method;
+pub use neo_macros::method as neo_method;
 
 // Re-export for serialization
 pub mod serialize;

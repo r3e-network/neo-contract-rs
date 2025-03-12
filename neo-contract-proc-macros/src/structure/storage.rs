@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, ItemStruct, Fields, FieldsNamed};
+use syn::{parse_macro_input, AttributeArgs, ItemStruct, Fields};
 
 /// Implementation of the `storage` attribute macro
 ///

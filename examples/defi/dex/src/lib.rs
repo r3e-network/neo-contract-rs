@@ -1,11 +1,23 @@
+#![no_std]
+
+extern crate alloc;
+
 //! # Simple DEX Contract
 //!
 //! A decentralized exchange implementation supporting token swaps,
 //! liquidity provision, and automated market making.
+//! Built on Neo N3 blockchain using the neo-contract-rs framework.
+//!
+//! This contract implements:
+//! - Liquidity pool creation and management
+//! - Liquidity provision and withdrawal
+//! - Token swaps with configurable fees
+//! - Price quotes and liquidity tracking
 
 #[neo_contract::contract]
 mod neo_dex {
     use neo_contract::prelude::*;
+    use alloc::vec::Vec;
     
     /// Liquidity Pool for a token pair
     #[derive(Debug, Clone, Encode, Decode)]
@@ -60,7 +72,7 @@ mod neo_dex {
         timestamp: u64,
     }
     
-    /// Events emitted by the DEX contract
+    /// Event emitted when a new pool is created
     #[event]
     struct PoolCreated {
         #[index]
@@ -70,6 +82,28 @@ mod neo_dex {
         fee_rate: u16,
     }
     
+    /// Implementation for properly emitting the PoolCreated event using Neo N3 standards
+    impl PoolCreated {
+        /// Static method to emit the PoolCreated event in Neo N3 format
+        pub fn emit(pool_id: u32, token_a: Hash160, token_b: Hash160, fee_rate: u16) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("PoolCreated");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(pool_id));
+            event_data.push(Any::from(token_a));
+            event_data.push(Any::from(token_b));
+            event_data.push(Any::from(fee_rate));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
+    /// Event emitted when liquidity is added to a pool
     #[event]
     struct LiquidityAdded {
         #[index]
@@ -81,6 +115,29 @@ mod neo_dex {
         liquidity_minted: u64,
     }
     
+    /// Implementation for properly emitting the LiquidityAdded event using Neo N3 standards
+    impl LiquidityAdded {
+        /// Static method to emit the LiquidityAdded event in Neo N3 format
+        pub fn emit(pool_id: u32, provider: Address, amount_a: u64, amount_b: u64, liquidity_minted: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("LiquidityAdded");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(pool_id));
+            event_data.push(Any::from(provider));
+            event_data.push(Any::from(amount_a));
+            event_data.push(Any::from(amount_b));
+            event_data.push(Any::from(liquidity_minted));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
+    /// Event emitted when liquidity is removed from a pool
     #[event]
     struct LiquidityRemoved {
         #[index]
@@ -92,6 +149,29 @@ mod neo_dex {
         liquidity_burned: u64,
     }
     
+    /// Implementation for properly emitting the LiquidityRemoved event using Neo N3 standards
+    impl LiquidityRemoved {
+        /// Static method to emit the LiquidityRemoved event in Neo N3 format
+        pub fn emit(pool_id: u32, provider: Address, amount_a: u64, amount_b: u64, liquidity_burned: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("LiquidityRemoved");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(pool_id));
+            event_data.push(Any::from(provider));
+            event_data.push(Any::from(amount_a));
+            event_data.push(Any::from(amount_b));
+            event_data.push(Any::from(liquidity_burned));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
+    /// Event emitted when a swap occurs
     #[event]
     struct Swap {
         #[index]
@@ -103,6 +183,31 @@ mod neo_dex {
         amount_in: u64,
         amount_out: u64,
         fee_amount: u64,
+    }
+    
+    /// Implementation for properly emitting the Swap event using Neo N3 standards
+    impl Swap {
+        /// Static method to emit the Swap event in Neo N3 format
+        pub fn emit(pool_id: u32, user: Address, token_in: Hash160, token_out: Hash160, 
+                    amount_in: u64, amount_out: u64, fee_amount: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("Swap");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(pool_id));
+            event_data.push(Any::from(user));
+            event_data.push(Any::from(token_in));
+            event_data.push(Any::from(token_out));
+            event_data.push(Any::from(amount_in));
+            event_data.push(Any::from(amount_out));
+            event_data.push(Any::from(fee_amount));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
     /// DEX contract storage
@@ -149,29 +254,48 @@ mod neo_dex {
         /// Initialize the DEX contract
         #[constructor]
         fn new(owner: Address) -> Self {
-            Self {
-                owner: Item::new(owner),
-                next_pool_id: Item::new(1),
+            let mut instance = Self {
+                owner: Item::new("owner"),
+                next_pool_id: Item::new("next_pool_id"),
                 pools: Map::new(),
                 pool_by_tokens: Map::new(),
                 positions: Map::new(),
                 provider_pools: Map::new(),
                 pool_providers: Map::new(),
                 recent_swaps: Map::new(),
-                next_swap_id: Item::new(1),
-                max_recent_swaps: Item::new(100), // Store last 100 swaps
-                default_fee_rate: Item::new(30),   // 0.3% default fee
-                min_liquidity: Item::new(1_000),   // Minimum liquidity
-            }
+                next_swap_id: Item::new("next_swap_id"),
+                max_recent_swaps: Item::new("max_recent_swaps"),
+                default_fee_rate: Item::new("default_fee_rate"),
+                min_liquidity: Item::new("min_liquidity"),
+            };
+            
+            // Initialize values
+            instance.owner.set(owner);
+            instance.next_pool_id.set(1);
+            instance.next_swap_id.set(1);
+            instance.max_recent_swaps.set(100);  // Store last 100 swaps
+            instance.default_fee_rate.set(30);   // 0.3% default fee
+            instance.min_liquidity.set(1_000);   // Minimum liquidity
+            
+            instance
         }
         
-        /// Create a new liquidity pool
+        /// Create a new liquidity pool for a token pair
+        /// 
+        /// # Arguments
+        /// * `token_a` - The first token in the pair
+        /// * `token_b` - The second token in the pair
+        /// * `fee_rate` - Optional fee rate in basis points (30 = 0.3%)
+        /// 
+        /// # Returns
+        /// The ID of the newly created pool
         #[method]
+        #[no_reentry]
         fn create_pool(&mut self, token_a: Hash160, token_b: Hash160, fee_rate: Option<u16>) -> u32 {
             // Ensure tokens are different
             assert!(token_a != token_b, "Tokens must be different");
             
-            // Order tokens to ensure consistent lookup
+            // Order tokens for consistent lookup
             let (first_token, second_token) = if token_a < token_b {
                 (token_a, token_b)
             } else {
@@ -179,50 +303,54 @@ mod neo_dex {
             };
             
             // Check if pool already exists
-            assert!(
-                !self.pool_by_tokens.contains_key(&(first_token, second_token)),
-                "Pool already exists"
-            );
+            let token_pair = (first_token, second_token);
+            assert!(self.pool_by_tokens.get(&token_pair).is_none(), "Pool already exists");
             
-            // Get default fee rate if not specified
-            let pool_fee_rate = fee_rate.unwrap_or(*self.default_fee_rate.get());
-            assert!(pool_fee_rate <= 1000, "Fee rate too high"); // Max 10%
+            // Get the caller's address
+            let caller = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&caller), "No authorization");
             
-            // Get next pool ID
-            let pool_id = *self.next_pool_id.get();
+            // Get the next pool ID
+            let pool_id = self.next_pool_id.get().unwrap_or_default();
             self.next_pool_id.set(pool_id + 1);
             
-            // Create pool
+            // Set default fee rate if not provided
+            let fee = fee_rate.unwrap_or(self.default_fee_rate.get().unwrap_or_default());
+            
+            // Create the pool
             let pool = LiquidityPool {
                 token_a: first_token,
                 token_b: second_token,
                 reserve_a: 0,
                 reserve_b: 0,
                 total_liquidity: 0,
-                fee_rate: pool_fee_rate,
-                last_update: runtime::time(),
+                fee_rate: fee,
+                last_update: Runtime::time(),
             };
             
-            // Store pool
+            // Save the pool
             self.pools.insert(pool_id, pool);
-            self.pool_by_tokens.insert((first_token, second_token), pool_id);
+            self.pool_by_tokens.insert(token_pair, pool_id);
             
-            // Initialize pool providers list
-            self.pool_providers.insert(pool_id, Vec::new());
-            
-            // Emit event
-            self.emit(PoolCreated {
-                pool_id,
-                token_a: first_token,
-                token_b: second_token,
-                fee_rate: pool_fee_rate,
-            });
+            // Emit pool created event with proper Neo N3 format
+            PoolCreated::emit(pool_id, first_token, second_token, fee);
             
             pool_id
         }
         
         /// Add liquidity to a pool
+        /// 
+        /// # Arguments
+        /// * `pool_id` - The ID of the pool
+        /// * `amount_a_desired` - The desired amount of token A to add
+        /// * `amount_b_desired` - The desired amount of token B to add
+        /// * `amount_a_min` - The minimum acceptable amount of token A
+        /// * `amount_b_min` - The minimum acceptable amount of token B
+        /// 
+        /// # Returns
+        /// A tuple of (amount_a_added, amount_b_added, liquidity_minted)
         #[method]
+        #[no_reentry]
         fn add_liquidity(
             &mut self,
             pool_id: u32,
@@ -231,114 +359,113 @@ mod neo_dex {
             amount_a_min: u64,
             amount_b_min: u64,
         ) -> (u64, u64, u64) {
-            let provider = runtime::calling_script_hash();
+            // Verify non-zero amounts
+            assert!(amount_a_desired > 0 && amount_b_desired > 0, "Amounts must be greater than zero");
             
-            // Verify provider signature
-            assert!(runtime::check_witness(&provider), "Invalid signature");
-            
-            // Get pool
+            // Get pool data
             let mut pool = self.pools.get(&pool_id).expect("Pool not found");
             
-            // Calculate optimal amounts
-            let (amount_a, amount_b, liquidity_minted) = if pool.total_liquidity == 0 {
+            // Get user address
+            let provider = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&provider), "No authorization");
+            
+            // Calculate amounts to add
+            let (amount_a, amount_b, liquidity) = if pool.total_liquidity == 0 {
                 // First liquidity provision
-                // The initial liquidity token amount is the geometric mean of the input amounts
-                let liquidity = (amount_a_desired as u128 * amount_b_desired as u128)
-                    .integer_sqrt() as u64;
-                    
-                // Ensure minimum liquidity
-                assert!(liquidity >= *self.min_liquidity.get(), "Insufficient initial liquidity");
+                // Calculate initial liquidity as sqrt(amount_a * amount_b)
+                let initial_liquidity = (amount_a_desired as f64 * amount_b_desired as f64).sqrt() as u64;
+                assert!(initial_liquidity > self.min_liquidity.get().unwrap_or_default(), 
+                       "Initial liquidity too low");
                 
-                (amount_a_desired, amount_b_desired, liquidity)
+                (amount_a_desired, amount_b_desired, initial_liquidity)
             } else {
-                // Not first provision - calculate based on existing reserves
+                // Subsequent liquidity provision
+                // Calculate based on current reserves
                 let amount_b_optimal = self.quote(amount_a_desired, pool.reserve_a, pool.reserve_b);
                 
                 if amount_b_optimal <= amount_b_desired {
-                    // amount_b_optimal is the binding constraint
+                    // amount_b_optimal is the limiting factor
                     assert!(amount_b_optimal >= amount_b_min, "Insufficient B amount");
                     
                     // Calculate liquidity tokens to mint
-                    let liquidity = self.min_value(
-                        amount_a_desired * pool.total_liquidity / pool.reserve_a,
-                        amount_b_optimal * pool.total_liquidity / pool.reserve_b
-                    );
+                    let liquidity = (amount_a_desired * pool.total_liquidity) / pool.reserve_a;
                     
                     (amount_a_desired, amount_b_optimal, liquidity)
                 } else {
-                    // amount_a_desired is the binding constraint
+                    // amount_a is the limiting factor
                     let amount_a_optimal = self.quote(amount_b_desired, pool.reserve_b, pool.reserve_a);
-                    assert!(amount_a_optimal <= amount_a_desired, "Amounts reversed");
+                    assert!(amount_a_optimal <= amount_a_desired, "Calculated amount exceeds desired");
                     assert!(amount_a_optimal >= amount_a_min, "Insufficient A amount");
                     
                     // Calculate liquidity tokens to mint
-                    let liquidity = self.min_value(
-                        amount_a_optimal * pool.total_liquidity / pool.reserve_a,
-                        amount_b_desired * pool.total_liquidity / pool.reserve_b
-                    );
+                    let liquidity = (amount_b_desired * pool.total_liquidity) / pool.reserve_b;
                     
                     (amount_a_optimal, amount_b_desired, liquidity)
                 }
             };
             
-            // Transfer tokens from provider to contract
+            // Transfer tokens from user to contract
             self.transfer_token_to_contract(&pool.token_a, &provider, amount_a);
             self.transfer_token_to_contract(&pool.token_b, &provider, amount_b);
             
             // Update pool reserves
             pool.reserve_a += amount_a;
             pool.reserve_b += amount_b;
-            pool.total_liquidity += liquidity_minted;
-            pool.last_update = runtime::time();
+            pool.total_liquidity += liquidity;
+            pool.last_update = Runtime::time();
             
-            // Save updated pool
+            // Update pool data
             self.pools.insert(pool_id, pool);
             
-            // Update or create liquidity position
+            // Update or create provider position
             let position_key = (provider, pool_id);
-            let mut position = self.positions.get(&position_key).unwrap_or_else(|| {
-                // New position - add provider to pool_providers list
-                let mut providers = self.pool_providers.get(&pool_id).unwrap_or_default();
-                if !providers.contains(&provider) {
-                    providers.push(provider);
-                    self.pool_providers.insert(pool_id, providers);
-                }
-                
-                // Add pool to provider_pools list
-                let mut provider_pools = self.provider_pools.get(&provider).unwrap_or_default();
-                if !provider_pools.contains(&pool_id) {
-                    provider_pools.push(pool_id);
-                    self.provider_pools.insert(provider, provider_pools);
-                }
-                
-                // Create new position
-                LiquidityPosition {
+            let mut position = match self.positions.get(&position_key) {
+                Some(pos) => pos,
+                None => LiquidityPosition {
                     provider,
                     pool_id,
                     liquidity_tokens: 0,
-                    timestamp: runtime::time(),
+                    timestamp: Runtime::time(),
                 }
-            });
+            };
             
-            // Update position
-            position.liquidity_tokens += liquidity_minted;
-            position.timestamp = runtime::time();
+            position.liquidity_tokens += liquidity;
+            position.timestamp = Runtime::time();
+            
             self.positions.insert(position_key, position);
             
-            // Emit event
-            self.emit(LiquidityAdded {
-                pool_id,
-                provider,
-                amount_a,
-                amount_b,
-                liquidity_minted,
-            });
+            // Update provider pools list if first position
+            let mut provider_pools = self.provider_pools.get(&provider).unwrap_or_default();
+            if !provider_pools.contains(&pool_id) {
+                provider_pools.push(pool_id);
+                self.provider_pools.insert(provider, provider_pools);
+            }
             
-            (amount_a, amount_b, liquidity_minted)
+            // Update pool providers list if first position
+            let mut pool_providers = self.pool_providers.get(&pool_id).unwrap_or_default();
+            if !pool_providers.contains(&provider) {
+                pool_providers.push(provider);
+                self.pool_providers.insert(pool_id, pool_providers);
+            }
+            
+            // Emit liquidity added event with proper Neo N3 format
+            LiquidityAdded::emit(pool_id, provider, amount_a, amount_b, liquidity);
+            
+            (amount_a, amount_b, liquidity)
         }
         
         /// Remove liquidity from a pool
+        /// 
+        /// # Arguments
+        /// * `pool_id` - The ID of the pool
+        /// * `liquidity` - The amount of liquidity tokens to burn
+        /// * `amount_a_min` - The minimum acceptable amount of token A
+        /// * `amount_b_min` - The minimum acceptable amount of token B
+        /// 
+        /// # Returns
+        /// A tuple of (amount_a_removed, amount_b_removed)
         #[method]
+        #[no_reentry]
         fn remove_liquidity(
             &mut self,
             pool_id: u32,
@@ -346,126 +473,154 @@ mod neo_dex {
             amount_a_min: u64,
             amount_b_min: u64,
         ) -> (u64, u64) {
-            let provider = runtime::calling_script_hash();
-            
-            // Verify provider signature
-            assert!(runtime::check_witness(&provider), "Invalid signature");
-            
-            // Get pool
+            // Get pool data
             let mut pool = self.pools.get(&pool_id).expect("Pool not found");
             
-            // Get provider position
-            let position_key = (provider, pool_id);
-            let mut position = self.positions.get(&position_key).expect("No liquidity position");
+            // Get user address
+            let provider = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&provider), "No authorization");
             
-            // Check if provider has enough liquidity tokens
-            assert!(position.liquidity_tokens >= liquidity, "Insufficient liquidity");
+            // Get the provider's position
+            let position_key = (provider, pool_id);
+            let mut position = self.positions.get(&position_key).expect("No liquidity position found");
+            
+            // Ensure they have enough liquidity tokens
+            assert!(position.liquidity_tokens >= liquidity, "Insufficient liquidity tokens");
             
             // Calculate token amounts to return
-            let amount_a = pool.reserve_a * liquidity / pool.total_liquidity;
-            let amount_b = pool.reserve_b * liquidity / pool.total_liquidity;
+            let amount_a = (liquidity * pool.reserve_a) / pool.total_liquidity;
+            let amount_b = (liquidity * pool.reserve_b) / pool.total_liquidity;
             
-            // Check minimum amounts
-            assert!(amount_a >= amount_a_min, "Insufficient A output");
-            assert!(amount_b >= amount_b_min, "Insufficient B output");
+            // Ensure minimum amounts are met
+            assert!(amount_a >= amount_a_min, "Insufficient token A output");
+            assert!(amount_b >= amount_b_min, "Insufficient token B output");
             
             // Update pool reserves
             pool.reserve_a -= amount_a;
             pool.reserve_b -= amount_b;
             pool.total_liquidity -= liquidity;
-            pool.last_update = runtime::time();
+            pool.last_update = Runtime::time();
             
-            // Save updated pool
-            self.pools.insert(pool_id, pool.clone());
+            // Update pool data
+            self.pools.insert(pool_id, pool);
             
-            // Update position
+            // Update provider position
             position.liquidity_tokens -= liquidity;
-            position.timestamp = runtime::time();
+            position.timestamp = Runtime::time();
             
             if position.liquidity_tokens == 0 {
-                // Remove position if no liquidity left
+                // Remove the position if no liquidity left
                 self.positions.remove(&position_key);
                 
-                // Remove provider from pool_providers list
-                let mut providers = self.pool_providers.get(&pool_id).unwrap_or_default();
-                if let Some(index) = providers.iter().position(|p| p == &provider) {
-                    providers.remove(index);
-                    self.pool_providers.insert(pool_id, providers);
+                // Remove from provider pools list
+                let mut provider_pools = self.provider_pools.get(&provider).unwrap_or_default();
+                if let Some(idx) = provider_pools.iter().position(|&id| id == pool_id) {
+                    provider_pools.remove(idx);
+                    if provider_pools.is_empty() {
+                        self.provider_pools.remove(&provider);
+                    } else {
+                        self.provider_pools.insert(provider, provider_pools);
+                    }
                 }
                 
-                // Remove pool from provider_pools list
-                let mut provider_pools = self.provider_pools.get(&provider).unwrap_or_default();
-                if let Some(index) = provider_pools.iter().position(|p| p == &pool_id) {
-                    provider_pools.remove(index);
-                    self.provider_pools.insert(provider, provider_pools);
+                // Remove from pool providers list
+                let mut pool_providers = self.pool_providers.get(&pool_id).unwrap_or_default();
+                if let Some(idx) = pool_providers.iter().position(|&addr| addr == provider) {
+                    pool_providers.remove(idx);
+                    if pool_providers.is_empty() {
+                        self.pool_providers.remove(&pool_id);
+                    } else {
+                        self.pool_providers.insert(pool_id, pool_providers);
+                    }
                 }
             } else {
-                // Save updated position
+                // Update the position
                 self.positions.insert(position_key, position);
             }
             
-            // Transfer tokens to provider
+            // Transfer tokens to the provider
             self.transfer_token_from_contract(&pool.token_a, &provider, amount_a);
             self.transfer_token_from_contract(&pool.token_b, &provider, amount_b);
             
-            // Emit event
-            self.emit(LiquidityRemoved {
-                pool_id,
-                provider,
-                amount_a,
-                amount_b,
-                liquidity_burned: liquidity,
-            });
+            // Emit liquidity removed event with proper Neo N3 format
+            LiquidityRemoved::emit(pool_id, provider, amount_a, amount_b, liquidity);
             
             (amount_a, amount_b)
         }
         
-        /// Swap tokens
+        /// Get the amount of token B needed when providing token A
+        /// 
+        /// # Arguments
+        /// * `amount_a` - The amount of token A
+        /// * `reserve_a` - The reserve of token A
+        /// * `reserve_b` - The reserve of token B
+        ///
+        /// # Returns
+        /// The amount of token B needed
         #[method]
-        fn swap(&mut self, pool_id: u32, token_in: Hash160, amount_in: u64, amount_out_min: u64) -> u64 {
-            let user = runtime::calling_script_hash();
+        #[safe]
+        fn quote(&self, amount_a: u64, reserve_a: u64, reserve_b: u64) -> u64 {
+            assert!(amount_a > 0, "Amount must be positive");
+            assert!(reserve_a > 0 && reserve_b > 0, "Reserves must be positive");
             
-            // Verify user signature
-            assert!(runtime::check_witness(&user), "Invalid signature");
+            (amount_a * reserve_b) / reserve_a
+        }
+        
+        /// Swap exact tokens for tokens
+        /// 
+        /// # Arguments
+        /// * `pool_id` - The ID of the pool
+        /// * `amount_in` - The exact amount of input tokens
+        /// * `amount_out_min` - The minimum acceptable amount of output tokens
+        /// * `is_token_a_in` - Whether the input token is token A
+        /// 
+        /// # Returns
+        /// The amount of output tokens received
+        #[method]
+        #[no_reentry]
+        fn swap_exact_tokens_for_tokens(
+            &mut self,
+            pool_id: u32,
+            amount_in: u64,
+            amount_out_min: u64,
+            is_token_a_in: bool,
+        ) -> u64 {
+            // Verify non-zero input
+            assert!(amount_in > 0, "Input amount must be positive");
             
-            // Get pool
+            // Get pool data
             let mut pool = self.pools.get(&pool_id).expect("Pool not found");
             
-            // Verify token_in is part of the pool
-            assert!(
-                token_in == pool.token_a || token_in == pool.token_b,
-                "Token not in pool"
-            );
+            // Get user address
+            let user = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&user), "No authorization");
             
-            // Determine token_out
-            let token_out = if token_in == pool.token_a { pool.token_b } else { pool.token_a };
-            
-            // Get current reserves
-            let (reserve_in, reserve_out) = if token_in == pool.token_a {
-                (pool.reserve_a, pool.reserve_b)
+            // Determine input and output tokens and reserves
+            let (token_in, token_out, reserve_in, reserve_out) = if is_token_a_in {
+                (pool.token_a, pool.token_b, pool.reserve_a, pool.reserve_b)
             } else {
-                (pool.reserve_b, pool.reserve_a)
+                (pool.token_b, pool.token_a, pool.reserve_b, pool.reserve_a)
             };
             
-            // Calculate fee
-            let fee_amount = (amount_in * pool.fee_rate as u64) / 10000;
-            let amount_in_with_fee = amount_in - fee_amount;
-            
-            // Calculate output amount using constant product formula
-            // (x + dx) * (y - dy) = x * y
-            // dy = y * dx / (x + dx)
+            // Calculate output amount with fee
+            let fee_numerator = 10000 - pool.fee_rate as u64;
+            let amount_in_with_fee = amount_in * fee_numerator;
+            let fee_amount = amount_in - (amount_in_with_fee / 10000);
             let numerator = amount_in_with_fee * reserve_out;
-            let denominator = reserve_in + amount_in_with_fee;
+            let denominator = reserve_in * 10000 + amount_in_with_fee;
             let amount_out = numerator / denominator;
             
-            // Check minimum output amount
+            // Ensure minimum output amount is met
             assert!(amount_out >= amount_out_min, "Insufficient output amount");
             
-            // Transfer token_in from user to contract
+            // Transfer input tokens from user to contract
             self.transfer_token_to_contract(&token_in, &user, amount_in);
             
-            // Update pool reserves
-            if token_in == pool.token_a {
+            // Transfer output tokens from contract to user
+            self.transfer_token_from_contract(&token_out, &user, amount_out);
+            
+            // Update reserves
+            if is_token_a_in {
                 pool.reserve_a += amount_in;
                 pool.reserve_b -= amount_out;
             } else {
@@ -473,16 +628,16 @@ mod neo_dex {
                 pool.reserve_a -= amount_out;
             }
             
-            pool.last_update = runtime::time();
+            pool.last_update = Runtime::time();
             
-            // Save updated pool
+            // Update pool data
             self.pools.insert(pool_id, pool);
             
-            // Transfer token_out to user
-            self.transfer_token_from_contract(&token_out, &user, amount_out);
+            // Record the swap operation
+            let swap_id = self.next_swap_id.get().unwrap_or_default();
+            self.next_swap_id.set(swap_id + 1);
             
-            // Record swap operation
-            let swap = SwapOperation {
+            let swap_op = SwapOperation {
                 user,
                 pool_id,
                 token_in,
@@ -490,93 +645,132 @@ mod neo_dex {
                 amount_in,
                 amount_out,
                 fee_amount,
-                timestamp: runtime::time(),
+                timestamp: Runtime::time(),
             };
             
-            let swap_id = *self.next_swap_id.get();
-            self.next_swap_id.set((swap_id + 1) % *self.max_recent_swaps.get());
-            self.recent_swaps.insert(swap_id, swap);
+            // Store the swap (with limited history)
+            self.recent_swaps.insert(swap_id, swap_op);
             
-            // Emit event
-            self.emit(Swap {
-                pool_id,
-                user,
-                token_in,
-                token_out,
-                amount_in,
-                amount_out,
-                fee_amount,
-            });
+            // Remove old swaps if we exceed the maximum
+            let max_swaps = self.max_recent_swaps.get().unwrap_or_default();
+            if swap_id > max_swaps {
+                self.recent_swaps.remove(&(swap_id - max_swaps));
+            }
+            
+            // Emit swap event with proper Neo N3 format
+            Swap::emit(pool_id, user, token_in, token_out, amount_in, amount_out, fee_amount);
             
             amount_out
         }
         
-        /// Update fee rate for a pool (owner only)
+        /// Swap tokens for exact tokens
+        /// 
+        /// # Arguments
+        /// * `pool_id` - The ID of the pool
+        /// * `amount_out` - The exact amount of output tokens
+        /// * `amount_in_max` - The maximum acceptable amount of input tokens
+        /// * `is_token_a_in` - Whether the input token is token A
+        /// 
+        /// # Returns
+        /// The amount of input tokens used
         #[method]
-        fn update_fee_rate(&mut self, pool_id: u32, new_fee_rate: u16) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can update fee rate");
+        #[no_reentry]
+        fn swap_tokens_for_exact_tokens(
+            &mut self,
+            pool_id: u32,
+            amount_out: u64,
+            amount_in_max: u64,
+            is_token_a_in: bool,
+        ) -> u64 {
+            // Verify non-zero output
+            assert!(amount_out > 0, "Output amount must be positive");
             
-            // Validate fee rate
-            assert!(new_fee_rate <= 1000, "Fee rate too high"); // Max 10%
-            
-            // Get pool
+            // Get pool data
             let mut pool = self.pools.get(&pool_id).expect("Pool not found");
             
-            // Update fee rate
-            pool.fee_rate = new_fee_rate;
+            // Get user address
+            let user = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&user), "No authorization");
             
-            // Save updated pool
+            // Determine input and output tokens and reserves
+            let (token_in, token_out, reserve_in, reserve_out) = if is_token_a_in {
+                (pool.token_a, pool.token_b, pool.reserve_a, pool.reserve_b)
+            } else {
+                (pool.token_b, pool.token_a, pool.reserve_b, pool.reserve_a)
+            };
+            
+            // Ensure output amount is available
+            assert!(amount_out < reserve_out, "Insufficient reserve");
+            
+            // Calculate input amount required with fee
+            let fee_numerator = 10000 - pool.fee_rate as u64;
+            let numerator = reserve_in * amount_out * 10000;
+            let denominator = (reserve_out - amount_out) * fee_numerator;
+            let amount_in = (numerator / denominator) + 1; // Add 1 to round up
+            let fee_amount = (amount_in * pool.fee_rate as u64) / 10000;
+            
+            // Ensure maximum input amount is not exceeded
+            assert!(amount_in <= amount_in_max, "Excessive input amount required");
+            
+            // Transfer input tokens from user to contract
+            self.transfer_token_to_contract(&token_in, &user, amount_in);
+            
+            // Transfer output tokens from contract to user
+            self.transfer_token_from_contract(&token_out, &user, amount_out);
+            
+            // Update reserves
+            if is_token_a_in {
+                pool.reserve_a += amount_in;
+                pool.reserve_b -= amount_out;
+            } else {
+                pool.reserve_b += amount_in;
+                pool.reserve_a -= amount_out;
+            }
+            
+            pool.last_update = Runtime::time();
+            
+            // Update pool data
             self.pools.insert(pool_id, pool);
             
-            true
-        }
-        
-        /// Update default fee rate (owner only)
-        #[method]
-        fn update_default_fee_rate(&mut self, new_fee_rate: u16) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can update default fee rate");
+            // Record the swap operation
+            let swap_id = self.next_swap_id.get().unwrap_or_default();
+            self.next_swap_id.set(swap_id + 1);
             
-            // Validate fee rate
-            assert!(new_fee_rate <= 1000, "Fee rate too high"); // Max 10%
+            let swap_op = SwapOperation {
+                user,
+                pool_id,
+                token_in,
+                token_out,
+                amount_in,
+                amount_out,
+                fee_amount,
+                timestamp: Runtime::time(),
+            };
             
-            // Update default fee rate
-            self.default_fee_rate.set(new_fee_rate);
+            // Store the swap (with limited history)
+            self.recent_swaps.insert(swap_id, swap_op);
             
-            true
-        }
-        
-        /// Update min liquidity requirement (owner only)
-        #[method]
-        fn update_min_liquidity(&mut self, new_min_liquidity: u64) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can update min liquidity");
+            // Remove old swaps if we exceed the maximum
+            let max_swaps = self.max_recent_swaps.get().unwrap_or_default();
+            if swap_id > max_swaps {
+                self.recent_swaps.remove(&(swap_id - max_swaps));
+            }
             
-            // Update min liquidity
-            self.min_liquidity.set(new_min_liquidity);
+            // Emit swap event with proper Neo N3 format
+            Swap::emit(pool_id, user, token_in, token_out, amount_in, amount_out, fee_amount);
             
-            true
-        }
-        
-        // === Safe methods (read-only) ===
-        
-        /// Get pool information
-        #[safe]
-        fn get_pool_info(&self, pool_id: u32) -> Option<(Hash160, Hash160, u64, u64, u64, u16)> {
-            let pool = self.pools.get(&pool_id)?;
-            
-            Some((
-                pool.token_a,
-                pool.token_b,
-                pool.reserve_a,
-                pool.reserve_b,
-                pool.total_liquidity,
-                pool.fee_rate
-            ))
+            amount_in
         }
         
         /// Get pool ID by token pair
+        /// 
+        /// # Arguments
+        /// * `token_a` - The first token in the pair
+        /// * `token_b` - The second token in the pair
+        ///
+        /// # Returns
+        /// The pool ID, if it exists
+        #[method]
         #[safe]
         fn get_pool_id(&self, token_a: Hash160, token_b: Hash160) -> Option<u32> {
             // Order tokens to ensure consistent lookup
@@ -586,121 +780,203 @@ mod neo_dex {
                 (token_b, token_a)
             };
             
-            self.pool_by_tokens.get(&(first_token, second_token)).copied()
+            self.pool_by_tokens.get(&(first_token, second_token))
         }
         
-        /// Get user's liquidity position in a pool
+        /// Get pool details
+        /// 
+        /// # Arguments
+        /// * `pool_id` - The ID of the pool
+        ///
+        /// # Returns
+        /// The liquidity pool details
+        #[method]
         #[safe]
-        fn get_liquidity_position(&self, user: Address, pool_id: u32) -> Option<u64> {
-            let position = self.positions.get(&(user, pool_id))?;
-            Some(position.liquidity_tokens)
+        fn get_pool(&self, pool_id: u32) -> Option<LiquidityPool> {
+            self.pools.get(&pool_id)
+        }
+        
+        /// Get user's liquidity position
+        /// 
+        /// # Arguments
+        /// * `provider` - The address of the liquidity provider
+        /// * `pool_id` - The ID of the pool
+        ///
+        /// # Returns
+        /// The liquidity position details
+        #[method]
+        #[safe]
+        fn get_position(&self, provider: Address, pool_id: u32) -> Option<LiquidityPosition> {
+            self.positions.get(&(provider, pool_id))
         }
         
         /// Get all pools a user has liquidity in
+        /// 
+        /// # Arguments
+        /// * `provider` - The address of the liquidity provider
+        ///
+        /// # Returns
+        /// A list of pool IDs
+        #[method]
         #[safe]
-        fn get_user_pools(&self, user: Address) -> Vec<u32> {
-            self.provider_pools.get(&user).unwrap_or_default().clone()
+        fn get_provider_pools(&self, provider: Address) -> Vec<u32> {
+            self.provider_pools.get(&provider).unwrap_or_default()
         }
         
-        /// Get all providers for a pool
+        /// Get all providers for a specific pool
+        /// 
+        /// # Arguments
+        /// * `pool_id` - The ID of the pool
+        ///
+        /// # Returns
+        /// A list of provider addresses
+        #[method]
         #[safe]
         fn get_pool_providers(&self, pool_id: u32) -> Vec<Address> {
-            self.pool_providers.get(&pool_id).unwrap_or_default().clone()
+            self.pool_providers.get(&pool_id).unwrap_or_default()
         }
         
-        /// Calculate expected output amount for a swap
+        /// Get the details of a recent swap
+        /// 
+        /// # Arguments
+        /// * `swap_id` - The ID of the swap
+        ///
+        /// # Returns
+        /// The swap operation details
+        #[method]
         #[safe]
-        fn get_swap_quote(&self, pool_id: u32, token_in: Hash160, amount_in: u64) -> Option<u64> {
-            let pool = self.pools.get(&pool_id)?;
-            
-            // Verify token_in is part of the pool
-            if token_in != pool.token_a && token_in != pool.token_b {
-                return None;
-            }
-            
-            // Get current reserves
-            let (reserve_in, reserve_out) = if token_in == pool.token_a {
-                (pool.reserve_a, pool.reserve_b)
-            } else {
-                (pool.reserve_b, pool.reserve_a)
-            };
-            
-            // Calculate fee
-            let fee_amount = (amount_in * pool.fee_rate as u64) / 10000;
-            let amount_in_with_fee = amount_in - fee_amount;
-            
-            // Calculate output amount using constant product formula
-            let numerator = amount_in_with_fee * reserve_out;
-            let denominator = reserve_in + amount_in_with_fee;
-            
-            Some(numerator / denominator)
+        fn get_swap(&self, swap_id: u32) -> Option<SwapOperation> {
+            self.recent_swaps.get(&swap_id)
         }
         
-        /// Get price impact percentage (basis points) for a swap
+        /// Get the current contract owner
+        ///
+        /// # Returns
+        /// The owner's address
+        #[method]
         #[safe]
-        fn get_price_impact(&self, pool_id: u32, token_in: Hash160, amount_in: u64) -> Option<u16> {
-            let pool = self.pools.get(&pool_id)?;
-            
-            // Verify token_in is part of the pool
-            if token_in != pool.token_a && token_in != pool.token_b {
-                return None;
-            }
-            
-            // Get current reserves
-            let (reserve_in, reserve_out) = if token_in == pool.token_a {
-                (pool.reserve_a, pool.reserve_b)
-            } else {
-                (pool.reserve_b, pool.reserve_a)
-            };
-            
-            // Current price
-            let current_price = (reserve_out as f64) / (reserve_in as f64);
-            
-            // Price after swap
-            let amount_in_with_fee = amount_in - (amount_in * pool.fee_rate as u64) / 10000;
-            let amount_out = self.get_swap_quote(pool_id, token_in, amount_in).unwrap_or_default();
-            let new_reserve_in = reserve_in + amount_in_with_fee;
-            let new_reserve_out = reserve_out - amount_out;
-            let new_price = (new_reserve_out as f64) / (new_reserve_in as f64);
-            
-            // Calculate impact as percentage in basis points
-            let impact = ((current_price - new_price) / current_price) * 10000.0;
-            
-            Some(impact as u16)
+        fn get_owner(&self) -> Address {
+            self.owner.get().unwrap_or_default()
         }
         
-        // === Helper methods ===
-        
-        /// Calculate proportional token amount
-        fn quote(&self, amount_a: u64, reserve_a: u64, reserve_b: u64) -> u64 {
-            amount_a * reserve_b / reserve_a
-        }
-        
-        /// Return smaller of two values
-        fn min_value(&self, a: u64, b: u64) -> u64 {
-            if a < b { a } else { b }
-        }
-        
-        /// Transfer NEP-17 token from user to contract
-        fn transfer_token_to_contract(&self, token_hash: &Hash160, from: &Address, amount: u64) {
-            let transferred: bool = self.call_contract(
-                token_hash,
-                "transfer",
-                (*from, runtime::executing_script_hash(), amount, ByteArray::new())
-            ).expect("Token transfer failed");
+        /// Set a new contract owner
+        /// 
+        /// # Arguments
+        /// * `new_owner` - The address of the new owner
+        ///
+        /// # Returns
+        /// `true` if successful
+        #[method]
+        #[no_reentry]
+        fn set_owner(&mut self, new_owner: Address) -> bool {
+            let current_owner = self.owner.get().unwrap_or_default();
             
-            assert!(transferred, "Failed to transfer tokens to contract");
+            // Only current owner can change ownership
+            assert!(Runtime::check_witness(&current_owner), "Only owner can transfer ownership");
+            
+            self.owner.set(new_owner);
+            true
         }
         
-        /// Transfer NEP-17 token from contract to user
-        fn transfer_token_from_contract(&self, token_hash: &Hash160, to: &Address, amount: u64) {
-            let transferred: bool = self.call_contract(
-                token_hash,
-                "transfer",
-                (runtime::executing_script_hash(), *to, amount, ByteArray::new())
-            ).expect("Token transfer failed");
+        /// Set the default fee rate for new pools
+        /// 
+        /// # Arguments
+        /// * `fee_rate` - The new default fee rate in basis points
+        ///
+        /// # Returns
+        /// `true` if successful
+        #[method]
+        #[no_reentry]
+        fn set_default_fee_rate(&mut self, fee_rate: u16) -> bool {
+            let owner = self.owner.get().unwrap_or_default();
             
-            assert!(transferred, "Failed to transfer tokens from contract");
+            // Only owner can change the default fee rate
+            assert!(Runtime::check_witness(&owner), "Only owner can change default fee rate");
+            
+            // Ensure the fee rate is reasonable
+            assert!(fee_rate <= 1000, "Fee rate cannot exceed 10%");
+            
+            self.default_fee_rate.set(fee_rate);
+            true
+        }
+        
+        /// Set the maximum number of recent swaps to store
+        /// 
+        /// # Arguments
+        /// * `max_swaps` - The maximum number of recent swaps
+        ///
+        /// # Returns
+        /// `true` if successful
+        #[method]
+        #[no_reentry]
+        fn set_max_recent_swaps(&mut self, max_swaps: u32) -> bool {
+            let owner = self.owner.get().unwrap_or_default();
+            
+            // Only owner can change the max recent swaps
+            assert!(Runtime::check_witness(&owner), "Only owner can change max recent swaps");
+            
+            self.max_recent_swaps.set(max_swaps);
+            true
+        }
+        
+        /// Set the minimum liquidity requirement
+        /// 
+        /// # Arguments
+        /// * `min_liquidity` - The minimum liquidity required
+        ///
+        /// # Returns
+        /// `true` if successful
+        #[method]
+        #[no_reentry]
+        fn set_min_liquidity(&mut self, min_liquidity: u64) -> bool {
+            let owner = self.owner.get().unwrap_or_default();
+            
+            // Only owner can change the minimum liquidity
+            assert!(Runtime::check_witness(&owner), "Only owner can change minimum liquidity");
+            
+            self.min_liquidity.set(min_liquidity);
+            true
+        }
+        
+        /// Internal helper to transfer tokens from a user to the contract
+        fn transfer_token_to_contract(&self, token: &Hash160, from: &Address, amount: u64) -> bool {
+            // Create proper NEP-17 transfer arguments
+            let mut transfer_args = Array::<Any>::new();
+            transfer_args.push(Any::from(*from));
+            transfer_args.push(Any::from(Runtime::executing_script_hash()));
+            transfer_args.push(Any::from(amount));
+            transfer_args.push(Any::from(ByteArray::new())); // data parameter
+            
+            // Call the token's transfer method
+            let result = Runtime::call_contract(token, "transfer", &transfer_args)
+                .expect("Failed to call transfer")
+                .as_bool()
+                .expect("Invalid transfer response");
+            
+            assert!(result, "Token transfer to contract failed");
+            result
+        }
+        
+        /// Internal helper to transfer tokens from the contract to a user
+        fn transfer_token_from_contract(&self, token: &Hash160, to: &Address, amount: u64) -> bool {
+            // Get the contract's script hash
+            let contract_addr = Runtime::executing_script_hash();
+            
+            // Create proper NEP-17 transfer arguments
+            let mut transfer_args = Array::<Any>::new();
+            transfer_args.push(Any::from(contract_addr));
+            transfer_args.push(Any::from(*to));
+            transfer_args.push(Any::from(amount));
+            transfer_args.push(Any::from(ByteArray::new())); // data parameter
+            
+            // Call the token's transfer method
+            let result = Runtime::call_contract(token, "transfer", &transfer_args)
+                .expect("Failed to call transfer")
+                .as_bool()
+                .expect("Invalid transfer response");
+            
+            assert!(result, "Token transfer from contract failed");
+            result
         }
     }
 }

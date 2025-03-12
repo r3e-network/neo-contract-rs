@@ -5,7 +5,7 @@
 //! Helps measure execution time and gas costs for contract operations
 //! Only available in debug mode or with PROFILING feature enabled
 
-use alloc::vec::Vec;
+
 use alloc::string::String;
 use alloc::format;
 
@@ -191,7 +191,7 @@ impl Benchmark {
             
             if let Some((elapsed_time, gas_used)) = profiler.stop() {
                 self.total_time += elapsed_time;
-                self.total_gas = self.total_gas.clone() + gas_used;
+                self.total_gas = self.total_gas + gas_used;
             }
         }
         
@@ -219,11 +219,11 @@ impl Benchmark {
         let total_time_str = ByteString::from(alloc::format!("{}", self.total_time));
         event_data.push(Any::from(total_time_str));
         
-        event_data.push(Any::from(self.total_gas.clone()));
+        event_data.push(Any::from(self.total_gas));
         
         if self.iterations > 0 {
             let avg_time = self.total_time / (self.iterations as u64);
-            let avg_gas = self.total_gas.clone() / Int256::from_i64(self.iterations as i64);
+            let avg_gas = self.total_gas / Int256::from_i64(self.iterations as i64);
             
             let avg_time_str = ByteString::from(alloc::format!("{}", avg_time));
             event_data.push(Any::from(avg_time_str));
@@ -261,23 +261,23 @@ impl GasStats {
         
         // Measure put operation
         let mut put_benchmark = Benchmark::new("storage_put", 10);
-        let put_gas = put_benchmark.run(|| {
+        put_benchmark.run(|| {
             let storage_map = StorageMap::<ByteString, Int256>::new(b"benchmark");
-            storage_map.put(&ByteString::from("test_key"), &Int256::from_i64(100));
+            let _ = storage_map.put(&ByteString::from("test_key"), &Int256::from_i64(100));
         });
         
         // Measure get operation
         let mut get_benchmark = Benchmark::new("storage_get", 10);
-        let get_gas = get_benchmark.run(|| {
+        get_benchmark.run(|| {
             let storage_map = StorageMap::<ByteString, Int256>::new(b"benchmark");
-            storage_map.get(&ByteString::from("test_key"));
+            let _ = storage_map.get(&ByteString::from("test_key"));
         });
         
         // Measure delete operation
         let mut delete_benchmark = Benchmark::new("storage_delete", 10);
-        let delete_gas = delete_benchmark.run(|| {
+        delete_benchmark.run(|| {
             let storage_map = StorageMap::<ByteString, Int256>::new(b"benchmark");
-            storage_map.delete(&ByteString::from("test_key"));
+            let _ = storage_map.delete(&ByteString::from("test_key"));
         });
         
         // Return dummy values for now since we can't cast () to i64

@@ -6,14 +6,11 @@
 //! access control, and policy enforcement.
 
 use alloc::vec::Vec;
-use alloc::string::String;
 use alloc::boxed::Box;
 
 // Import from prelude instead
-use crate::prelude::{H160, ByteString, Int256, Array, Any, StorageMap};
+use crate::prelude::{H160, ByteString, Int256, Array, Any};
 use crate::runtime::Runtime;  // Use correct path
-use crate::storage::{Context, StorageIterator};
-use crate::error::{Error, ErrorCode, Result};
 
 pub mod roles;
 pub mod voting;
@@ -216,8 +213,8 @@ impl TokenThresholdPolicy {
         match Runtime::call_contract(
             self.token_hash.clone(),
             method,
-            // TODO: Implement proper conversion from Vec<Any> to Array<Any>
-            Array::<Any>::new()
+            // Convert the Vec<Any> to Array
+            Array::from(args)
         ) {
             result => {
                 match Int256::try_from(result) {

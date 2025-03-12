@@ -3,7 +3,8 @@
 
 //! Codec implementations for various types
 
-mod impl_builtin;
+// Make the module public so its contents can be exported
+pub mod impl_builtin;
 
-// Re-export the implementations
-pub use impl_builtin::*; 
+// Re-export the Codec trait implementation
+pub use crate::storage::item::Codec;

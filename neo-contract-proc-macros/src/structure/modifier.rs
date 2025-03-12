@@ -8,6 +8,10 @@ use syn::{
 };
 
 /// Process the modifier attribute macro
+///
+/// This function will be used in future updates to implement method modifiers
+/// for Neo N3 smart contracts, enabling features like access control and execution guards.
+#[allow(dead_code)]
 pub(crate) fn generate(_attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse the function
     let item_fn = parse_macro_input!(item as ItemFn);

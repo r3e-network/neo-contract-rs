@@ -8,7 +8,11 @@ use syn::{
 };
 
 /// Process the calling_convention attribute macro
-pub(crate) fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
+/// 
+/// This function will be used in future updates for supporting different
+/// calling conventions in Neo N3 smart contracts.
+#[allow(dead_code)]
+pub fn generate(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse the function
     let mut item_fn = parse_macro_input!(item as ItemFn);
     

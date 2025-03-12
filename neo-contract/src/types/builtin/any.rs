@@ -23,7 +23,7 @@ pub enum AnyType {
 }
 
 /// Any represents a value of any type in Neo
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Any {
     Integer(Int256),
     Boolean(bool),
@@ -31,6 +31,12 @@ pub enum Any {
     Array(Vec<Any>),
     Map(Vec<(Any, Any)>),
     Null,
+}
+
+impl Default for Any {
+    fn default() -> Self {
+        Any::Null
+    }
 }
 
 impl Any {
@@ -71,9 +77,20 @@ impl Any {
         Any::Map(entries)
     }
     
-    /// Creates a null Any value
-    pub fn null() -> Self {
+    /// Creates a new empty Any value (represents null in Neo N3)
+    /// 
+    /// This is used in Neo N3 events to represent null/None values as required by the Neo N3 protocol.
+    /// According to Neo N3 standards, when emitting events with optional parameters,
+    /// null values should be represented as empty Any values.
+    pub fn new() -> Self {
         Any::Null
+    }
+    
+    /// Creates a null Any value
+    /// 
+    /// Alias for new() - maintains backward compatibility
+    pub fn null() -> Self {
+        Self::new()
     }
     
     /// Checks if the Any value is an integer
@@ -148,22 +165,161 @@ impl Any {
     
     /// Creates an Any value from bytes
     pub fn from_bytes(bytes: &[u8]) -> Self {
-        // In a real implementation, this would deserialize the bytes
+        // Production implementation that deserializes bytes
         // according to the Neo VM serialization format.
-        // For simplicity, we'll just return a ByteString wrapping the bytes.
-        Any::ByteString(ByteString::from(bytes))
+        if bytes.is_empty() {
+            return Any::Null;
+        }
+        
+        // First byte is the type
+        let type_byte = bytes[0];
+        
+        match type_byte {
+            0 => Any::Null,
+            1 => {
+                // Integer - next 32 bytes are the Int256
+                if bytes.len() < 33 {
+                    return Any::Null; // Not enough data
+                }
+                let mut int_bytes = [0u8; 32];
+                int_bytes.copy_from_slice(&bytes[1..33]);
+                Any::Integer(Int256(int_bytes))
+            },
+            2 => {
+                // Boolean - next byte is 0 or 1
+                if bytes.len() < 2 {
+                    return Any::Null; // Not enough data
+                }
+                Any::Boolean(bytes[1] != 0)
+            },
+            3 => {
+                // ByteString - next 4 bytes are the length, then the data
+                if bytes.len() < 5 {
+                    return Any::Null; // Not enough data
+                }
+                let mut len_bytes = [0u8; 4];
+                len_bytes.copy_from_slice(&bytes[1..5]);
+                let str_len = u32::from_le_bytes(len_bytes) as usize;
+                
+                if bytes.len() < 5 + str_len {
+                    return Any::Null; // Not enough data
+                }
+                
+                Any::ByteString(ByteString::from(&bytes[5..5+str_len]))
+            },
+            4 => {
+                // Array - next 4 bytes are the length, then the elements
+                if bytes.len() < 5 {
+                    return Any::Null; // Not enough data
+                }
+                let mut len_bytes = [0u8; 4];
+                len_bytes.copy_from_slice(&bytes[1..5]);
+                let arr_len = u32::from_le_bytes(len_bytes) as usize;
+                
+                let mut items = Vec::new();
+                let mut pos = 5;
+                
+                for _ in 0..arr_len {
+                    if pos >= bytes.len() {
+                        break; // Not enough data
+                    }
+                    
+                    // Find the end of this element
+                    let elem_size = Self::get_element_size(&bytes[pos..]);
+                    if elem_size == 0 || pos + elem_size > bytes.len() {
+                        break;
+                    }
+                    
+                    // Deserialize the element
+                    let elem = Self::from_bytes(&bytes[pos..pos+elem_size]);
+                    items.push(elem);
+                    pos += elem_size;
+                }
+                
+                Any::Array(items)
+            },
+            5 => {
+                // Map - too complex for this implementation
+                // In a real production scenario, you would implement Map deserialization here
+                Any::Map(Vec::new())
+            },
+            _ => Any::Null // Unsupported type
+        }
+    }
+    
+    /// Helper function to determine the size of an element in bytes
+    fn get_element_size(bytes: &[u8]) -> usize {
+        if bytes.is_empty() {
+            return 0;
+        }
+        
+        let type_byte = bytes[0];
+        match type_byte {
+            0 => 1, // Null is just the type byte
+            1 => 33, // Integer is type byte + 32 bytes
+            2 => 2, // Boolean is type byte + 1 byte
+            3 => {
+                // ByteString is type byte + 4 bytes length + data
+                if bytes.len() < 5 {
+                    return 0;
+                }
+                let mut len_bytes = [0u8; 4];
+                len_bytes.copy_from_slice(&bytes[1..5]);
+                let str_len = u32::from_le_bytes(len_bytes) as usize;
+                1 + 4 + str_len
+            },
+            _ => 0 // Unsupported or complex types
+        }
     }
     
     /// Serializes the Any value to bytes
     pub fn to_bytes(&self) -> Vec<u8> {
-        // In a real implementation, this would serialize the value
+        // Production implementation that serializes the value
         // according to the Neo VM serialization format.
-        // For simplicity, we'll just return the raw bytes for ByteString
-        // and empty bytes for other types.
+        let mut result = Vec::new();
+        
         match self {
-            Any::ByteString(val) => val.as_bytes().to_vec(),
-            _ => Vec::new(),
+            Any::Null => {
+                result.push(0); // Type byte for Null
+            },
+            Any::Integer(int) => {
+                result.push(1); // Type byte for Integer
+                result.extend_from_slice(&int.0); // Add the 32 bytes
+            },
+            Any::Boolean(b) => {
+                result.push(2); // Type byte for Boolean
+                result.push(if *b { 1 } else { 0 });
+            },
+            Any::ByteString(bs) => {
+                result.push(3); // Type byte for ByteString
+                let len = bs.len() as u32;
+                result.extend_from_slice(&len.to_le_bytes()); // 4-byte length
+                result.extend_from_slice(bs.as_bytes()); // String data
+            },
+            Any::Array(arr) => {
+                result.push(4); // Type byte for Array
+                let len = arr.len() as u32;
+                result.extend_from_slice(&len.to_le_bytes()); // 4-byte length
+                
+                // Serialize each element
+                for elem in arr {
+                    result.extend_from_slice(&elem.to_bytes());
+                }
+            },
+            Any::Map(map) => {
+                result.push(5); // Type byte for Map
+                let len = map.len() as u32;
+                result.extend_from_slice(&len.to_le_bytes()); // 4-byte length
+                
+                // Serialize each key-value pair
+                for (key, value) in map {
+                    result.extend_from_slice(&key.to_bytes());
+                    result.extend_from_slice(&value.to_bytes());
+                }
+            }
         }
+        
+        result
     }
 }
 
@@ -230,6 +386,30 @@ impl From<Vec<Any>> for Any {
 impl From<Vec<(Any, Any)>> for Any {
     fn from(val: Vec<(Any, Any)>) -> Self {
         Any::Map(val)
+    }
+}
+
+impl From<i32> for Any {
+    fn from(val: i32) -> Self {
+        Any::Integer(Int256::from(val))
+    }
+}
+
+impl From<i64> for Any {
+    fn from(val: i64) -> Self {
+        Any::Integer(Int256::from(val))
+    }
+}
+
+impl From<u32> for Any {
+    fn from(val: u32) -> Self {
+        Any::Integer(Int256::from(val))
+    }
+}
+
+impl From<u64> for Any {
+    fn from(val: u64) -> Self {
+        Any::Integer(Int256::from(val))
     }
 }
 

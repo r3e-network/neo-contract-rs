@@ -1,18 +1,8 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use alloc::string::String;
-use alloc::vec::Vec;
-use crate::types::builtin::h160::H160;
-use crate::types::builtin::string::ByteString;
-use crate::types::builtin::int256::Int256;
-use crate::types::builtin::array::Array;
-use crate::types::builtin::any::Any;
+use crate::prelude::{H160, ByteString, Int256, Array, Any};
 use crate::runtime::Runtime;
-// Import the prelude which should contain all necessary attributes
-use crate::prelude::*;
-// Import the neo_method attribute directly from the crate root
-use crate::neo_method;
 
 /// NEO native contract
 pub struct Neo;

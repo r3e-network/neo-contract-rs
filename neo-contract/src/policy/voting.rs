@@ -5,13 +5,16 @@
 //! This module provides tools for creating and managing votes and proposals
 
 use alloc::format;
-use alloc::string::String;
+
 use alloc::vec::Vec;
+use alloc::vec;
 
 // Fix imports to use prelude for all types
-use crate::prelude::{H160, ByteString, Int256, Array, Any, StorageMap};
+
+use crate::prelude::{H160, ByteString, Array, Any, StorageMap};
 use crate::runtime::Runtime;
 use crate::error::{Error, ErrorCode, Result};
+use crate::storage::item::Codec;
 
 // Define Storable trait here since it's not accessible from storage
 pub trait Storable {
@@ -40,12 +43,35 @@ impl Storable for VoteValue {
     }
     
     fn from_storage(data: &ByteString) -> Option<Self> {
-        let value = data.as_string();
-        match value.as_str() {
+        let value = unsafe { core::str::from_utf8_unchecked(data.as_bytes()) };
+        match value {
             "yes" => Some(VoteValue::Yes),
             "no" => Some(VoteValue::No),
             "abstain" => Some(VoteValue::Abstain),
             _ => None,
+        }
+    }
+}
+
+impl Codec for VoteValue {
+    fn encode(&self) -> Vec<u8> {
+        match self {
+            VoteValue::Yes => vec![1],
+            VoteValue::No => vec![2],
+            VoteValue::Abstain => vec![3],
+        }
+    }
+    
+    fn decode(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() != 1 {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        match bytes[0] {
+            1 => Ok(VoteValue::Yes),
+            2 => Ok(VoteValue::No),
+            3 => Ok(VoteValue::Abstain),
+            _ => Err(Error::new(ErrorCode::InvalidFormat)),
         }
     }
 }
@@ -83,8 +109,8 @@ impl Storable for ProposalStatus {
     }
     
     fn from_storage(data: &ByteString) -> Option<Self> {
-        let value = data.as_string();
-        match value.as_str() {
+        let value = unsafe { core::str::from_utf8_unchecked(data.as_bytes()) };
+        match value {
             "pending" => Some(ProposalStatus::Pending),
             "accepted" => Some(ProposalStatus::Accepted),
             "rejected" => Some(ProposalStatus::Rejected),
@@ -93,6 +119,37 @@ impl Storable for ProposalStatus {
             "executed" => Some(ProposalStatus::Executed),
             "expired" => Some(ProposalStatus::Expired),
             _ => None,
+        }
+    }
+}
+
+impl Codec for ProposalStatus {
+    fn encode(&self) -> Vec<u8> {
+        match self {
+            ProposalStatus::Pending => vec![1],
+            ProposalStatus::Accepted => vec![2],
+            ProposalStatus::Rejected => vec![3],
+            ProposalStatus::Canceled => vec![4],
+            ProposalStatus::Queued => vec![5],
+            ProposalStatus::Executed => vec![6],
+            ProposalStatus::Expired => vec![7],
+        }
+    }
+    
+    fn decode(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() != 1 {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        match bytes[0] {
+            1 => Ok(ProposalStatus::Pending),
+            2 => Ok(ProposalStatus::Accepted),
+            3 => Ok(ProposalStatus::Rejected),
+            4 => Ok(ProposalStatus::Canceled),
+            5 => Ok(ProposalStatus::Queued),
+            6 => Ok(ProposalStatus::Executed),
+            7 => Ok(ProposalStatus::Expired),
+            _ => Err(Error::new(ErrorCode::InvalidFormat)),
         }
     }
 }
@@ -117,6 +174,164 @@ pub struct Proposal {
     status: ProposalStatus,
 }
 
+impl Codec for Proposal {
+    fn encode(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        
+        // Encode the ID
+        let id_bytes = self.id.encode();
+        let id_len = id_bytes.len() as u32;
+        result.extend_from_slice(&id_len.to_le_bytes());
+        result.extend_from_slice(&id_bytes);
+        
+        // Encode the description
+        let desc_bytes = self.description.encode();
+        let desc_len = desc_bytes.len() as u32;
+        result.extend_from_slice(&desc_len.to_le_bytes());
+        result.extend_from_slice(&desc_bytes);
+        
+        // Encode the proposer
+        let proposer_bytes = self.proposer.encode();
+        result.extend_from_slice(&proposer_bytes);
+        
+        // Encode blocks and quorum
+        result.extend_from_slice(&self.start_block.to_le_bytes());
+        result.extend_from_slice(&self.end_block.to_le_bytes());
+        result.push(self.quorum);
+        
+        // Encode actions
+        let actions_len = self.actions.len() as u32;
+        result.extend_from_slice(&actions_len.to_le_bytes());
+        
+        for action in &self.actions {
+            let action_bytes = action.encode();
+            let action_len = action_bytes.len() as u32;
+            result.extend_from_slice(&action_len.to_le_bytes());
+            result.extend_from_slice(&action_bytes);
+        }
+        
+        // Encode status
+        let status_bytes = self.status.encode();
+        result.extend_from_slice(&status_bytes);
+        
+        result
+    }
+    
+    fn decode(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() < 4 {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        let mut pos = 0;
+        
+        // Decode ID
+        let mut id_len_bytes = [0u8; 4];
+        id_len_bytes.copy_from_slice(&bytes[pos..pos+4]);
+        pos += 4;
+        let id_len = u32::from_le_bytes(id_len_bytes) as usize;
+        
+        if pos + id_len > bytes.len() {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        let id = ByteString::decode(&bytes[pos..pos+id_len])?;
+        pos += id_len;
+        
+        // Decode description
+        if pos + 4 > bytes.len() {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        let mut desc_len_bytes = [0u8; 4];
+        desc_len_bytes.copy_from_slice(&bytes[pos..pos+4]);
+        pos += 4;
+        let desc_len = u32::from_le_bytes(desc_len_bytes) as usize;
+        
+        if pos + desc_len > bytes.len() {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        let description = ByteString::decode(&bytes[pos..pos+desc_len])?;
+        pos += desc_len;
+        
+        // Decode proposer
+        if pos + 20 > bytes.len() {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        let proposer = H160::decode(&bytes[pos..pos+20])?;
+        pos += 20;
+        
+        // Decode block heights and quorum
+        if pos + 9 > bytes.len() {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        let mut start_block_bytes = [0u8; 4];
+        start_block_bytes.copy_from_slice(&bytes[pos..pos+4]);
+        pos += 4;
+        let start_block = u32::from_le_bytes(start_block_bytes);
+        
+        let mut end_block_bytes = [0u8; 4];
+        end_block_bytes.copy_from_slice(&bytes[pos..pos+4]);
+        pos += 4;
+        let end_block = u32::from_le_bytes(end_block_bytes);
+        
+        let quorum = bytes[pos];
+        pos += 1;
+        
+        // Decode actions
+        if pos + 4 > bytes.len() {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        let mut actions_len_bytes = [0u8; 4];
+        actions_len_bytes.copy_from_slice(&bytes[pos..pos+4]);
+        pos += 4;
+        let actions_len = u32::from_le_bytes(actions_len_bytes) as usize;
+        
+        let mut actions = Vec::with_capacity(actions_len);
+        
+        for _ in 0..actions_len {
+            if pos + 4 > bytes.len() {
+                return Err(Error::new(ErrorCode::InvalidFormat));
+            }
+            
+            let mut action_len_bytes = [0u8; 4];
+            action_len_bytes.copy_from_slice(&bytes[pos..pos+4]);
+            pos += 4;
+            let action_len = u32::from_le_bytes(action_len_bytes) as usize;
+            
+            if pos + action_len > bytes.len() {
+                return Err(Error::new(ErrorCode::InvalidFormat));
+            }
+            
+            let action = ProposalAction::decode(&bytes[pos..pos+action_len])?;
+            pos += action_len;
+            
+            actions.push(action);
+        }
+        
+        // Decode status
+        if pos + 1 > bytes.len() {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        let status = ProposalStatus::decode(&bytes[pos..pos+1])?;
+        
+        Ok(Proposal {
+            id,
+            description,
+            proposer,
+            start_block,
+            end_block,
+            quorum,
+            actions,
+            status,
+        })
+    }
+}
+
 /// Action to execute if a proposal passes
 pub struct ProposalAction {
     /// Contract to call
@@ -125,6 +340,66 @@ pub struct ProposalAction {
     method: ByteString,
     /// Arguments to pass
     args: Array,
+}
+
+impl Codec for ProposalAction {
+    fn encode(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        
+        // Encode contract hash
+        let hash_bytes = self.contract_hash.encode();
+        result.extend_from_slice(&hash_bytes);
+        
+        // Encode method
+        let method_bytes = self.method.encode();
+        let method_len = method_bytes.len() as u32;
+        result.extend_from_slice(&method_len.to_le_bytes());
+        result.extend_from_slice(&method_bytes);
+        
+        // Encode args (Array already has its own encoding)
+        let args_bytes = self.args.encode();
+        result.extend_from_slice(&args_bytes);
+        
+        result
+    }
+    
+    fn decode(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() < 24 { // 20 (H160) + 4 (method length)
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        let mut pos = 0;
+        
+        // Decode contract hash
+        let contract_hash = H160::decode(&bytes[pos..pos+20])?;
+        pos += 20;
+        
+        // Decode method
+        let mut method_len_bytes = [0u8; 4];
+        method_len_bytes.copy_from_slice(&bytes[pos..pos+4]);
+        pos += 4;
+        let method_len = u32::from_le_bytes(method_len_bytes) as usize;
+        
+        if pos + method_len > bytes.len() {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        let method = ByteString::decode(&bytes[pos..pos+method_len])?;
+        pos += method_len;
+        
+        // Decode args
+        if pos >= bytes.len() {
+            return Err(Error::new(ErrorCode::InvalidFormat));
+        }
+        
+        let args = Array::decode(&bytes[pos..])?;
+        
+        Ok(ProposalAction {
+            contract_hash,
+            method,
+            args,
+        })
+    }
 }
 
 /// Voting system for governance
@@ -157,15 +432,15 @@ impl VotingSystem {
     ) -> Result<()> {
         // Check if caller is the proposer
         if !Runtime::check_witness(&proposer) {
-            return Err(Error::Unauthorized("Proposer must be the caller"));
+            return Err(Error::with_message(ErrorCode::Unauthorized, "Proposer must be the caller"));
         }
-        
+
         // Check if proposal already exists
         let proposal_id = ByteString::from(id);
         let proposals_map = self.get_proposals_map();
         
-        if proposals_map.get(&proposal_id).is_some() {
-            return Err(Error::AlreadyExists("Proposal already exists"));
+        if proposals_map.get(&proposal_id).unwrap_or_default().is_some() {
+            return Err(Error::with_message(ErrorCode::InvalidState, "Proposal already exists"));
         }
         
         // Create the proposal
@@ -193,7 +468,7 @@ impl VotingSystem {
     pub fn vote(&self, proposal_id: &str, voter: H160, vote: VoteValue) -> Result<()> {
         // Check if caller is the voter
         if !Runtime::check_witness(&voter) {
-            return Err(Error::Unauthorized("Voter must be the caller"));
+            return Err(Error::with_message(ErrorCode::PermissionDenied, "Voter must be the caller"));
         }
         
         // Get the proposal
@@ -204,21 +479,21 @@ impl VotingSystem {
         let current_block = self.get_current_block_height();
         
         if current_block < proposal.start_block {
-            return Err(Error::InvalidState("Voting has not started yet"));
+            return Err(Error::with_message(ErrorCode::InvalidState, "Voting has not started yet"));
         }
         
         if current_block > proposal.end_block {
-            return Err(Error::InvalidState("Voting has ended"));
+            return Err(Error::with_message(ErrorCode::InvalidState, "Voting has ended"));
         }
         
         // Check if the proposal is still pending
         if proposal.status != ProposalStatus::Pending {
-            return Err(Error::InvalidState("Proposal is not pending"));
+            return Err(Error::with_message(ErrorCode::InvalidState, "Proposal is not pending"));
         }
         
         // Record the vote
         let votes_map = self.get_votes_map(proposal_id);
-        votes_map.put(&voter, &vote);
+        let _ = votes_map.put(&voter, &vote);
         
         // Emit the vote cast event
         self.emit_vote_cast(proposal_id, voter, vote);
@@ -233,14 +508,14 @@ impl VotingSystem {
         
         // Check if the proposal is still pending
         if proposal.status != ProposalStatus::Pending {
-            return Err(Error::InvalidState("Proposal is not pending"));
+            return Err(Error::with_message(ErrorCode::InvalidState, "Proposal is not pending"));
         }
         
         // Check if the voting period has ended
         let current_block = self.get_current_block_height();
         
         if current_block <= proposal.end_block {
-            return Err(Error::InvalidState("Voting period has not ended"));
+            return Err(Error::with_message(ErrorCode::InvalidState, "Voting period has not ended"));
         }
         
         // Calculate the results
@@ -280,7 +555,7 @@ impl VotingSystem {
         
         // Check if the proposal is accepted
         if proposal.status != ProposalStatus::Accepted {
-            return Err(Error::InvalidState("Proposal is not accepted"));
+            return Err(Error::with_message(ErrorCode::InvalidState, "Proposal is not accepted"));
         }
         
         // Execute all actions
@@ -292,10 +567,13 @@ impl VotingSystem {
             );
             
             // Check if the call was successful
-            let success = bool::try_from(result).unwrap_or(false);
+            let success = match result {
+                Any::Boolean(b) => b,
+                _ => false
+            };
             
             if !success {
-                return Err(Error::ContractCallError("Action execution failed"));
+                return Err(Error::with_message(ErrorCode::ContractError, "Action execution failed"));
             }
         }
         
@@ -316,12 +594,12 @@ impl VotingSystem {
         
         // Check if the caller is the proposer
         if !Runtime::check_witness(&proposal.proposer) {
-            return Err(Error::Unauthorized("Only the proposer can cancel"));
+            return Err(Error::with_message(ErrorCode::PermissionDenied, "Only the proposer can cancel"));
         }
         
         // Check if the proposal is still pending
         if proposal.status != ProposalStatus::Pending {
-            return Err(Error::InvalidState("Proposal is not pending"));
+            return Err(Error::with_message(ErrorCode::InvalidState, "Proposal is not pending"));
         }
         
         // Update the proposal status
@@ -338,17 +616,17 @@ impl VotingSystem {
     pub fn get_proposal(&self, proposal_id: &ByteString) -> Result<Proposal> {
         let proposals_map = self.get_proposals_map();
         
-        if let Some(proposal) = proposals_map.get(proposal_id) {
+        if let Some(proposal) = proposals_map.get(proposal_id).unwrap_or_default() {
             Ok(proposal)
         } else {
-            Err(Error::NotFound("Proposal not found"))
+            Err(Error::with_message(ErrorCode::NotFound, "Proposal not found"))
         }
     }
     
     /// Helper method to store a proposal
     fn store_proposal(&self, proposal: &Proposal) -> Result<()> {
         let proposals_map = self.get_proposals_map();
-        proposals_map.put(&proposal.id, proposal);
+        let _ = proposals_map.put(&proposal.id, proposal);
         Ok(())
     }
     
@@ -371,18 +649,19 @@ impl VotingSystem {
         let mut no_votes = 0;
         let mut total_votes = 0;
         
-        for item in votes_map.iter() {
-            if let Some((voter, vote)) = item {
-                let voting_power = self.get_voting_power(&voter);
-                
-                match vote {
-                    VoteValue::Yes => yes_votes += voting_power,
-                    VoteValue::No => no_votes += voting_power,
-                    VoteValue::Abstain => {}, // Abstentions don't count toward yes or no
-                }
-                
-                total_votes += voting_power;
+        // votes_map.iter() returns a Vec<(H160, VoteValue)> directly, not an iterator over Result
+        let vote_pairs = votes_map.iter();
+        
+        for (voter, vote) in vote_pairs {
+            let voting_power = self.get_voting_power(&voter);
+            
+            match vote {
+                VoteValue::Yes => yes_votes += voting_power,
+                VoteValue::No => no_votes += voting_power,
+                VoteValue::Abstain => {}, // Abstentions don't count toward yes or no
             }
+            
+            total_votes += voting_power;
         }
         
         (yes_votes, no_votes, total_votes)
@@ -402,9 +681,9 @@ impl VotingSystem {
                 args
             );
             
-            match Int256::try_from(result) {
-                Ok(balance) => balance.as_u64().unwrap_or(0),
-                Err(_) => 0,
+            match result {
+                Any::Integer(balance) => balance.as_u64().unwrap_or(0),
+                _ => 0,
             }
         } else {
             // If no voting token is set, each address has 1 vote
@@ -425,9 +704,9 @@ impl VotingSystem {
                 args
             );
             
-            match Int256::try_from(result) {
-                Ok(supply) => supply.as_u64().unwrap_or(0),
-                Err(_) => 0,
+            match result {
+                Any::Integer(supply) => supply.as_u64().unwrap_or(0),
+                _ => 0,
             }
         } else {
             // If no voting token is set, use a reasonable default
@@ -444,14 +723,13 @@ impl VotingSystem {
         let mut args = Array::new();
         args.push(Any::from(block_hash));
         
-        let result = Runtime::call_contract(
+        let _result = Runtime::call_contract(
             crate::contract::native::ledger::Ledger::hash(),
             method,
             args
         );
         
-        // Extract the height from the block
-        let block = result;
+        // We don't need to use the block result directly, just get the index
         let height_method = ByteString::from("index");
         let height_result = Runtime::call_contract(
             crate::contract::native::ledger::Ledger::hash(),
@@ -459,9 +737,9 @@ impl VotingSystem {
             Array::new()
         );
         
-        match u32::try_from(height_result) {
-            Ok(height) => height,
-            Err(_) => 0,
+        match height_result {
+            Any::Integer(int_value) => int_value.as_u32().unwrap_or(0),
+            _ => 0,
         }
     }
     

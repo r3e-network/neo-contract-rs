@@ -171,6 +171,17 @@ impl Script {
         }
     }
 
+    /// Adds a comment to the script.
+    /// 
+    /// Note: Since Neo N3 does not support the COMMENT opcode, this function 
+    /// now only stores the comment in memory without adding it to the bytecode.
+    /// Comments will be available in the source code but not in the compiled script.
+    pub fn emit_comment(&mut self, _comment: &str) {
+        // In Neo N3, we don't emit comments into the bytecode
+        // This is a no-op that preserves the API for backward compatibility
+        // Comments are only stored in the source code
+    }
+
     /// Adds an instruction to the script.
     pub fn add_instruction(&mut self, instruction: Instruction) {
         self.instructions.push(instruction);

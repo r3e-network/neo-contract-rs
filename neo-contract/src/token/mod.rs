@@ -3,8 +3,7 @@
 
 //! Token interfaces and implementations for the Neo blockchain
 
-use alloc::vec::Vec;
-use alloc::string::String;
+
 
 // Update to use prelude
 use crate::prelude::{H160, ByteString, Int256, Array, Any};

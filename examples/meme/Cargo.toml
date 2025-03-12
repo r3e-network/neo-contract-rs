@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 neo-contract = { path = "../../neo-contract" }
+neo-macros = { path = "../../neo-macros" }
 
 [lib]
 crate-type = ["cdylib"]

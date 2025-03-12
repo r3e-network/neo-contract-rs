@@ -12,6 +12,10 @@ pub use crate::env::syscall_non_wasm;
 pub mod neo;
 pub use neo::*;
 
+// Re-export native contracts for easy access
+#[cfg(feature = "std")]
+pub use crate::contracts::native::*;
+
 // Add a dedicated ink! style module for a cleaner import experience
 pub mod ink_style {
     // Re-export all ink! style attributes for easy imports

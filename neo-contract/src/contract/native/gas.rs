@@ -1,7 +1,7 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use alloc::string::String;
+
 // use crate::builtin::{H160, ByteString, Int256, Array, Any};
 use crate::prelude::{H160, ByteString, Int256, Array, Any};
 use crate::runtime::Runtime;
@@ -80,12 +80,9 @@ impl Gas {
         // Extract integer value
         if let Any::Integer(value) = result {
             // Convert to u8 (GAS has 8 decimals)
+            // Note: Using as u8 will automatically truncate to the range 0-255
             let value_u8 = value.to_u64().unwrap_or(8) as u8;
-            if value_u8 <= 255 {
-                value_u8
-            } else {
-                8
-            }
+            value_u8
         } else {
             8 // GAS has 8 decimals
         }

@@ -72,9 +72,31 @@ Here's a summary of the attributes used to mark methods:
 
 When you mark a method with `#[safe]`, several things happen:
 
-1. The compiler includes the method in the contract manifest with the `safe: true` property
-2. The method receives `&self` (immutable reference) instead of `&mut self`
-3. The Neo VM sets appropriate call flags when the method is invoked
+1. The compiler includes the method in the contract manifest with the `"safe": true` property
+2. The method receives `&self` (immutable reference) instead of `&mut self` 
+3. The Neo VM enforces that the method doesn't modify state
+4. The method can be called with `CallFlags::ReadOnly` flag
+
+### Manifest Representation
+
+In the contract manifest, safe methods are marked with the `"safe": true` property in the method's metadata. For example:
+
+```json
+{
+  "name": "balance_of",
+  "parameters": [
+    {
+      "name": "account",
+      "type": "Hash160"
+    }
+  ],
+  "returnType": "Integer",
+  "offset": 123,
+  "safe": true
+}
+```
+
+This is important for optimization and ensuring proper access control, as it informs the Neo VM that the method doesn't modify state and can be called with reduced privileges.
 
 ## Requirements for Safe Methods
 
@@ -156,6 +178,22 @@ fn get_proposals(&self, start_idx: u64, count: u64) -> Vec<Proposal> {
 - **Don't** make unsafe syscalls from safe methods
 - **Don't** confuse return value immutability with method safety
 - **Don't** perform excessively complex computations in safe methods (they still consume resources)
+
+## Neo N3 Call Flags
+
+When invoking contract methods in Neo N3, call flags determine how the method interacts with the blockchain:
+
+| Flag | Value | Description |
+|------|-------|-------------|
+| `None` | 0 | Default behavior |
+| `ReadOnly` | 1 | Calls cannot modify state |
+| `AllowCall` | 2 | Allows calling other contracts |
+| `AllowNotify` | 4 | Allows triggering notifications |
+| `AllowStates` | 8 | Allows reading contract states |
+| `AllowModifyStates` | 16 | Allows modifying contract states |
+| `All` | 31 | All permissions |
+
+Safe methods are typically called with `ReadOnly` flags set, which ensures they cannot modify state.
 
 ## Testing Safe Methods
 

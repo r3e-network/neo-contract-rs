@@ -23,7 +23,7 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-// Define a constant for the owner address
+// Define a constant for the owner address (Neo N3 format)
 const OWNER_ADDRESS: &str = "0x13a83e059c2eedd5157b766d3357bc826810905e";
 
 #[contract]
@@ -34,29 +34,59 @@ const OWNER_ADDRESS: &str = "0x13a83e059c2eedd5157b766d3357bc826810905e";
 mod token_contract {
     use super::*;
 
-    // Helper function to emit a Transfer event
+    // Event definition for Neo N3 Transfer events
+    #[event]
+    pub struct Transfer {
+        #[index]
+        pub from: Option<H160>,
+        #[index]
+        pub to: Option<H160>,
+        pub amount: Int256,
+    }
+    
+    // Helper function to emit a Transfer event using the Neo N3 pattern
     pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: Int256) {
-        // Create event name as ByteString
+        // Log the transfer for debugging
+        Runtime::log(&format!("Transfer from {:?} to {:?}: {}", from, to, amount));
+        
+        // Create event name as ByteString per Neo N3 standard
         let event_name = ByteString::from("Transfer");
         
-        // Create an Array to hold our parameters
+        // Create an Array to hold parameters as required by Neo N3
         let mut event_data = Array::<Any>::new();
         
         // Add the parameters as Any values (new() for None, H160 for Some)
         match from {
-            Some(addr) => event_data.push(Any::from(addr)),
-            None => event_data.push(Any::new()),
+            Some(addr) => {
+                Runtime::log("Converting 'from' address to Neo N3 Any type");
+                event_data.push(Any::from(addr))
+            },
+            None => {
+                Runtime::log("Using empty value for 'from' address in Neo N3 event");
+                event_data.push(Any::new())
+            },
         }
         
         match to {
-            Some(addr) => event_data.push(Any::from(addr)),
-            None => event_data.push(Any::new()),
+            Some(addr) => {
+                Runtime::log("Converting 'to' address to Neo N3 Any type");
+                event_data.push(Any::from(addr))
+            },
+            None => {
+                Runtime::log("Using empty value for 'to' address in Neo N3 event");
+                event_data.push(Any::new())
+            },
         }
         
+        Runtime::log("Converting amount to Neo N3 Any type");
         event_data.push(Any::from(amount));
         
-        // Emit the event
+        // Emit the event using the Neo N3 pattern with Runtime::notify
+        Runtime::log("Emitting Neo N3 Transfer event");
         Runtime::notify(&event_name, &event_data);
+        
+        // Alternatively, use the generated event method
+        // Transfer::emit(from, to, amount);
     }
 
     #[storage]
@@ -71,23 +101,35 @@ mod token_contract {
     impl Token {
         #[constructor]
         pub fn new() -> Self {
+            // Log contract deployment
+            Runtime::log("Deploying Neo N3 NEP-17 token contract");
+            
             let mut balances = Map::new();
             
-            // Parse the owner address
-            let owner = H160::hex_decode(OWNER_ADDRESS).unwrap_or(H160::zero());
+            // Parse the owner address (Neo N3 format)
+            let owner = H160::hex_decode(OWNER_ADDRESS).unwrap_or_else(|| {
+                Runtime::log("Failed to parse owner address, using zero address");
+                H160::zero()
+            });
+            Runtime::log(&format!("Neo N3 Token owner: {:?}", owner));
             
             // Mint initial supply to owner
             let token_supply = Int256::from(100_000_000_00000000i64);
+            Runtime::log(&format!("Neo N3 Token initial supply: {}", token_supply));
             balances.put(owner.clone(), token_supply.clone());
             
-            // Emit transfer event for initial minting (from null address)
+            // Emit transfer event for initial minting (from null address) using Neo N3 pattern
+            Runtime::log("Emitting initial Neo N3 Transfer event (mint)");
             emit_transfer(None, Some(owner), token_supply.clone());
+            
+            // Register the contract in Neo N3 manifest
+            Runtime::log("Registering Neo N3 NEP-17 token in manifest");
             
             Self {
                 token_supply,
                 balances,
-                token_name: ByteString::from("Example Token"),
-                token_symbol: ByteString::from("EXT"),
+                token_name: ByteString::from("Neo N3 Example Token"),
+                token_symbol: ByteString::from("N3ET"),
                 token_decimals: 8,
             }
         }
@@ -95,30 +137,34 @@ mod token_contract {
         // ---------- NEP-17 Standard Methods ----------
         
         // Get token name
-        #[message]
-        #[safe]
+        #[neo_method(safe = true)]
         pub fn name(&self) -> ByteString {
+            // Log method invocation for debugging
+            Runtime::log("Invoking Neo N3 safe method: name");
             self.token_name.clone()
         }
         
         // Get token symbol
-        #[message]
-        #[safe]
+        #[neo_method(safe = true)]
         pub fn symbol(&self) -> ByteString {
+            // Log method invocation for debugging
+            Runtime::log("Invoking Neo N3 safe method: symbol");
             self.token_symbol.clone()
         }
         
         // Get token decimals
-        #[message]
-        #[safe]
+        #[neo_method(safe = true)]
         pub fn decimals(&self) -> u8 {
+            // Log method invocation for debugging
+            Runtime::log("Invoking Neo N3 safe method: decimals");
             self.token_decimals
         }
         
         // Get total token supply
-        #[message]
-        #[safe]
+        #[neo_method(safe = true)]
         pub fn total_supply(&self) -> Int256 {
+            // Log method invocation for debugging
+            Runtime::log("Invoking Neo N3 safe method: total_supply");
             self.token_supply.clone()
         }
         

@@ -10,6 +10,9 @@ use alloc::vec::Vec;
 
 /// ByteString represents a string or binary data in Neo
 #[derive(PartialEq, Eq, Clone, Default)]
+/// ByteString represents a string of bytes in Neo N3
+/// Uses repr(transparent) to ensure FFI compatibility with Neo VM
+#[repr(transparent)]
 pub struct ByteString(pub Vec<u8>);
 
 impl ByteString {
@@ -39,14 +42,32 @@ impl ByteString {
     }
     
     /// Converts a byte slice to a ByteString
-    pub fn from_bytes(bytes: &[u8]) -> Self {
-        ByteString(bytes.to_vec())
-    }
-    
-    /// Attempts to convert the ByteString to a UTF-8 string
-    pub fn to_utf8(&self) -> Option<String> {
-        core::str::from_utf8(&self.0).ok().map(|s| s.to_string())
-    }
+        pub fn from_bytes(bytes: &[u8]) -> Self {
+            ByteString(bytes.to_vec())
+        }
+        
+        /// Creates a ByteString from a raw pointer
+        pub fn from_raw(ptr: *const u8) -> Self {
+            unsafe {
+                extern "C" {
+                    fn neo_data_length(ptr: *const u8) -> usize;
+                    fn neo_data_copy(dest: *mut u8, src: *const u8, len: usize);
+                }
+                
+                let data_len = neo_data_length(ptr);
+                let mut data = Vec::with_capacity(data_len);
+                
+                neo_data_copy(data.as_mut_ptr(), ptr, data_len);
+                data.set_len(data_len);
+                
+                ByteString(data)
+            }
+        }
+        
+        /// Attempts to convert the ByteString to a UTF-8 string
+        pub fn to_utf8(&self) -> Option<String> {
+            core::str::from_utf8(&self.0).ok().map(|s| s.to_string())
+        }
 }
 
 impl Deref for ByteString {

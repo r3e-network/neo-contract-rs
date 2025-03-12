@@ -1,11 +1,21 @@
+#![no_std]
+
+extern crate alloc;
+
+use alloc::vec::Vec;
+use alloc::string::String;
+
 //! # NEO Lottery Contract
 //!
 //! A simple lottery contract that allows users to buy tickets and randomly selects winners.
 //! The lottery uses block hash data as a source of randomness combined with user inputs.
+//! This contract follows Neo N3 standards and best practices.
 
 #[neo_contract::contract]
 mod neo_lottery {
     use neo_contract::prelude::*;
+    use alloc::vec::Vec;
+    use alloc::string::String;
     
     /// Lottery status enum
     #[derive(Debug, Clone, Encode, Decode, PartialEq)]
@@ -68,6 +78,28 @@ mod neo_lottery {
         max_tickets_per_user: u32,
     }
     
+    /// Implementation for properly emitting the LotteryCreated event using Neo N3 standards
+    impl LotteryCreated {
+        /// Static method to emit the LotteryCreated event in Neo N3 format
+        pub fn emit(round_id: u32, ticket_price: u64, start_time: u64, end_time: u64, max_tickets_per_user: u32) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("LotteryCreated");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(round_id));
+            event_data.push(Any::from(ticket_price));
+            event_data.push(Any::from(start_time));
+            event_data.push(Any::from(end_time));
+            event_data.push(Any::from(max_tickets_per_user));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
     #[event]
     struct TicketsPurchased {
         #[index]
@@ -76,6 +108,27 @@ mod neo_lottery {
         user: Address,
         ticket_count: u32,
         total_cost: u64,
+    }
+    
+    /// Implementation for properly emitting the TicketsPurchased event using Neo N3 standards
+    impl TicketsPurchased {
+        /// Static method to emit the TicketsPurchased event in Neo N3 format
+        pub fn emit(round_id: u32, user: Address, ticket_count: u32, total_cost: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("TicketsPurchased");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(round_id));
+            event_data.push(Any::from(user));
+            event_data.push(Any::from(ticket_count));
+            event_data.push(Any::from(total_cost));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
     #[event]
@@ -88,6 +141,27 @@ mod neo_lottery {
         winning_block: u32,
     }
     
+    /// Implementation for properly emitting the WinnerSelected event using Neo N3 standards
+    impl WinnerSelected {
+        /// Static method to emit the WinnerSelected event in Neo N3 format
+        pub fn emit(round_id: u32, winner: Address, prize_amount: u64, winning_block: u32) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("WinnerSelected");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(round_id));
+            event_data.push(Any::from(winner));
+            event_data.push(Any::from(prize_amount));
+            event_data.push(Any::from(winning_block));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
     #[event]
     struct LotteryCompleted {
         #[index]
@@ -96,6 +170,28 @@ mod neo_lottery {
         total_tickets: u32,
         total_prize: u64,
         commission_amount: u64,
+    }
+    
+    /// Implementation for properly emitting the LotteryCompleted event using Neo N3 standards
+    impl LotteryCompleted {
+        /// Static method to emit the LotteryCompleted event in Neo N3 format
+        pub fn emit(round_id: u32, total_participants: u32, total_tickets: u32, total_prize: u64, commission_amount: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("LotteryCompleted");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(round_id));
+            event_data.push(Any::from(total_participants));
+            event_data.push(Any::from(total_tickets));
+            event_data.push(Any::from(total_prize));
+            event_data.push(Any::from(commission_amount));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
     /// Lottery contract storage
@@ -133,21 +229,30 @@ mod neo_lottery {
         /// Initialize the lottery contract
         #[constructor]
         fn new(owner: Address, gas_token: Hash160) -> Self {
-            Self {
-                owner: Item::new(owner),
-                current_round_id: Item::new(0),
+            let mut instance = Self {
+                owner: Item::new("owner"),
+                current_round_id: Item::new("current_round_id"),
                 rounds: Map::new(),
                 user_tickets: Map::new(),
                 ticket_purchases: Map::new(),
                 ticket_owners: Map::new(),
                 round_participants: Map::new(),
-                gas_token: Item::new(gas_token),
-                commission_collector: Item::new(owner), // Default to owner
-            }
+                gas_token: Item::new("gas_token"),
+                commission_collector: Item::new("commission_collector"),
+            };
+            
+            // Initialize with proper values
+            instance.owner.set(owner);
+            instance.current_round_id.set(0);
+            instance.gas_token.set(gas_token);
+            instance.commission_collector.set(owner); // Default to owner
+            
+            instance
         }
         
         /// Create a new lottery round (owner only)
         #[method]
+        #[no_reentry]
         fn create_lottery(
             &mut self,
             ticket_price: u64,
@@ -155,8 +260,12 @@ mod neo_lottery {
             max_tickets_per_user: u32,
             commission_rate: u16,
         ) -> u32 {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can create lotteries");
+            // Verify caller is owner
+            let caller = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&caller), "Authentication failed");
+            
+            let owner = self.owner.get().unwrap_or_default();
+            assert!(caller == owner, "Only owner can create lotteries");
             
             // Validate inputs
             assert!(ticket_price > 0, "Ticket price must be greater than 0");
@@ -164,11 +273,11 @@ mod neo_lottery {
             assert!(commission_rate <= 2000, "Commission cannot exceed 20%"); // Max 20%
             
             // Calculate times
-            let current_time = runtime::time();
+            let current_time = Runtime::time();
             let end_time = current_time + (duration_hours as u64 * 3600); // hours to seconds
             
             // Get next round ID
-            let round_id = *self.current_round_id.get() + 1;
+            let round_id = self.current_round_id.get().unwrap_or_default() + 1;
             self.current_round_id.set(round_id);
             
             // Create lottery round
@@ -192,93 +301,82 @@ mod neo_lottery {
             // Initialize participants list
             self.round_participants.insert(round_id, Vec::new());
             
-            // Emit event
-            self.emit(LotteryCreated {
+            // Emit event with proper Neo N3 format
+            LotteryCreated::emit(
                 round_id,
                 ticket_price,
-                start_time: current_time,
+                current_time,
                 end_time,
-                max_tickets_per_user,
-            });
+                max_tickets_per_user
+            );
             
             round_id
         }
         
         /// Purchase lottery tickets
         #[method]
+        #[no_reentry]
         fn buy_tickets(&mut self, round_id: u32, ticket_count: u32) -> bool {
-            let buyer = runtime::calling_script_hash();
+            // Validate inputs
+            assert!(ticket_count > 0, "Must purchase at least one ticket");
             
-            // Verify buyer signature
-            assert!(runtime::check_witness(&buyer), "Invalid signature");
-            
-            // Check if lottery round exists and is active
+            // Get lottery round
             let mut lottery = self.rounds.get(&round_id).expect("Lottery round not found");
-            assert!(lottery.status == LotteryStatus::Active, "Lottery is not active");
             
-            // Check if lottery is still open
-            let current_time = runtime::time();
+            // Verify lottery is active
+            assert!(lottery.status == LotteryStatus::Active, "Lottery not active");
+            
+            // Check if lottery has ended
+            let current_time = Runtime::time();
             assert!(current_time < lottery.end_time, "Lottery has ended");
             
-            // Check if ticket count is valid
-            assert!(ticket_count > 0, "Must buy at least one ticket");
+            // Get buyer address
+            let buyer = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&buyer), "Authentication failed");
             
-            // Check max tickets per user if set
+            // Check max tickets per user
             if lottery.max_tickets_per_user > 0 {
-                let current_tickets = self.user_tickets.get(&(round_id, buyer)).unwrap_or_default();
-                assert!(
-                    current_tickets + ticket_count <= lottery.max_tickets_per_user,
-                    "Would exceed max tickets per user"
-                );
+                let user_tickets = self.user_tickets.get(&(round_id, buyer)).unwrap_or_default();
+                assert!(user_tickets + ticket_count <= lottery.max_tickets_per_user, 
+                       "Exceeds maximum tickets per user");
             }
             
-            // Calculate total cost
+            // Calculate cost
             let total_cost = lottery.ticket_price * ticket_count as u64;
             
             // Transfer GAS from buyer to contract
-            let gas_token = *self.gas_token.get();
-            let transferred: bool = self.call_contract(
-                &gas_token,
-                "transfer",
-                (buyer, runtime::executing_script_hash(), total_cost, ByteArray::new())
-            ).expect("GAS transfer failed");
+            let gas_token = self.gas_token.get().unwrap_or_default();
             
-            assert!(transferred, "Failed to transfer GAS tokens");
+            // Use proper NEP-17 transfer_from for Neo N3
+            let mut transfer_args = Array::<Any>::new();
+            transfer_args.push(Any::from(buyer));
+            transfer_args.push(Any::from(Runtime::executing_script_hash()));
+            transfer_args.push(Any::from(total_cost));
+            transfer_args.push(Any::from(ByteArray::new())); // Add data parameter for NEP-17
             
-            // Update lottery round data
+            let success = Runtime::call_contract(&gas_token, "transfer", &transfer_args)
+                .expect("Failed to call transfer")
+                .as_bool()
+                .expect("Invalid transfer response");
+                
+            assert!(success, "Token transfer failed");
+            
+            // Update lottery
             lottery.tickets_sold += ticket_count;
             lottery.pot_size += total_cost;
+            
+            // Update storage
             self.rounds.insert(round_id, lottery.clone());
             
-            // Update user tickets count
-            let current_tickets = self.user_tickets.get(&(round_id, buyer)).unwrap_or_default();
-            self.user_tickets.insert((round_id, buyer), current_tickets + ticket_count);
+            // Update user tickets
+            let user_tickets = self.user_tickets.get(&(round_id, buyer)).unwrap_or_default();
+            self.user_tickets.insert((round_id, buyer), user_tickets + ticket_count);
             
-            // Generate ticket numbers for this purchase
-            let mut ticket_numbers = Vec::with_capacity(ticket_count as usize);
-            
-            // Use various inputs for "randomness" in ticket numbers
-            let block = runtime::get_block();
-            let block_hash_bytes = block.hash;
-            let timestamp = current_time.to_ne_bytes();
-            let buyer_bytes = buyer.to_byte_array();
-            
-            for i in 0..ticket_count {
-                // Combine inputs for ticket number generation
-                let mut seed_bytes = Vec::new();
-                seed_bytes.extend_from_slice(&block_hash_bytes);
-                seed_bytes.extend_from_slice(&timestamp);
-                seed_bytes.extend_from_slice(&buyer_bytes);
-                seed_bytes.extend_from_slice(&i.to_ne_bytes());
-                
-                // Generate number using a simple hash-based method
-                // In a real implementation, this could be more sophisticated
-                let ticket_number = ((seed_bytes[0] as u32) << 24) |
-                                    ((seed_bytes[1] as u32) << 16) |
-                                    ((seed_bytes[2] as u32) << 8) |
-                                     (seed_bytes[3] as u32);
-                
-                ticket_numbers.push(ticket_number);
+            // Add user to participants if first purchase
+            if user_tickets == 0 {
+                let mut participants = self.round_participants.get(&round_id).unwrap_or_default();
+                participants.push(buyer);
+                self.round_participants.insert(round_id, participants);
             }
             
             // Record ticket purchase
@@ -287,151 +385,135 @@ mod neo_lottery {
                 user: buyer,
                 ticket_count,
                 purchase_time: current_time,
-                ticket_numbers,
+                ticket_numbers: self.generate_ticket_numbers(round_id, buyer, ticket_count),
             };
             
-            let purchase_index = current_tickets; // Use current ticket count as index
+            let purchase_index = user_tickets / 10; // Group purchases in batches of 10
             self.ticket_purchases.insert((round_id, buyer, purchase_index), purchase);
             
-            // Map individual tickets to the buyer
-            let start_index = lottery.tickets_sold - ticket_count;
+            // Record ticket ownership
+            let start_ticket = lottery.tickets_sold - ticket_count + 1;
             for i in 0..ticket_count {
-                let ticket_index = start_index + i;
-                self.ticket_owners.insert((round_id, ticket_index), buyer);
+                let ticket_number = start_ticket + i;
+                self.ticket_owners.insert((round_id, ticket_number), buyer);
             }
             
-            // Add buyer to participants list if first purchase
-            if current_tickets == 0 {
-                let mut participants = self.round_participants.get(&round_id).unwrap_or_default();
-                participants.push(buyer);
-                self.round_participants.insert(round_id, participants);
-            }
-            
-            // Emit event
-            self.emit(TicketsPurchased {
-                round_id,
-                user: buyer,
-                ticket_count,
-                total_cost,
-            });
+            // Emit event with proper Neo N3 format
+            TicketsPurchased::emit(round_id, buyer, ticket_count, total_cost);
             
             true
         }
         
         /// Complete a lottery round and select winner(s)
         #[method]
+        #[no_reentry]
         fn complete_lottery(&mut self, round_id: u32) -> bool {
-            let caller = runtime::calling_script_hash();
+            // Verify caller is owner
+            let caller = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&caller), "Authentication failed");
             
-            // Check if lottery round exists
+            let owner = self.owner.get().unwrap_or_default();
+            assert!(caller == owner, "Only owner can complete lotteries");
+            
+            // Get lottery round
             let mut lottery = self.rounds.get(&round_id).expect("Lottery round not found");
             
-            // Check if lottery can be completed
-            let current_time = runtime::time();
+            // Verify lottery can be completed
+            assert!(lottery.status == LotteryStatus::Active, "Lottery not active");
             
-            // Owner can complete early, anyone else must wait until end_time
-            if caller != *self.owner.get() {
-                assert!(current_time >= lottery.end_time, "Lottery hasn't ended yet");
-            }
+            // Check if lottery has ended
+            let current_time = Runtime::time();
+            assert!(current_time >= lottery.end_time, "Lottery has not ended yet");
             
-            // Check lottery status
-            assert!(lottery.status == LotteryStatus::Active, "Lottery is not active");
+            // Verify tickets were sold
+            assert!(lottery.tickets_sold > 0, "No tickets sold");
             
-            // Check if any tickets were sold
-            if lottery.tickets_sold == 0 {
-                // No tickets sold - mark as completed without winners
-                lottery.status = LotteryStatus::Completed;
-                self.rounds.insert(round_id, lottery);
-                
-                self.emit(LotteryCompleted {
-                    round_id,
-                    total_participants: 0,
-                    total_tickets: 0,
-                    total_prize: 0,
-                    commission_amount: 0,
-                });
-                
-                return true;
-            }
-            
-            // Get current block number
-            let current_block = runtime::get_block().index;
+            // Get current block for randomness
+            let current_block = Ledger::current_index();
             lottery.winning_block = current_block;
             
-            // Calculate commission amount
+            // Calculate prize and commission
             let commission_amount = (lottery.pot_size * lottery.commission_rate as u64) / 10000;
-            let prize_pool = lottery.pot_size - commission_amount;
+            let prize_amount = lottery.pot_size - commission_amount;
             
-            // Transfer commission to collector
-            if commission_amount > 0 {
-                let gas_token = *self.gas_token.get();
-                let commission_collector = *self.commission_collector.get();
-                
-                let transferred: bool = self.call_contract(
-                    &gas_token,
-                    "transfer",
-                    (runtime::executing_script_hash(), commission_collector, commission_amount, ByteArray::new())
-                ).expect("Commission transfer failed");
-                
-                assert!(transferred, "Failed to transfer commission");
-            }
-            
-            // Select winner using the next block hash as randomness source
-            // In a real implementation, we'd wait for the next block hash for better randomness
-            // For this example, we'll use the current block hash
-            
-            let block_hash = runtime::get_block().hash;
-            
-            // Convert hash to a large number and take modulo of tickets_sold to get winner ticket index
-            let winner_ticket_index = (((block_hash[0] as u32) << 24) |
-                                      ((block_hash[1] as u32) << 16) |
-                                      ((block_hash[2] as u32) << 8) |
-                                       (block_hash[3] as u32)) % lottery.tickets_sold;
+            // Select winner using block hash as randomness
+            let block = Ledger::get_block(current_block).expect("Failed to get block");
+            let block_hash = block.hash;
+            let random_number = self.bytes_to_u32(&block_hash) % lottery.tickets_sold + 1;
             
             // Get winner address
-            let winner = self.ticket_owners.get(&(round_id, winner_ticket_index)).expect("Winner not found");
+            let winner = self.ticket_owners.get(&(round_id, random_number))
+                .expect("Failed to get winner");
+            
+            // Add winner to lottery
             lottery.winners.push(winner);
-            
-            // Transfer prize to winner
-            let gas_token = *self.gas_token.get();
-            let transferred: bool = self.call_contract(
-                &gas_token,
-                "transfer",
-                (runtime::executing_script_hash(), winner, prize_pool, ByteArray::new())
-            ).expect("Prize transfer failed");
-            
-            assert!(transferred, "Failed to transfer prize");
             
             // Update lottery status
             lottery.status = LotteryStatus::Completed;
-            self.rounds.insert(round_id, lottery.clone());
             
-            // Emit events
-            self.emit(WinnerSelected {
-                round_id,
-                winner,
-                prize_amount: prize_pool,
-                winning_block: current_block,
-            });
+            // Update storage
+            self.rounds.insert(round_id, lottery);
             
+            // Transfer prize to winner
+            let gas_token = self.gas_token.get().unwrap_or_default();
+            
+            // Use proper NEP-17 transfer for Neo N3
+            let mut transfer_args = Array::<Any>::new();
+            transfer_args.push(Any::from(Runtime::executing_script_hash()));
+            transfer_args.push(Any::from(winner));
+            transfer_args.push(Any::from(prize_amount));
+            transfer_args.push(Any::from(ByteArray::new())); // data parameter
+            
+            let success = Runtime::call_contract(&gas_token, "transfer", &transfer_args)
+                .expect("Failed to call transfer")
+                .as_bool()
+                .expect("Invalid transfer response");
+                
+            assert!(success, "Prize transfer failed");
+            
+            // Transfer commission to collector
+            if commission_amount > 0 {
+                let collector = self.commission_collector.get().unwrap_or_default();
+                
+                let mut transfer_args = Array::<Any>::new();
+                transfer_args.push(Any::from(Runtime::executing_script_hash()));
+                transfer_args.push(Any::from(collector));
+                transfer_args.push(Any::from(commission_amount));
+                transfer_args.push(Any::from(ByteArray::new())); // data parameter
+                
+                let success = Runtime::call_contract(&gas_token, "transfer", &transfer_args)
+                    .expect("Failed to call transfer")
+                    .as_bool()
+                    .expect("Invalid transfer response");
+                    
+                assert!(success, "Commission transfer failed");
+            }
+            
+            // Emit winner event with proper Neo N3 format
+            WinnerSelected::emit(round_id, winner, prize_amount, current_block);
+            
+            // Emit completion event with proper Neo N3 format
             let participants = self.round_participants.get(&round_id).unwrap_or_default();
-            
-            self.emit(LotteryCompleted {
+            LotteryCompleted::emit(
                 round_id,
-                total_participants: participants.len() as u32,
-                total_tickets: lottery.tickets_sold,
-                total_prize: prize_pool,
-                commission_amount,
-            });
+                participants.len() as u32,
+                lottery.tickets_sold,
+                prize_amount,
+                commission_amount
+            );
             
             true
         }
         
         /// Update commission collector address (owner only)
         #[method]
+        #[no_reentry]
         fn set_commission_collector(&mut self, collector: Address) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can set commission collector");
+            let caller = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&caller), "Authentication failed");
+            
+            let owner = self.owner.get().unwrap_or_default();
+            assert!(caller == owner, "Only owner can set commission collector");
             
             self.commission_collector.set(collector);
             true
@@ -439,9 +521,13 @@ mod neo_lottery {
         
         /// Cancel a lottery round and refund participants (owner only)
         #[method]
+        #[no_reentry]
         fn cancel_lottery(&mut self, round_id: u32) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can cancel lottery");
+            let caller = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&caller), "Authentication failed");
+            
+            let owner = self.owner.get().unwrap_or_default();
+            assert!(caller == owner, "Only owner can cancel lottery");
             
             // Check if lottery round exists
             let mut lottery = self.rounds.get(&round_id).expect("Lottery round not found");
@@ -451,20 +537,26 @@ mod neo_lottery {
             
             // Process refunds
             let participants = self.round_participants.get(&round_id).unwrap_or_default();
-            let gas_token = *self.gas_token.get();
+            let gas_token = self.gas_token.get().unwrap_or_default();
             
             for participant in participants {
                 let tickets_bought = self.user_tickets.get(&(round_id, participant)).unwrap_or_default();
                 let refund_amount = tickets_bought as u64 * lottery.ticket_price;
                 
                 if refund_amount > 0 {
-                    let transferred: bool = self.call_contract(
-                        &gas_token,
-                        "transfer",
-                        (runtime::executing_script_hash(), participant, refund_amount, ByteArray::new())
-                    ).expect("Refund transfer failed");
+                    // Use proper NEP-17 transfer for Neo N3
+                    let mut transfer_args = Array::<Any>::new();
+                    transfer_args.push(Any::from(Runtime::executing_script_hash()));
+                    transfer_args.push(Any::from(participant));
+                    transfer_args.push(Any::from(refund_amount));
+                    transfer_args.push(Any::from(ByteArray::new())); // data parameter
                     
-                    assert!(transferred, "Failed to transfer refund");
+                    let success = Runtime::call_contract(&gas_token, "transfer", &transfer_args)
+                        .expect("Failed to call transfer")
+                        .as_bool()
+                        .expect("Invalid transfer response");
+                        
+                    assert!(success, "Refund transfer failed");
                 }
             }
             
@@ -477,6 +569,7 @@ mod neo_lottery {
         
         /// Create a recurring lottery that starts immediately after the previous one ends
         #[method]
+        #[no_reentry]
         fn create_recurring_lottery(
             &mut self,
             ticket_price: u64,
@@ -485,8 +578,11 @@ mod neo_lottery {
             commission_rate: u16,
             iterations: u32,
         ) -> bool {
-            let caller = runtime::calling_script_hash();
-            assert!(caller == *self.owner.get(), "Only owner can create recurring lotteries");
+            let caller = Runtime::calling_script_hash();
+            assert!(Runtime::check_witness(&caller), "Authentication failed");
+            
+            let owner = self.owner.get().unwrap_or_default();
+            assert!(caller == owner, "Only owner can create recurring lotteries");
             
             // Validate inputs
             assert!(ticket_price > 0, "Ticket price must be greater than 0");
@@ -510,6 +606,7 @@ mod neo_lottery {
         }
         
         /// Get lottery round information
+        #[method]
         #[safe]
         fn get_lottery_info(&self, round_id: u32) -> Option<(u64, u64, u64, u32, u64, u16, u8)> {
             let lottery = self.rounds.get(&round_id)?;
@@ -532,6 +629,7 @@ mod neo_lottery {
         }
         
         /// Get lottery winners
+        #[method]
         #[safe]
         fn get_lottery_winners(&self, round_id: u32) -> Option<Vec<Address>> {
             let lottery = self.rounds.get(&round_id)?;
@@ -540,12 +638,14 @@ mod neo_lottery {
         }
         
         /// Get user tickets for a specific lottery round
+        #[method]
         #[safe]
         fn get_user_tickets(&self, round_id: u32, user: Address) -> u32 {
             self.user_tickets.get(&(round_id, user)).unwrap_or_default()
         }
         
         /// Get total participants in a lottery round
+        #[method]
         #[safe]
         fn get_total_participants(&self, round_id: u32) -> u32 {
             let participants = self.round_participants.get(&round_id).unwrap_or_default();
@@ -553,9 +653,10 @@ mod neo_lottery {
         }
         
         /// Get the current active lottery round ID
+        #[method]
         #[safe]
         fn get_current_lottery(&self) -> u32 {
-            let current_id = *self.current_round_id.get();
+            let current_id = self.current_round_id.get().unwrap_or_default();
             
             // Check if the current round is still active
             if current_id > 0 {
@@ -570,6 +671,7 @@ mod neo_lottery {
         }
         
         /// Check winning odds for a user in a specific lottery round
+        #[method]
         #[safe]
         fn get_winning_odds(&self, round_id: u32, user: Address) -> (u32, u32, u64) {
             let lottery = match self.rounds.get(&round_id) {
@@ -594,6 +696,47 @@ mod neo_lottery {
             };
             
             (user_odds_numerator, user_odds_denominator, potential_winnings)
+        }
+
+        /// Generate pseudo-random ticket numbers
+        fn generate_ticket_numbers(&self, round_id: u32, user: Address, count: u32) -> Vec<u32> {
+            let mut numbers = Vec::new();
+            
+            // Use multiple sources of entropy
+            let timestamp = Runtime::time();
+            let block_height = Ledger::current_index();
+            let block = Ledger::get_block(block_height).expect("Failed to get block");
+            let block_hash = block.hash;
+            
+            // Combine data for seed
+            let mut seed_data = Vec::new();
+            seed_data.extend_from_slice(&round_id.to_ne_bytes());
+            seed_data.extend_from_slice(&user.to_vec());
+            seed_data.extend_from_slice(&timestamp.to_ne_bytes());
+            seed_data.extend_from_slice(&block_height.to_ne_bytes());
+            seed_data.extend_from_slice(&block_hash);
+            
+            // Generate numbers
+            for i in 0..count {
+                seed_data.extend_from_slice(&i.to_ne_bytes());
+                let hash = Runtime::sha256(&seed_data);
+                let number = self.bytes_to_u32(&hash);
+                numbers.push(number);
+            }
+            
+            numbers
+        }
+
+        /// Convert bytes to u32
+        fn bytes_to_u32(&self, bytes: &[u8]) -> u32 {
+            let mut result = 0u32;
+            let len = bytes.len().min(4);
+            
+            for i in 0..len {
+                result = (result << 8) | bytes[i] as u32;
+            }
+            
+            result
         }
     }
 }

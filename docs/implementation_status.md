@@ -16,6 +16,8 @@ This document provides an overview of what features are currently implemented an
 | Contract Call Interface | ✅ | Interface for calling other contracts |
 | Contract Update | ✅ | Contract upgrade functionality |
 | Security Features | ✅ | Reentrancy protection, safe methods |
+| No_std Compatibility | ✅ | Full support for no_std environments with alloc crate |
+| Code Quality | ✅ | Lint-free codebase with proper variable usage |
 
 ## Compiler
 

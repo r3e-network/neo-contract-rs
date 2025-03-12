@@ -5,7 +5,6 @@
 use crate::{env, types::*};
 use crate::prelude::{H160, ByteString, Array, Any, Int256};
 use crate::runtime::Runtime;
-use neo_contract_proc_macros::safe;
 use crate::transaction_attribute_type::TransactionAttributeType;
 
 /// Policy native contract for system policy management

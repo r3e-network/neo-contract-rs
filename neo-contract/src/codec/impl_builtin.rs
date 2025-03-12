@@ -258,12 +258,17 @@ impl Codec for Array {
 // Extension methods to make Array serialization easier
 impl Array {
     /// Create a new Array with initial data
-    pub fn new_with_data(data: Vec<Any>) -> Self {
-        Array(data)
+    pub fn new_with_data(data: alloc::vec::Vec<Any>) -> Self {
+        // Create an empty array and then populate it using public methods
+        let mut array = Self::new();
+        for item in data {
+            array.push(item);
+        }
+        array
     }
     
     /// Serialize an Array to bytes (for storage)
-    pub fn serialize(&self) -> Vec<u8> {
+    pub fn serialize(&self) -> alloc::vec::Vec<u8> {
         self.encode()
     }
     

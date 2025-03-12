@@ -1,4 +1,11 @@
-//! # On-Chain RPG Game
+#![no_std]
+
+extern crate alloc;
+
+use alloc::string::String;
+use alloc::vec::Vec;
+
+//! # On-Chain RPG Game for Neo N3
 //!
 //! A simple on-chain RPG game with character management, inventory,
 //! quests, and combat mechanics. This example demonstrates how complex
@@ -7,6 +14,8 @@
 #[neo_contract::contract]
 mod neo_rpg {
     use neo_contract::prelude::*;
+    use alloc::string::String;
+    use alloc::vec::Vec;
     
     /// Character stats
     #[derive(Debug, Clone, Encode, Decode)]
@@ -190,11 +199,50 @@ mod neo_rpg {
         class: u8, // 0=Warrior, 1=Rogue, 2=Mage, 3=Ranger, 4=Cleric
     }
     
+    /// Implementation for properly emitting the CharacterCreated event using Neo N3 standards
+    impl CharacterCreated {
+        /// Static method to emit the CharacterCreated event in Neo N3 format
+        pub fn emit(player: Address, name: String, class: u8) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("CharacterCreated");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(player));
+            event_data.push(Any::from(name));
+            event_data.push(Any::from(class));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
     #[event]
     struct LevelUp {
         #[index]
         player: Address,
         new_level: u16,
+    }
+    
+    /// Implementation for properly emitting the LevelUp event using Neo N3 standards
+    impl LevelUp {
+        /// Static method to emit the LevelUp event in Neo N3 format
+        pub fn emit(player: Address, new_level: u16) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("LevelUp");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(player));
+            event_data.push(Any::from(new_level));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
     #[event]
@@ -205,11 +253,50 @@ mod neo_rpg {
         quantity: u32,
     }
     
+    /// Implementation for properly emitting the ItemAcquired event using Neo N3 standards
+    impl ItemAcquired {
+        /// Static method to emit the ItemAcquired event in Neo N3 format
+        pub fn emit(player: Address, item_id: u32, quantity: u32) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("ItemAcquired");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(player));
+            event_data.push(Any::from(item_id));
+            event_data.push(Any::from(quantity));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
     #[event]
     struct QuestStarted {
         #[index]
         player: Address,
         quest_id: u32,
+    }
+    
+    /// Implementation for properly emitting the QuestStarted event using Neo N3 standards
+    impl QuestStarted {
+        /// Static method to emit the QuestStarted event in Neo N3 format
+        pub fn emit(player: Address, quest_id: u32) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("QuestStarted");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(player));
+            event_data.push(Any::from(quest_id));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
     #[event]
@@ -221,6 +308,27 @@ mod neo_rpg {
         reward_gold: u64,
     }
     
+    /// Implementation for properly emitting the QuestCompleted event using Neo N3 standards
+    impl QuestCompleted {
+        /// Static method to emit the QuestCompleted event in Neo N3 format
+        pub fn emit(player: Address, quest_id: u32, reward_exp: u64, reward_gold: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("QuestCompleted");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(player));
+            event_data.push(Any::from(quest_id));
+            event_data.push(Any::from(reward_exp));
+            event_data.push(Any::from(reward_gold));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
     #[event]
     struct CombatResult {
         #[index]
@@ -229,6 +337,28 @@ mod neo_rpg {
         victory: bool,
         reward_exp: u64,
         reward_gold: u64,
+    }
+    
+    /// Implementation for properly emitting the CombatResult event using Neo N3 standards
+    impl CombatResult {
+        /// Static method to emit the CombatResult event in Neo N3 format
+        pub fn emit(player: Address, monster_id: u32, victory: bool, reward_exp: u64, reward_gold: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("CombatResult");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(player));
+            event_data.push(Any::from(monster_id));
+            event_data.push(Any::from(victory));
+            event_data.push(Any::from(reward_exp));
+            event_data.push(Any::from(reward_gold));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
     /// Game storage
@@ -278,21 +408,30 @@ mod neo_rpg {
         #[constructor]
         fn new(admin: Address) -> Self {
             let mut instance = Self {
-                admin: Item::new(admin),
-                characters: Map::new(),
-                items: Map::new(),
-                next_item_id: Item::new(1),
-                quests: Map::new(),
-                next_quest_id: Item::new(1),
-                monsters: Map::new(),
-                next_monster_id: Item::new(1),
-                quest_progress: Map::new(),
-                combat_sessions: Map::new(),
-                level_exp_requirements: Map::new(),
-                max_level: Item::new(50),
-                max_inventory: Item::new(100),
-                base_attack_cooldown: Item::new(10), // 10 seconds
+                admin: Item::new("admin"),
+                characters: Map::new("characters"),
+                items: Map::new("items"),
+                next_item_id: Item::new("next_item_id"),
+                quests: Map::new("quests"),
+                next_quest_id: Item::new("next_quest_id"),
+                monsters: Map::new("monsters"),
+                next_monster_id: Item::new("next_monster_id"),
+                quest_progress: Map::new("quest_progress"),
+                combat_sessions: Map::new("combat_sessions"),
+                level_exp_requirements: Map::new("level_exp_requirements"),
+                max_level: Item::new("max_level"),
+                max_inventory: Item::new("max_inventory"),
+                base_attack_cooldown: Item::new("base_attack_cooldown"),
             };
+            
+            // Initialize values
+            instance.admin.set(admin);
+            instance.next_item_id.set(1);
+            instance.next_quest_id.set(1);
+            instance.next_monster_id.set(1);
+            instance.max_level.set(50);
+            instance.max_inventory.set(100);
+            instance.base_attack_cooldown.set(10); // 10 seconds
             
             // Initialize level experience requirements
             let max_level = *instance.max_level.get();
@@ -307,11 +446,12 @@ mod neo_rpg {
         
         /// Create a new character
         #[method]
+        #[no_reentry]
         fn create_character(&mut self, name: String, class_id: u8) -> bool {
-            let player = runtime::calling_script_hash();
+            let player = Runtime::calling_script_hash();
             
             // Verify player signature
-            assert!(runtime::check_witness(&player), "Invalid signature");
+            assert!(Runtime::check_witness(&player), "Invalid signature");
             
             // Check if player already has a character
             assert!(!self.characters.contains_key(&player), "Player already has a character");
@@ -374,7 +514,7 @@ mod neo_rpg {
             
             // Create character
             let character = Character {
-                name,
+                name: name.clone(),
                 class,
                 level: 1,
                 experience: 0,
@@ -390,8 +530,8 @@ mod neo_rpg {
                 equipped_accessory: None,
                 completed_quests: Vec::new(),
                 active_quests: Vec::new(),
-                created_at: runtime::time(),
-                last_action: runtime::time(),
+                created_at: Runtime::time(),
+                last_action: Runtime::time(),
             };
             
             // Add starter items based on class
@@ -417,18 +557,15 @@ mod neo_rpg {
             self.equip_item(&player, starter_weapon_id);
             self.equip_item(&player, starter_armor_id);
             
-            // Emit event
-            self.emit(CharacterCreated {
-                player,
-                name: self.characters.get(&player).unwrap().name.clone(),
-                class: class_id,
-            });
+            // Emit event with proper Neo N3 format
+            CharacterCreated::emit(player, name, class_id);
             
             true
         }
         
         /// Add a new item to the game (admin only)
         #[method]
+        #[no_reentry]
         fn add_item(
             &mut self,
             name: String,
@@ -443,7 +580,7 @@ mod neo_rpg {
             luck: Option<u16>,
             value: u64,
         ) -> u32 {
-            let caller = runtime::calling_script_hash();
+            let caller = Runtime::calling_script_hash();
             assert!(caller == *self.admin.get(), "Only admin can add items");
             
             // Convert item type ID to enum
@@ -516,6 +653,7 @@ mod neo_rpg {
         
         /// Add a new quest to the game (admin only)
         #[method]
+        #[no_reentry]
         fn add_quest(
             &mut self,
             name: String,
@@ -530,7 +668,7 @@ mod neo_rpg {
             reward_item_ids: Vec<u32>,
             reward_item_quantities: Vec<u32>,
         ) -> u32 {
-            let caller = runtime::calling_script_hash();
+            let caller = Runtime::calling_script_hash();
             assert!(caller == *self.admin.get(), "Only admin can add quests");
             
             // Validate inputs
@@ -592,6 +730,7 @@ mod neo_rpg {
         
         /// Add a new monster to the game (admin only)
         #[method]
+        #[no_reentry]
         fn add_monster(
             &mut self,
             name: String,
@@ -604,7 +743,7 @@ mod neo_rpg {
             drop_item_ids: Vec<u32>,
             drop_chances: Vec<u8>,
         ) -> u32 {
-            let caller = runtime::calling_script_hash();
+            let caller = Runtime::calling_script_hash();
             assert!(caller == *self.admin.get(), "Only admin can add monsters");
             
             // Validate inputs
@@ -643,11 +782,12 @@ mod neo_rpg {
         
         /// Start a quest
         #[method]
+        #[no_reentry]
         fn start_quest(&mut self, quest_id: u32) -> bool {
-            let player = runtime::calling_script_hash();
+            let player = Runtime::calling_script_hash();
             
             // Verify player signature
-            assert!(runtime::check_witness(&player), "Invalid signature");
+            assert!(Runtime::check_witness(&player), "Invalid signature");
             
             // Check if quest exists
             let quest = self.quests.get(&quest_id).expect("Quest not found");
@@ -682,7 +822,7 @@ mod neo_rpg {
             let progress = QuestProgress {
                 quest_id,
                 objectives_progress: vec![0; quest.objectives.len()],
-                started_at: runtime::time(),
+                started_at: Runtime::time(),
             };
             
             // Update character active quests
@@ -694,21 +834,19 @@ mod neo_rpg {
             self.quest_progress.insert((player, quest_id), progress);
             
             // Emit event
-            self.emit(QuestStarted {
-                player,
-                quest_id,
-            });
+            QuestStarted::emit(player, quest_id);
             
             true
         }
         
         /// Update quest progress
         #[method]
+        #[no_reentry]
         fn update_quest_progress(&mut self, quest_id: u32, objective_index: u32, progress: u32) -> bool {
-            let player = runtime::calling_script_hash();
+            let player = Runtime::calling_script_hash();
             
             // Verify player signature
-            assert!(runtime::check_witness(&player), "Invalid signature");
+            assert!(Runtime::check_witness(&player), "Invalid signature");
             
             // Check if player has the quest active
             let character = self.characters.get(&player).expect("Character not found");
@@ -746,11 +884,12 @@ mod neo_rpg {
         
         /// Start combat with a monster
         #[method]
+        #[no_reentry]
         fn start_combat(&mut self, monster_id: u32) -> bool {
-            let player = runtime::calling_script_hash();
+            let player = Runtime::calling_script_hash();
             
             // Verify player signature
-            assert!(runtime::check_witness(&player), "Invalid signature");
+            assert!(Runtime::check_witness(&player), "Invalid signature");
             
             // Check if player has a character
             let character = self.characters.get(&player).expect("Character not found");
@@ -770,7 +909,7 @@ mod neo_rpg {
                 monster_id,
                 monster_current_health: monster.health,
                 combat_log: Vec::new(),
-                started_at: runtime::time(),
+                started_at: Runtime::time(),
                 status: CombatStatus::InProgress,
             };
             
@@ -782,11 +921,12 @@ mod neo_rpg {
         
         /// Perform attack in combat
         #[method]
+        #[no_reentry]
         fn attack(&mut self) -> bool {
-            let player = runtime::calling_script_hash();
+            let player = Runtime::calling_script_hash();
             
             // Verify player signature
-            assert!(runtime::check_witness(&player), "Invalid signature");
+            assert!(Runtime::check_witness(&player), "Invalid signature");
             
             // Check if player has an active combat session
             let mut combat_session = self.combat_sessions.get(&player).expect("No active combat");
@@ -802,16 +942,16 @@ mod neo_rpg {
             // Check cooldown
             let cooldown = *self.base_attack_cooldown.get();
             assert!(
-                runtime::time() >= character.last_action + cooldown,
+                Runtime::time() >= character.last_action + cooldown,
                 "Attack on cooldown"
             );
             
             // Calculate character attack
-            let attack_value = self.calculate_attack_damage(&character, &monster);
+            let mut attack_value = self.calculate_attack_damage(&character, &monster);
             let critical = self.roll_critical(&character);
             
             if critical {
-                let attack_value = attack_value * 2;
+                attack_value = attack_value * 2;
             }
             
             // Apply damage to monster
@@ -829,7 +969,7 @@ mod neo_rpg {
                 defender: monster.name.clone(),
                 damage: attack_value,
                 critical,
-                timestamp: runtime::time(),
+                timestamp: Runtime::time(),
             });
             
             // If monster still alive, it counter-attacks
@@ -852,12 +992,12 @@ mod neo_rpg {
                     defender: character.name.clone(),
                     damage: monster_attack,
                     critical: false,
-                    timestamp: runtime::time(),
+                    timestamp: Runtime::time(),
                 });
             }
             
             // Update last action timestamp
-            character.last_action = runtime::time();
+            character.last_action = Runtime::time();
             
             // If combat ended, process results
             if combat_session.status != CombatStatus::InProgress {
@@ -873,11 +1013,12 @@ mod neo_rpg {
         
         /// Equip an item
         #[method]
+        #[no_reentry]
         fn equip_item(&mut self, item_id: u32) -> bool {
-            let player = runtime::calling_script_hash();
+            let player = Runtime::calling_script_hash();
             
             // Verify player signature
-            assert!(runtime::check_witness(&player), "Invalid signature");
+            assert!(Runtime::check_witness(&player), "Invalid signature");
             
             // Check if player has a character
             let mut character = self.characters.get(&player).expect("Character not found");
@@ -963,11 +1104,12 @@ mod neo_rpg {
         
         /// Use a consumable item
         #[method]
+        #[no_reentry]
         fn use_item(&mut self, item_id: u32) -> bool {
-            let player = runtime::calling_script_hash();
+            let player = Runtime::calling_script_hash();
             
             // Verify player signature
-            assert!(runtime::check_witness(&player), "Invalid signature");
+            assert!(Runtime::check_witness(&player), "Invalid signature");
             
             // Check if player has a character
             let mut character = self.characters.get(&player).expect("Character not found");
@@ -1019,11 +1161,12 @@ mod neo_rpg {
         
         /// Rest to restore health and mana
         #[method]
+        #[no_reentry]
         fn rest(&mut self) -> bool {
-            let player = runtime::calling_script_hash();
+            let player = Runtime::calling_script_hash();
             
             // Verify player signature
-            assert!(runtime::check_witness(&player), "Invalid signature");
+            assert!(Runtime::check_witness(&player), "Invalid signature");
             
             // Check if player has a character
             let mut character = self.characters.get(&player).expect("Character not found");
@@ -1043,7 +1186,7 @@ mod neo_rpg {
             character.mana = u32::min(character.mana + mana_restore, character.max_mana);
             
             // Update last action timestamp
-            character.last_action = runtime::time();
+            character.last_action = Runtime::time();
             
             // Store updated character
             self.characters.insert(player, character);
@@ -1052,6 +1195,7 @@ mod neo_rpg {
         }
         
         /// Get character info
+        #[method]
         #[safe]
         fn get_character(&self, player: Address) -> Option<(
             String, u8, u16, u64, u64, u32, u32, u32, u32, u32, u32, u32
@@ -1076,6 +1220,7 @@ mod neo_rpg {
         }
         
         /// Get character inventory
+        #[method]
         #[safe]
         fn get_inventory(&self, player: Address) -> Vec<(u32, u32, bool)> {
             let character = match self.characters.get(&player) {
@@ -1090,6 +1235,7 @@ mod neo_rpg {
         }
         
         /// Get item details
+        #[method]
         #[safe]
         fn get_item(&self, item_id: u32) -> Option<(
             String, u8, u8, u16, Option<u8>, Option<u16>, Option<u16>, Option<u16>, Option<u16>, Option<u16>, u64
@@ -1113,6 +1259,7 @@ mod neo_rpg {
         }
         
         /// Get quest details
+        #[method]
         #[safe]
         fn get_quest(&self, quest_id: u32) -> Option<(
             String, String, u16, u64, u64
@@ -1130,6 +1277,7 @@ mod neo_rpg {
         }
         
         /// Get quest objectives
+        #[method]
         #[safe]
         fn get_quest_objectives(&self, quest_id: u32) -> Vec<(u8, u32, u32)> {
             let quest = match self.quests.get(&quest_id) {
@@ -1148,6 +1296,7 @@ mod neo_rpg {
         }
         
         /// Get quest progress for a player
+        #[method]
         #[safe]
         fn get_quest_progress(&self, player: Address, quest_id: u32) -> Option<Vec<u32>> {
             let progress = self.quest_progress.get(&(player, quest_id))?;
@@ -1156,6 +1305,7 @@ mod neo_rpg {
         }
         
         /// Get active combat session
+        #[method]
         #[safe]
         fn get_combat_session(&self, player: Address) -> Option<(
             u32, u32, u8, Vec<(String, String, u32, bool)>
@@ -1262,12 +1412,8 @@ mod neo_rpg {
             // Store updated character
             self.characters.insert(*player, character);
             
-            // Emit event
-            self.emit(ItemAcquired {
-                player: *player,
-                item_id,
-                quantity,
-            });
+            // Emit event with proper Neo N3 format
+            ItemAcquired::emit(*player, item_id, quantity);
         }
         
         /// Check if a quest is complete
@@ -1314,19 +1460,14 @@ mod neo_rpg {
             // Store updated character
             self.characters.insert(*player, character);
             
-            // Emit event
-            self.emit(QuestCompleted {
-                player: *player,
-                quest_id: *quest_id,
-                reward_exp: quest.reward_experience,
-                reward_gold: quest.reward_gold,
-            });
+            // Emit event with proper Neo N3 format
+            QuestCompleted::emit(*player, *quest_id, quest.reward_experience, quest.reward_gold);
         }
         
         /// Update character stats based on equipped items
         fn update_character_stats(&mut self, character: &mut Character) {
             // Reset character to base stats for their level
-            let base_stats = self.calculate_base_stats(character.class, character.level);
+            let base_stats = self.calculate_base_stats(character.class.clone(), character.level);
             character.stats = base_stats.clone();
             
             // Calculate max health and mana from base stats
@@ -1426,7 +1567,7 @@ mod neo_rpg {
                 Class::Cleric => {
                     stats.intelligence += level_points / 2;
                     stats.vitality += level_points / 4;
-                    stats.wisdom += level_points / 4;
+                    stats.luck += level_points / 4; // Note: Changed from wisdom to luck since wisdom isn't defined
                 },
             }
             
@@ -1496,148 +1637,6 @@ mod neo_rpg {
             
             // Apply defense reduction
             let defense_reduction = u32::min(base_damage, character_defense);
-            let final_damage = base_damage - defense_reduction;
-            
-            final_damage
-        }
-        
-        /// Roll for critical hit based on luck
-        fn roll_critical(&self, character: &Character) -> bool {
-            // Get pseudo-random value based on block hash + timestamp
-            let block = runtime::get_block();
-            let timestamp = runtime::time();
-            
-            // Create "randomness" by hashing block hash with timestamp
-            let mut seed_bytes = Vec::new();
-            seed_bytes.extend_from_slice(&block.hash);
-            seed_bytes.extend_from_slice(&timestamp.to_ne_bytes());
-            
-            // Get last byte as random value 0-255
-            let random_value = seed_bytes[seed_bytes.len() - 1] as u16;
-            
-            // Critical chance based on luck (1% per point)
-            let crit_chance = character.stats.luck;
-            
-            // If random value is less than crit chance, it's a critical hit
-            random_value < crit_chance
-        }
-        
-        /// Process combat results
-        fn process_combat_result(&mut self, player: &Address, combat_session: &CombatSession) {
-            // Get character
-            let mut character = self.characters.get(player).expect("Character not found");
-            
-            if combat_session.status == CombatStatus::Victory {
-                // Get monster
-                let monster = self.monsters.get(&combat_session.monster_id).expect("Monster not found");
-                
-                // Grant experience
-                self.grant_experience(player, &mut character, monster.experience_reward);
-                
-                // Grant gold
-                character.gold += monster.gold_reward;
-                
-                // Check for item drops
-                for (item_id, drop_chance) in &monster.item_drops {
-                    // Simple "random" drop mechanism
-                    let block = runtime::get_block();
-                    let timestamp = runtime::time();
-                    
-                    // Create "randomness" by hashing block hash with timestamp and item
-                    let mut seed_bytes = Vec::new();
-                    seed_bytes.extend_from_slice(&block.hash);
-                    seed_bytes.extend_from_slice(&timestamp.to_ne_bytes());
-                    seed_bytes.extend_from_slice(&item_id.to_ne_bytes());
-                    
-                    // Get last byte as random value 0-255
-                    let random_value = seed_bytes[seed_bytes.len() - 1] as u8;
-                    
-                    // If random value is less than drop chance, the item drops
-                    if random_value < *drop_chance {
-                        self.add_item_to_player(player, *item_id, 1);
-                    }
-                }
-                
-                // Update quest progress for monster kills if needed
-                for quest_id in &character.active_quests {
-                    if let Some(quest) = self.quests.get(quest_id) {
-                        if let Some(progress) = self.quest_progress.get(&(*player, *quest_id)) {
-                            let mut updated_progress = progress.clone();
-                            let mut updated = false;
-                            
-                            // Check each objective
-                            for (i, objective) in quest.objectives.iter().enumerate() {
-                                if objective.objective_type == ObjectiveType::KillMonsters 
-                                    && objective.target_id == combat_session.monster_id {
-                                    
-                                    updated_progress.objectives_progress[i] += 1;
-                                    updated = true;
-                                }
-                            }
-                            
-                            if updated {
-                                // Store updated progress
-                                self.quest_progress.insert((*player, *quest_id), updated_progress.clone());
-                                
-                                // Check if quest is complete
-                                let is_complete = self.check_quest_completion(player, quest_id);
-                                
-                                // If complete, process rewards
-                                if is_complete {
-                                    self.complete_quest(player, quest_id);
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Emit combat result event
-                self.emit(CombatResult {
-                    player: *player,
-                    monster_id: combat_session.monster_id,
-                    victory: true,
-                    reward_exp: monster.experience_reward,
-                    reward_gold: monster.gold_reward,
-                });
-            } else {
-                // Character was defeated
-                // Set health to 1 (merciful game mechanic)
-                character.health = 1;
-                
-                // Apply defeat penalty - lose 10% of gold
-                let gold_loss = character.gold / 10;
-                character.gold -= gold_loss;
-                
-                // Emit combat result event
-                self.emit(CombatResult {
-                    player: *player,
-                    monster_id: combat_session.monster_id,
-                    victory: false,
-                    reward_exp: 0,
-                    reward_gold: 0,
-                });
-            }
-            
-            // Remove combat session
-            self.combat_sessions.remove(player);
-            
-            // Store updated character
-            self.characters.insert(*player, character);
-        }
-        
-        /// Grant experience to a character and handle level ups
-        fn grant_experience(&mut self, player: &Address, character: &mut Character, amount: u64) {
-            // Add experience
-            character.experience += amount;
-            
-            // Check for level up
-            let max_level = *self.max_level.get();
-            
-            while character.level < max_level {
-                // Get experience required for next level
-                let next_level = character.level + 1;
-                let exp_required = self.level_exp_requirements.get(&next_level).unwrap_or_default();
-                
                 // If enough exp, level up
                 if character.experience >= exp_required {
                     character.level = next_level;

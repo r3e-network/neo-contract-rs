@@ -1,185 +1,338 @@
-# NEO NFT Marketplace Smart Contract
+# NFT Marketplace for Neo N3
 
-A decentralized NFT marketplace built on the Neo N3 blockchain using the neo-contract-rs framework. This contract enables users to list, buy, sell, and auction NFTs with support for royalties and creator verification.
+This example demonstrates a comprehensive NFT marketplace implementation for the Neo N3 blockchain using the Neo Contract Rust framework. The marketplace supports fixed-price sales, auctions, offers, royalties, and collection verification.
 
 ## Features
 
-- **Fixed Price Listings**: List NFTs for sale at a set price
-- **Timed Auctions**: Create auctions with automatic extensions and minimum bid increases
-- **Offers System**: Allow users to make offers on fixed price listings
-- **Royalty Support**: Automatic royalty distribution to NFT creators
-- **Collection Verification**: Official verification of NFT collections
-- **Fee Structure**: Configurable marketplace fees
-- **Escrow System**: Secure holding of NFTs during listings and auctions
+- **Multiple Listing Types**: Support for fixed-price listings and timed auctions
+- **Bidding System**: Auction functionality with minimum bid increments and time extensions
+- **Offer System**: Users can make offers on fixed-price listings
+- **Royalty Management**: Configurable royalties for creators with automatic distribution
+- **Collection Verification**: System for verifying authentic NFT collections
+- **Fee Structure**: Configurable marketplace fees with dedicated collector address
+- **Auction Parameters**: Customizable auction durations, extensions, and bid increments
+- **Event Notifications**: Comprehensive event system for all marketplace actions
 
-## How It Works
+## Contract Structure
 
-### NFT Listing
+### Storage Model
 
-Users can list their NFTs in two main ways:
+The contract uses the following storage structure:
 
-#### Fixed Price Listing
-1. Owner transfers the NFT to the marketplace contract
-2. Sets a fixed price in GAS (or other supported tokens)
-3. Optionally sets an expiration time
-4. The NFT remains in escrow until purchased or the listing is cancelled
+```rust
+struct NFTMarketplace {
+    /// Contract owner
+    owner: Item<Address>,
+    
+    /// Next listing ID
+    next_listing_id: Item<u64>,
+    
+    /// Maps listing ID to listing
+    listings: Map<u64, Listing>,
+    
+    /// Maps NFT contract and token ID to active listing ID
+    active_listings: Map<(Hash160, ByteArray), u64>,
+    
+    /// Maps listing ID to highest bid
+    highest_bids: Map<u64, Bid>,
+    
+    /// Maps listing ID and offerer to offer
+    offers: Map<(u64, Address), Offer>,
+    
+    /// Maps NFT contract to verified collection info
+    verified_collections: Map<Hash160, VerifiedCollection>,
+    
+    /// Marketplace fee percentage in basis points (100 = 1%)
+    fee_percentage: Item<u16>,
+    
+    /// Fee collector address
+    fee_collector: Item<Address>,
+    
+    /// Maximum royalty percentage in basis points (1000 = 10%)
+    max_royalty: Item<u16>,
+    
+    /// Maximum auction duration in seconds (30 days)
+    max_auction_duration: Item<u64>,
+    
+    /// Minimum auction duration in seconds (1 hour)
+    min_auction_duration: Item<u64>,
+    
+    /// Auction extension time in seconds if bid placed near end (5 minutes)
+    auction_extension_time: Item<u64>,
+    
+    /// Minimum bid increase percentage in basis points (500 = 5%)
+    min_bid_increase: Item<u16>,
+}
+```
 
-#### Auction Listing
-1. Owner transfers the NFT to the marketplace contract
-2. Sets a starting price and auction duration
-3. Users can place bids with automatic refunds to outbid users
-4. Auctions automatically extend if bids are placed near the end
-5. When the auction ends, the highest bidder receives the NFT
+### Key Data Structures
 
-### Purchasing
+#### Listing
 
-1. For fixed price listings, buyers can purchase instantly at the listed price
-2. For auctions, the highest bidder when the auction ends wins
-3. The marketplace automatically distributes:
-   - Payment to the seller (minus fees and royalties)
-   - Royalties to the creator (if applicable)
-   - Fees to the marketplace
+```rust
+struct Listing {
+    /// Unique listing ID
+    id: u64,
+    
+    /// NFT collection contract hash
+    nft_contract: Hash160,
+    
+    /// NFT token ID
+    token_id: ByteArray,
+    
+    /// Listing owner/seller
+    owner: Address,
+    
+    /// Payment token (GAS or other NEP-17 tokens)
+    payment_token: Hash160,
+    
+    /// Price or minimum bid
+    price: u64,
+    
+    /// Listing type (fixed price or auction)
+    listing_type: ListingType,
+    
+    /// Listing status
+    status: ListingStatus,
+    
+    /// Creation timestamp
+    created_at: u64,
+    
+    /// Expiration timestamp (0 for no expiration in fixed price listings)
+    expires_at: u64,
+    
+    /// Royalty percentage in basis points (100 = 1%)
+    royalty_percentage: u16,
+    
+    /// Royalty recipient address
+    royalty_recipient: Address,
+}
+```
 
-### Offers and Bids
+#### Bid
 
-1. Buyers can make offers on fixed price listings
-2. Offers include an amount and expiration time
-3. Sellers can accept offers, triggering an immediate sale
-4. For auctions, the bid system handles automatic price competition
+```rust
+struct Bid {
+    /// Listing ID
+    listing_id: u64,
+    
+    /// Bidder address
+    bidder: Address,
+    
+    /// Bid amount
+    amount: u64,
+    
+    /// Timestamp when bid was placed
+    timestamp: u64,
+}
+```
 
-### Royalties
+## Core Functionality
 
-1. The marketplace checks if the NFT supports the royalty standard
-2. If supported, it pays the royalty percentage to the specified recipient
-3. For collections without built-in royalties, verified collections can have default royalties
-4. Royalties are capped at a maximum percentage to prevent excessive fees
+### Fixed Price Listings
 
-## Contract Methods
+Users can list NFTs for a fixed price:
 
-### Listing Management
+```rust
+fn create_fixed_price_listing(
+    &mut self,
+    nft_contract: Hash160,
+    token_id: ByteArray,
+    price: u64,
+    payment_token: Hash160,
+    expires_at: u64,
+) -> u64
+```
 
-- `create_fixed_price_listing`: List an NFT for a fixed price
-- `create_auction`: Create an auction for an NFT
-- `cancel_listing`: Cancel an active listing (seller only)
-- `finalize_auction`: Complete an auction after its end time
+This function:
+1. Verifies the caller owns the NFT
+2. Checks if the NFT is already listed
+3. Transfers the NFT to the marketplace contract
+4. Creates a listing with the specified parameters
+5. Returns the listing ID
 
-### Buying and Bidding
+### Auctions
 
-- `buy`: Purchase a fixed price listing
-- `place_bid`: Place a bid on an auction
-- `make_offer`: Make an offer on a fixed price listing
-- `cancel_offer`: Cancel a previously made offer
-- `accept_offer`: Accept an offer (seller only)
+Users can create an auction for an NFT:
 
-### Collection Management
+```rust
+fn create_auction(
+    &mut self,
+    nft_contract: Hash160,
+    token_id: ByteArray,
+    start_price: u64,
+    payment_token: Hash160,
+    duration: u64,
+) -> u64
+```
 
-- `verify_collection`: Add official verification to a collection (admin only)
-- `update_collection`: Update collection verification status (admin only)
+This function creates a timed auction with:
+- Minimum starting price
+- Specified duration (within allowed limits)
+- Automatic time extension when bids are placed near the end
 
-### Admin Functions
+### Bidding
 
-- `set_fee_percentage`: Update marketplace fee (admin only)
-- `set_fee_collector`: Update fee collector address (admin only)
-- `set_max_royalty`: Update maximum royalty percentage (admin only)
-- `set_auction_parameters`: Update auction parameters (admin only)
+Users can place bids on active auctions:
 
-### View Methods
+```rust
+fn place_bid(&mut self, listing_id: u64, amount: u64) -> bool
+```
 
-- `get_listing`: View detailed listing information
-- `get_active_listing_id`: Check if an NFT is currently listed
-- `get_highest_bid`: View highest bid for an auction
-- `get_offer`: View offer details
-- `get_collection`: View collection information
-- `get_fee_percentage`: View current marketplace fee
-- `get_max_royalty`: View maximum royalty percentage
-- `get_auction_parameters`: View auction settings
+This function:
+1. Verifies the auction is active and hasn't ended
+2. Checks that the bid amount meets minimum requirements
+3. Refunds the previous highest bidder if present
+4. Records the new highest bid
+5. Extends the auction time if the bid is placed near the end
 
-## Marketplace Parameters
+### Direct Purchase
 
-The marketplace includes several configurable parameters:
+Users can buy fixed-price listings:
 
-- **Fee Percentage**: Marketplace fee (default 2.5%)
-- **Maximum Royalty**: Cap on creator royalties (default 10%)
-- **Auction Duration**: Minimum 1 hour, maximum 30 days
-- **Auction Extension**: 5 minutes extension when bids are placed near the end
-- **Minimum Bid Increase**: 5% minimum increase over previous bid
+```rust
+fn buy(&mut self, listing_id: u64) -> bool
+```
 
-## Security Considerations
+This function:
+1. Verifies the listing is active and fixed-price
+2. Transfers payment from buyer to marketplace
+3. Distributes payment between seller, royalty recipient, and marketplace
+4. Transfers the NFT to the buyer
+5. Updates the listing status
 
-- **Escrow System**: NFTs are held in the contract until sold or listing is cancelled
-- **Signature Verification**: All operations require appropriate signatures
-- **Auction Extensions**: Prevents last-second bidding (sniping)
-- **Payment Verification**: Ensures all payments are received before transferring NFTs
-- **Royalty Caps**: Prevents excessive royalty percentages
+### Offers
 
-## Usage Example
+Users can make offers on listings:
 
-```python
-# Python example using neo-python client
-from neo3.api import SmartContract
+```rust
+fn make_offer(&mut self, listing_id: u64, amount: u64, expires_in: u64) -> bool
+```
 
-# Contract hash of the deployed marketplace
-marketplace_hash = '0x1234567890abcdef1234567890abcdef12345678'
-marketplace_contract = SmartContract(marketplace_hash)
+Sellers can accept offers:
 
-# NFT contract hash (NEP-11 compatible)
-nft_hash = '0xabcdef1234567890abcdef1234567890abcdef12'
+```rust
+fn accept_offer(&mut self, listing_id: u64, offerer: Address) -> bool
+```
 
-# Create a fixed price listing
-wallet.sign_transaction(
-    marketplace_contract.create_fixed_price_listing(
-        nft_contract=nft_hash,
-        token_id=b'token-1',  # NFT token ID
-        price=1000000000,     # 10 GAS (assuming 8 decimals)
-        payment_token=GAS_TOKEN_HASH,
-        expires_at=0          # No expiration
-    )
-)
+### Royalty System
 
-# Create an auction
-wallet.sign_transaction(
-    marketplace_contract.create_auction(
-        nft_contract=nft_hash,
-        token_id=b'token-2',
-        start_price=500000000,  # 5 GAS
-        payment_token=GAS_TOKEN_HASH,
-        duration=86400         # 24 hours
-    )
-)
+The contract automatically handles royalties for creators:
 
-# Buy a fixed price listing
-wallet.sign_transaction(
-    marketplace_contract.buy(
-        listing_id=1
-    )
-)
+```rust
+fn get_royalty_info(&self, nft_contract: &Hash160, token_id: &ByteArray) -> (u16, Address)
+```
 
-# Place a bid on an auction
-wallet.sign_transaction(
-    marketplace_contract.place_bid(
-        listing_id=2,
-        amount=600000000  # 6 GAS
-    )
-)
-
-# Make an offer on a fixed price listing
-wallet.sign_transaction(
-    marketplace_contract.make_offer(
-        listing_id=3,
-        amount=800000000,  # 8 GAS
-        expires_in=43200   # 12 hours
-    )
-)
-
-# Accept an offer (seller only)
-wallet.sign_transaction(
-    marketplace_contract.accept_offer(
-        listing_id=3,
-        offerer='NbnjKGMBJzJ6j5JwPPBhGGXxTj6qUbueNP'
-    )
+```rust
+fn distribute_payment(
+    &self,
+    listing_id: u64,
+    listing: &Listing,
+    buyer: Address,
+    amount: u64,
 )
 ```
 
+## Security Considerations
+
+- **Ownership Verification**: All listing and purchase operations verify proper ownership
+- **Time-based Constraints**: Auctions and offers have well-defined time periods
+- **Payment Handling**: Contract manages transfers between parties, preventing direct transfers
+- **Auction Extensions**: Prevents sniping by extending auctions when bids are placed near the end
+- **Role-based Access**: Admin functions are restricted to the contract owner
+
+## How to Build
+
+### Development Build
+
+For development and testing:
+
+```bash
+cargo check -p neo-nft-marketplace --features std
+cargo build -p neo-nft-marketplace --features std
+```
+
+### Production Build
+
+For blockchain deployment:
+
+```bash
+cargo build -p neo-nft-marketplace --release
+```
+
+## Using the Contract
+
+### Deployment
+
+Deploy the contract with initial parameters:
+
+```
+deploy neo-nft-marketplace.nef neo-nft-marketplace.manifest.json <owner_address>
+```
+
+### Creating a Fixed Price Listing
+
+```
+invoke <contract_hash> create_fixed_price_listing <nft_contract_hash> <token_id> 1000000000 <gas_token_hash> 0
+```
+This creates a listing with:
+- NFT from the specified contract and token ID
+- Price of 10 GAS (1000000000 = 10 GAS in the smallest unit)
+- Payment in GAS tokens
+- No expiration (0)
+
+### Creating an Auction
+
+```
+invoke <contract_hash> create_auction <nft_contract_hash> <token_id> 500000000 <gas_token_hash> 86400
+```
+This creates an auction with:
+- NFT from the specified contract and token ID
+- Starting price of 5 GAS
+- Payment in GAS tokens
+- Duration of 24 hours (86400 seconds)
+
+### Placing a Bid
+
+```
+invoke <contract_hash> place_bid 1 600000000
+```
+This places a bid of 6 GAS on listing #1.
+
+### Buying a Fixed Price Item
+
+```
+invoke <contract_hash> buy 2
+```
+This purchases the NFT in listing #2.
+
+### Making an Offer
+
+```
+invoke <contract_hash> make_offer 3 400000000 86400
+```
+This makes an offer of 4 GAS on listing #3, valid for 24 hours.
+
+## Events
+
+The contract emits detailed events for all operations:
+
+- `ListingCreated`: When a new listing is created
+- `ListingSold`: When a listing is purchased
+- `ListingCancelled`: When a listing is cancelled
+- `AuctionBid`: When a bid is placed
+- `AuctionCompleted`: When an auction is finalized
+- `OfferCreated`: When an offer is made
+- `OfferAccepted`: When an offer is accepted
+- `RoyaltyPaid`: When royalties are paid to creators
+- `FeePaid`: When marketplace fees are collected
+
+## Known Issues
+
+1. **Procedural Macro Issues**: The `#[neo_contract::contract]`, `#[method]`, and other macros may not resolve correctly
+2. **Storage Trait Issues**: The `Storage` trait implementations might need updates
+3. **Runtime Function Signature Mismatches**: Runtime API signatures may change between versions
+
 ## License
 
-This code is provided as an example and is licensed under MIT License.
+This example is provided under the same license as the Neo Contract Rust framework.

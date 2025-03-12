@@ -3,7 +3,7 @@
 //! This module defines the roles used in the Neo governance system.
 
 use core::fmt;
-use alloc::string::String;
+
 
 /// Roles in the Neo governance system
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

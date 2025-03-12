@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 neo-contract = { path = "../../neo-contract", version = "0.1.0" }
+neo-macros = { path = "../../neo-macros", version = "0.1.0" }
 
 [dev-dependencies]
 neo-contract-testing = { path = "../../neo-contract-testing", version = "0.1.0" }

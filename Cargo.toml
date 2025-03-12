@@ -1,9 +1,11 @@
 [workspace]
 members = [
     "neo-contract",
-    "neo-contract-proc-macros",
     "neo-compiler",
+    "neo-macros",
+    "neo-contract-testing",
     "examples/dao",
+    "examples/hello_world",
 ]
 
 resolver = "2"

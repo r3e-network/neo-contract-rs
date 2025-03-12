@@ -2,9 +2,24 @@
 name = "neo-dex"
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
-neo-contract = { path = "../../../neo-contract" }
+description = "NEO Decentralized Exchange Smart Contract Example"
 
 [lib]
 crate-type = ["cdylib"]
+
+[dependencies]
+neo-contract = { path = "../../../", default-features = false }
+
+[features]
+default = []
+std = ["neo-contract/std"]
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true

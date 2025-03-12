@@ -794,20 +794,7 @@ mod neo_lending {
             }
             
             // Record liquidation event
-            let liquidation_id = *self.next_liquidation_id.get();
-            self.next_liquidation_id.set(liquidation_id + 1);
-            
-            let liquidation_event = LiquidationEvent {
-                liquidator,
-                borrower,
-                repay_token,
-                repay_amount: actual_repay_amount,
-                collateral_token,
-                collateral_amount: seize_tokens,
-                timestamp: runtime::time(),
-            };
-            
-            self.liquidation_history.insert(liquidation_id, liquidation_event);
+            self.record_liquidation(liquidator, borrower, repay_token, actual_repay_amount, collateral_token, seize_tokens);
             
             // Emit event
             self.emit(LiquidateBorrow {
@@ -1057,23 +1044,42 @@ mod neo_lending {
             self.market_tokens.get().clone()
         }
         
-        /// Get token price from oracle
-        #[safe]
+        /// Get current token price from oracle (or cached price if recent)
         fn get_price(&self, token: Hash160) -> Option<u64> {
-            // First try cache
+            // Check cached price first
             if let Some(price_data) = self.prices.get(&token) {
-                // Check if price is fresh (less than 1 hour old)
-                if runtime::time() - price_data.last_updated < 3600 {
+                // Use cached price if less than 1 hour old
+                if Ledger::current_timestamp() - price_data.last_updated < 3600 {
                     return Some(price_data.price);
                 }
             }
             
             // Call price oracle
-            let price: u64 = self.call_contract(
-                &self.price_oracle.get(),
-                "get_price",
-                (token,)
-            ).ok()?;
+            let oracle = self.price_oracle.get()?;
+            
+            let mut args = Array::new();
+            args.push(Any::from(token));
+            
+            // Call the oracle
+            let result = Runtime::call(
+                oracle,
+                &ByteString::from("getPrice"),
+                args,
+                CallFlags::READ_ONLY
+            )?;
+            
+            let price = result.as_u64()?;
+            
+            // Cache the price
+            let price_data = PriceData {
+                token,
+                price,
+                last_updated: Ledger::current_timestamp(),
+                source: oracle,
+            };
+            
+            // Store in cache
+            self.prices.insert(token, price_data);
             
             Some(price)
         }
@@ -1366,6 +1372,24 @@ mod neo_lending {
             ).expect("Token transfer failed");
             
             assert!(transferred, "Failed to transfer tokens from contract");
+        }
+        
+        /// Record a liquidation event
+        fn record_liquidation(&mut self, liquidator: Address, borrower: Address, repay_token: Hash160, repay_amount: u64, collateral_token: Hash160, seize_amount: u64) {
+            let liquidation_id = *self.next_liquidation_id.get();
+            self.next_liquidation_id.set(liquidation_id + 1);
+            
+            let event = LiquidationEvent {
+                liquidator,
+                borrower,
+                repay_token,
+                repay_amount,
+                collateral_token,
+                seize_amount,
+                timestamp: Ledger::current_timestamp(),
+            };
+            
+            self.liquidation_history.insert(liquidation_id, event);
         }
     }
 }

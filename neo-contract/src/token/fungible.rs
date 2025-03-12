@@ -3,12 +3,11 @@
 
 //! Fungible token implementation for the Neo blockchain
 
-use alloc::vec::Vec;
-use alloc::string::String;
+
 
 // Update to use prelude
-use crate::prelude::{H160, ByteString, Int256, Array, Any, StorageMap};
-use crate::policy::voting::Storable;  // Import Storable from the voting module
+use crate::prelude::{H160, ByteString, Int256, StorageMap};
+
 use crate::runtime::Runtime;
 use crate::error::{Error, ErrorCode, Result};
 use crate::token::{Token, TokenEvents};
@@ -90,11 +89,11 @@ impl FungibleToken {
         
         // Update balance
         let balance = self.balance_of(to);
-        self.balances.put(to, &(balance + amount));
+        let _ = self.balances.put(to, &(balance + amount));
         
         // Update total supply
         let total_supply = self.total_supply();
-        self.metadata.total_supply.put(&ByteString::from("value"), &(total_supply + amount));
+        let _ = self.metadata.total_supply.put(&ByteString::from("value"), &(total_supply + amount));
         
         // Emit transfer event
         TokenEvents::emit_transfer(&(), None, Some(to.clone()), amount);
@@ -206,9 +205,9 @@ impl Token for FungibleToken {
         }
         
         // Update balances
-        self.balances.put(&sender, &(from_balance - amount));
+        let _ = self.balances.put(&sender, &(from_balance - amount));
         let to_balance = self.balance_of(to);
-        self.balances.put(to, &(to_balance + amount));
+        let _ = self.balances.put(to, &(to_balance + amount));
         
         // Emit transfer event
         TokenEvents::emit_transfer(&(), Some(sender), Some(to.clone()), amount);
@@ -234,9 +233,9 @@ impl Token for FungibleToken {
         }
         
         // Update balances
-        self.balances.put(from, &(from_balance - amount));
+        let _ = self.balances.put(from, &(from_balance - amount));
         let to_balance = self.balance_of(to);
-        self.balances.put(to, &(to_balance + amount));
+        let _ = self.balances.put(to, &(to_balance + amount));
         
         // Emit transfer event
         TokenEvents::emit_transfer(&(), Some(from.clone()), Some(to.clone()), amount);

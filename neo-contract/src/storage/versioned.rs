@@ -4,7 +4,7 @@
 
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-use crate::error::{Error, ErrorCode, Result};
+use crate::error::Result;
 use super::context::Context;
 use super::item::{Item, Codec};
 

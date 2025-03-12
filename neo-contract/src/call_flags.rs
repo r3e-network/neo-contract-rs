@@ -4,7 +4,7 @@
 
 use core::fmt;
 use alloc::vec::Vec;
-use alloc::string::String;
+
 
 /// Call flags for contract calls
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,6 +31,9 @@ impl CallFlags {
     
     /// Allow all - allows all operations
     pub const ALLOW_ALL: CallFlags = CallFlags(0b00011110);
+    
+    /// All - alias for ALLOW_ALL
+    pub const ALL: CallFlags = Self::ALLOW_ALL;
     
     /// States and notify - combination of ALLOW_STATES and ALLOW_NOTIFY
     pub const STATES_AND_NOTIFY: CallFlags = CallFlags(0b00000110);

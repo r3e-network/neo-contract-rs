@@ -1,183 +1,334 @@
-# NEO Lending Protocol Smart Contract
+# Lending Protocol Example for Neo N3
 
-A decentralized lending and borrowing protocol built on the Neo N3 blockchain using the neo-contract-rs framework. This contract enables users to supply assets, earn interest, and borrow against their collateral.
+This example demonstrates a simple lending protocol implementation on the Neo N3 blockchain using the Neo Contract Rust framework.
 
-## Features
+## Lending Protocol Features
 
-- **Multi-Asset Support**: Support for any NEP-17 compatible token
-- **Variable Interest Rates**: Dynamic rates based on market utilization
-- **Collateralized Borrowing**: Secure loans backed by supplied assets
-- **Liquidation Mechanism**: Protection against undercollateralized positions
-- **Risk Parameter Management**: Configurable collateral and reserve factors per asset
-- **Price Oracle Integration**: External price feeds for accurate asset valuation
+- **Interest-Bearing Deposits**: Earn interest by depositing assets
+- **Collateralized Loans**: Borrow assets against collateral
+- **Dynamic Interest Rates**: Interest rates that adjust based on utilization
+- **Liquidation Mechanism**: Process to handle under-collateralized positions
+- **Multi-Asset Support**: Support for multiple NEP-17 tokens
 
-## How It Works
+## Contract Structure
 
-### Markets
+### Storage Model
 
-Each supported asset has its own market with specific parameters:
-- **Supply and Borrow Rates**: Dynamically adjusted based on market utilization
-- **Collateral Factor**: Maximum loan-to-value ratio (e.g., 75% means you can borrow up to 75% of your collateral value)
-- **Reserve Factor**: Portion of interest that goes to protocol reserves
-- **Interest Rate Model**: Includes base rate, multiplier, and jump multiplier for high utilization
+The lending protocol maintains several key storage items:
 
-### Supplying Assets
-
-When users supply assets:
-1. They transfer tokens to the protocol
-2. They receive a proportional amount of aTokens (interest-bearing tokens)
-3. Supplied assets can be used as collateral for borrowing
-4. Assets earn interest based on the market's supply rate
-
-### Borrowing
-
-Users can borrow assets if:
-1. They have supplied enough collateral
-2. The total borrow value doesn't exceed their collateral value adjusted by collateral factors
-3. The protocol has enough liquidity of the requested asset
-
-### Interest Accrual
-
-- Interest accrues on every block based on utilization
-- Borrow rates increase as utilization increases, especially after passing the "kink" point
-- Supply rates are derived from borrow rates and market utilization
-
-### Liquidation
-
-If a borrower's position becomes undercollateralized:
-1. Anyone can repay part of their debt (up to the close factor amount)
-2. The liquidator receives collateral at a discount (liquidation incentive)
-3. This process continues until the borrower's position is safe again or fully liquidated
-
-## Contract Methods
-
-### Market Management
-
-- `list_market`: Add support for a new asset (admin only)
-- `set_collateral_factor`: Update collateral factor for an asset (admin only)
-- `set_reserve_factor`: Update reserve factor for an asset (admin only)
-
-### User Operations
-
-- `supply`: Provide assets to the protocol
-- `withdraw`: Withdraw supplied assets 
-- `borrow`: Borrow assets using collateral
-- `repay`: Repay borrowed assets
-- `set_asset_as_collateral`: Toggle using an asset as collateral
-
-### Liquidation
-
-- `liquidate_borrow`: Liquidate an undercollateralized borrower
-
-### Protocol Administration
-
-- `set_price_oracle`: Update price oracle address (admin only)
-- `set_liquidation_incentive`: Update liquidation incentive (admin only)
-- `set_close_factor`: Update close factor (admin only)
-- `set_fee_collector`: Set protocol fee collector address (admin only)
-- `set_protocol_seize_share`: Update protocol's share of liquidation (admin only)
-
-### View Methods
-
-- `get_market_info`: View market parameters and state
-- `get_account_assets`: View user's supplied and borrowed assets
-- `get_account_supplied_tokens`: View all tokens supplied by a user
-- `get_account_borrowed_tokens`: View all tokens borrowed by a user
-- `get_account_health`: Calculate account health factor
-- `can_be_liquidated`: Check if an account can be liquidated
-- `get_all_markets`: List all supported markets
-- `get_price`: Get current price for an asset
-- `get_liquidation_incentive`: Get current liquidation incentive
-- `get_close_factor`: Get current close factor
-
-## Interest Rate Model
-
-The protocol uses a piecewise interest rate model:
-
-For utilization < kink:
-```
-borrow_rate = base_rate + utilization * multiplier
+```rust
+#[storage]
+struct LendingProtocol {
+    // Supported assets and their configurations
+    supported_assets: StorageMap<H160, AssetConfig>,
+    
+    // User deposits for each asset
+    deposits: StorageMap<Vec<u8>, u64>, // key: asset_id + user_address
+    
+    // Outstanding loans
+    loans: StorageMap<Vec<u8>, Loan>, // key: asset_id + user_address
+    
+    // Global statistics for each asset
+    asset_stats: StorageMap<H160, AssetStats>,
+    
+    // Price oracle contract
+    price_oracle: StorageItem<H160>,
+    
+    // Protocol administrator
+    admin: StorageItem<H160>,
+}
 ```
 
-For utilization ≥ kink:
-```
-borrow_rate = base_rate + kink * multiplier + (utilization - kink) * jump_multiplier
+### Key Data Structures
+
+```rust
+struct AssetConfig {
+    token_address: H160,
+    collateral_factor: u64, // 0-10000 (basis points)
+    liquidation_threshold: u64, // 0-10000 (basis points)
+    liquidation_penalty: u64, // 0-10000 (basis points)
+    base_rate: u64, // Base interest rate in basis points
+    slope1: u64, // Interest rate model parameter 1
+    slope2: u64, // Interest rate model parameter 2
+}
+
+struct AssetStats {
+    total_deposits: u64,
+    total_borrows: u64,
+    total_reserves: u64,
+    last_update_timestamp: u64,
+    cumulative_interest_rate: u64,
+}
+
+struct Loan {
+    principal: u64,
+    interest_index: u64,
+    collateral_asset: H160,
+    collateral_amount: u64,
+    start_timestamp: u64,
+}
 ```
 
-Supply rate is derived from borrow rate:
+## Core Functionality
+
+### Depositing Assets
+
+Users can deposit NEP-17 tokens to earn interest:
+
+```rust
+#[method]
+pub fn deposit(&mut self, asset_id: H160, amount: u64) -> bool {
+    // Validate inputs
+    assert!(amount > 0, "Amount must be greater than zero");
+    assert!(self.is_supported_asset(&asset_id), "Asset not supported");
+    
+    // Get user address
+    let user = Runtime::check_witness(&Runtime::current_sender())
+        .expect("Authentication failed");
+    
+    // Transfer tokens from user to contract
+    let success = self.transfer_from(asset_id, &user, &self.contract_hash(), amount);
+    assert!(success, "Token transfer failed");
+    
+    // Update user deposit balance
+    let deposit_key = self.get_deposit_key(&asset_id, &user);
+    let current_deposit = self.deposits.get(&deposit_key).unwrap_or(0);
+    let new_deposit = current_deposit + amount;
+    self.deposits.insert(deposit_key, new_deposit);
+    
+    // Update asset statistics
+    self.update_asset_stats(&asset_id, amount, 0);
+    
+    // Emit deposit event
+    self.emit_deposit_event(&user, &asset_id, amount);
+    
+    true
+}
 ```
-supply_rate = borrow_rate * utilization * (1 - reserve_factor)
+
+### Borrowing Assets
+
+Users can borrow assets by providing collateral:
+
+```rust
+#[method]
+pub fn borrow(&mut self, asset_id: H160, amount: u64, collateral_asset_id: H160) -> bool {
+    // Validate inputs
+    assert!(amount > 0, "Amount must be greater than zero");
+    assert!(self.is_supported_asset(&asset_id), "Asset not supported");
+    assert!(self.is_supported_asset(&collateral_asset_id), "Collateral asset not supported");
+    
+    // Get user address
+    let user = Runtime::check_witness(&Runtime::current_sender())
+        .expect("Authentication failed");
+    
+    // Check collateral value and health factor
+    let collateral_value = self.get_user_collateral_value(&user, &collateral_asset_id);
+    let borrow_value = self.get_asset_value(&asset_id, amount);
+    let config = self.supported_assets.get(&asset_id).unwrap();
+    
+    // Calculate maximum borrow amount based on collateral
+    let max_borrow_value = collateral_value * config.collateral_factor / 10000;
+    assert!(borrow_value <= max_borrow_value, "Insufficient collateral");
+    
+    // Create loan record
+    let loan_key = self.get_loan_key(&asset_id, &user);
+    let loan = Loan {
+        principal: amount,
+        interest_index: self.get_current_interest_index(&asset_id),
+        collateral_asset: collateral_asset_id,
+        collateral_amount: self.get_user_deposit(&user, &collateral_asset_id),
+        start_timestamp: Ledger::current_timestamp(),
+    };
+    self.loans.insert(loan_key, loan);
+    
+    // Update asset statistics
+    self.update_asset_stats(&asset_id, 0, amount);
+    
+    // Transfer borrowed tokens to user
+    let success = self.transfer(asset_id, &user, amount);
+    assert!(success, "Token transfer failed");
+    
+    // Emit borrow event
+    self.emit_borrow_event(&user, &asset_id, amount, &collateral_asset_id);
+    
+    true
+}
+```
+
+### Interest Rate Model
+
+The protocol uses a dynamic interest rate model based on utilization:
+
+```rust
+fn calculate_interest_rate(&self, asset_id: &H160) -> u64 {
+    let stats = self.asset_stats.get(asset_id).unwrap();
+    let config = self.supported_assets.get(asset_id).unwrap();
+    
+    // If no deposits, return base rate
+    if stats.total_deposits == 0 {
+        return config.base_rate;
+    }
+    
+    // Calculate utilization rate (0-10000)
+    let utilization = stats.total_borrows * 10000 / stats.total_deposits;
+    
+    // Two-slope interest rate model
+    if utilization <= 8000 {  // 80% utilization
+        // Below optimal utilization: base_rate + slope1 * utilization
+        config.base_rate + (utilization * config.slope1 / 10000)
+    } else {
+        // Above optimal utilization: add slope2 with higher weight
+        let base_interest = config.base_rate + (8000 * config.slope1 / 10000);
+        let excess_utilization = utilization - 8000;
+        base_interest + (excess_utilization * config.slope2 / 10000)
+    }
+}
+```
+
+### Liquidation Mechanism
+
+When collateral value falls below the liquidation threshold:
+
+```rust
+#[method]
+pub fn liquidate(&mut self, borrower: H160, asset_id: H160, repay_amount: u64) -> bool {
+    // Validate inputs
+    assert!(repay_amount > 0, "Amount must be greater than zero");
+    assert!(self.is_supported_asset(&asset_id), "Asset not supported");
+    
+    // Get liquidator address
+    let liquidator = Runtime::check_witness(&Runtime::current_sender())
+        .expect("Authentication failed");
+    
+    // Check if position is liquidatable
+    let health_factor = self.calculate_health_factor(&borrower);
+    assert!(health_factor < 10000, "Position is not liquidatable");
+    
+    // Get the loan details
+    let loan_key = self.get_loan_key(&asset_id, &borrower);
+    let mut loan = self.loans.get(&loan_key).expect("Loan not found");
+    assert!(repay_amount <= loan.principal, "Cannot repay more than principal");
+    
+    // Calculate collateral to seize (including liquidation bonus)
+    let config = self.supported_assets.get(&asset_id).unwrap();
+    let collateral_config = self.supported_assets.get(&loan.collateral_asset).unwrap();
+    
+    let repay_value = self.get_asset_value(&asset_id, repay_amount);
+    let liquidation_bonus = config.liquidation_penalty;
+    let seize_value = repay_value * (10000 + liquidation_bonus) / 10000;
+    
+    let collateral_price = self.get_asset_price(&loan.collateral_asset);
+    let seize_amount = seize_value * 10^8 / collateral_price;
+    
+    // Update loan state
+    loan.principal -= repay_amount;
+    if loan.principal == 0 {
+        self.loans.remove(&loan_key);
+    } else {
+        self.loans.insert(loan_key, loan);
+    }
+    
+    // Transfer repaid tokens from liquidator to contract
+    let success = self.transfer_from(asset_id, &liquidator, &self.contract_hash(), repay_amount);
+    assert!(success, "Token transfer failed");
+    
+    // Transfer seized collateral to liquidator
+    let deposit_key = self.get_deposit_key(&loan.collateral_asset, &borrower);
+    let current_deposit = self.deposits.get(&deposit_key).unwrap_or(0);
+    assert!(current_deposit >= seize_amount, "Insufficient collateral");
+    
+    self.deposits.insert(deposit_key, current_deposit - seize_amount);
+    
+    let liquidator_deposit_key = self.get_deposit_key(&loan.collateral_asset, &liquidator);
+    let liquidator_deposit = self.deposits.get(&liquidator_deposit_key).unwrap_or(0);
+    self.deposits.insert(liquidator_deposit_key, liquidator_deposit + seize_amount);
+    
+    // Emit liquidation event
+    self.emit_liquidation_event(&liquidator, &borrower, &asset_id, repay_amount, &loan.collateral_asset, seize_amount);
+    
+    true
+}
+```
+
+## Building and Deploying
+
+To build this lending protocol example:
+
+```bash
+# Development build
+cargo build -p defi-lending --features std
+
+# Production build
+cargo build -p defi-lending --release
 ```
 
 ## Security Considerations
 
-- **Reentrancy Protection**: Critical operations are protected against reentrancy attacks
-- **Access Control**: Admin-only functions are protected with caller verification
-- **Solvency Checks**: All borrowing and withdrawal operations verify account solvency
-- **Price Oracle Freshness**: Price data can be cached with timestamps to handle oracle failures
-- **Integer Math**: Safe math operations to prevent overflow/underflow
-- **Liquidation Incentives**: Calibrated to ensure timely liquidations without excessive penalties
-- **Protocol Shares**: Protocol can collect a share of liquidation proceeds for sustainability
+This lending protocol example demonstrates key security mechanisms:
 
-## Risk Parameters
+1. **Collateral Factors**: Conservative collateralization requirements
+2. **Price Oracle Integration**: Up-to-date asset prices for accurate valuations
+3. **Liquidation Process**: Timely handling of under-collateralized positions
+4. **Interest Rate Controls**: Encouraging optimal capital utilization
+5. **Access Controls**: Administrative functions restricted to authorized users
 
-Default parameters (can be adjusted by governance):
-- **Liquidation Incentive**: 10% (1.1 × debt value in collateral)
-- **Close Factor**: 50% (maximum portion of a borrow that can be repaid in a single liquidation)
-- **Protocol Seize Share**: 5% (portion of liquidation proceeds that goes to the protocol)
+## Integration with Front-end
 
-Market-specific parameters:
-- **Collateral Factor**: 0-90% (determined per asset based on risk profile)
-- **Reserve Factor**: 0-50% (determined per asset based on risk profile)
+This contract can be integrated with a front-end application to provide users with a complete lending platform experience:
 
-## Usage Example
+```javascript
+// JavaScript example with neo-js
+const { rpc, sc, wallet } = require('@cityofzion/neo-js');
 
-```python
-# Python example using neo-python client
-from neo3.api import SmartContract
+// Connect to the lending protocol contract
+const lendingContract = new sc.Contract('0xYourContractScriptHash');
 
-# Contract hash of the deployed lending protocol
-lending_hash = '0x1234567890abcdef1234567890abcdef12345678'
-lending_contract = SmartContract(lending_hash)
+// Deposit assets
+async function depositAsset(assetId, amount) {
+  const account = wallet.Account.fromWIF('YourPrivateKeyWIF');
+  
+  const tx = await lendingContract.invoke(
+    'deposit',
+    [assetId, amount],
+    account
+  );
+  
+  return await tx.send();
+}
 
-# Supply GAS to the protocol
-gas_token_hash = '0xd2a4cff31913016155e38e474a2c06d08be276cf'
-wallet.sign_transaction(
-    lending_contract.supply(
-        token=gas_token_hash,
-        amount=1000000000  # 10 GAS (assuming 8 decimals)
-    )
-)
-
-# Borrow NEO using GAS as collateral
-neo_token_hash = '0xef4073a0f2b305a38ec4050e4d3d28bc40ea63f5'
-wallet.sign_transaction(
-    lending_contract.borrow(
-        token=neo_token_hash,
-        amount=500000000  # 5 NEO (assuming 8 decimals)
-    )
-)
-
-# Repay borrow
-wallet.sign_transaction(
-    lending_contract.repay(
-        token=neo_token_hash,
-        amount=500000000,  # 5 NEO
-        borrower=None  # Repay own borrow
-    )
-)
-
-# Liquidate undercollateralized borrower
-wallet.sign_transaction(
-    lending_contract.liquidate_borrow(
-        borrower='NbnjKGMBJzJ6j5JwPPBhGGXxTj6qUbueNP',
-        repay_token=neo_token_hash,
-        collateral_token=gas_token_hash,
-        repay_amount=100000000  # 1 NEO
-    )
-)
+// Borrow assets
+async function borrowAsset(assetId, amount, collateralAssetId) {
+  const account = wallet.Account.fromWIF('YourPrivateKeyWIF');
+  
+  const tx = await lendingContract.invoke(
+    'borrow',
+    [assetId, amount, collateralAssetId],
+    account
+  );
+  
+  return await tx.send();
+}
 ```
+
+## Educational Value
+
+This example demonstrates several important DeFi concepts:
+
+1. **Risk Management**: Collateralization, health factors, and liquidation
+2. **Interest Rate Models**: Dynamic interest rates based on utilization
+3. **Price Oracle Integration**: Using external data for asset valuation
+4. **Multi-Asset Support**: Managing different token types within a single protocol
+5. **Event Emission**: Keeping an auditable history of all protocol activities
+
+## Known Issues and Workarounds
+
+As with other examples in this repository, you may encounter:
+
+1. **Procedural Macro Issues**: The `#[contract]` and other macros may not resolve correctly
+2. **Storage Trait Issues**: The `Storage` trait and `StorageContext` may not be found
+3. **Runtime Function Signature Mismatches**: Check for current function signatures in the framework
 
 ## License
 
-This code is provided as an example and is licensed under MIT License.
+This example is provided under the same license as the Neo Contract Rust framework.

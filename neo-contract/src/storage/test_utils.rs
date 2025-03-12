@@ -10,10 +10,9 @@ use alloc::collections::BTreeMap;
 use core::cell::RefCell;
 use crate::find_options::FindOptions;
 
-thread_local! {
-    /// Global mock storage for testing
-    static MOCK_STORAGE: RefCell<BTreeMap<Vec<u8>, Vec<u8>>> = RefCell::new(BTreeMap::new());
-}
+// Define a static mock storage for testing
+// In a no_std environment, we can't use thread_local, so we'll use a static with proper locking if needed
+static mut MOCK_STORAGE: Option<BTreeMap<Vec<u8>, Vec<u8>>> = None;
 
 /// Mock storage for testing
 ///
@@ -77,7 +76,7 @@ impl MockStorage {
             
             for (key, value) in storage.iter() {
                 if key.starts_with(prefix) {
-                    let result_key = if options.remove_prefix {
+                    let result_key = if options.contains(FindOptions::REMOVE_PREFIX) {
                         key[prefix.len()..].to_vec()
                     } else {
                         key.clone()
@@ -117,10 +116,15 @@ impl MockStorage {
     where
         F: FnOnce(&mut BTreeMap<Vec<u8>, Vec<u8>>) -> R,
     {
-        MOCK_STORAGE.with(|cell| {
-            let mut storage = cell.borrow_mut();
-            f(&mut storage)
-        })
+        unsafe {
+            // Initialize storage if it hasn't been initialized yet
+            if MOCK_STORAGE.is_none() {
+                MOCK_STORAGE = Some(BTreeMap::new());
+            }
+            
+            // Get a mutable reference to the storage and execute the function
+            f(MOCK_STORAGE.as_mut().unwrap())
+        }
     }
     
     /// Gets all key-value pairs in mock storage
@@ -143,15 +147,23 @@ impl MockStorage {
             
             for (key, value) in storage.iter() {
                 // Try to interpret keys and values as UTF-8 strings if possible
-                let key_str = String::from_utf8(key.clone()).unwrap_or_else(|_| {
-                    format!("{:?}", key)
-                });
+                // Try to get string representation or use a placeholder for keys
+                let key_str = match core::str::from_utf8(key) {
+                    Ok(s) => s,
+                    Err(_) => "[Binary Data]"
+                };
                 
-                let value_str = String::from_utf8(value.clone()).unwrap_or_else(|_| {
-                    format!("{:?}", value)
-                });
+                // Try to get string representation or use a placeholder for values
+                let value_str = match core::str::from_utf8(value) {
+                    Ok(s) => s,
+                    Err(_) => "[Binary Data]"
+                };
                 
-                result.push_str(&format!("{} => {}\n", key_str, value_str));
+                // Build the string without using format!
+                result.push_str(key_str);
+                result.push_str(" => ");
+                result.push_str(value_str);
+                result.push_str("\n");
             }
             
             result
@@ -208,7 +220,7 @@ mod tests {
         
         // Test find with prefix and remove_prefix option
         let mut options = FindOptions::default();
-        options.remove_prefix = true;
+        options.add(FindOptions::REMOVE_PREFIX);
         let results = MockStorage::find(b"user:1:", &options);
         assert_eq!(results.len(), 2);
         

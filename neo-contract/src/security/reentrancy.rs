@@ -8,7 +8,7 @@
 // use crate::builtin::ByteString;
 use crate::prelude::ByteString;
 use crate::error::{Error, ErrorCode, Result};
-use core::marker::PhantomData;
+
 
 /// Reentrancy status
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,6 +22,7 @@ pub enum ReentrancyStatus {
 /// Reentrancy guard to protect against reentrancy attacks
 pub struct ReentrancyGuard {
     /// The key used to store the status
+    #[allow(dead_code)]
     key: ByteString,
     /// Status flag (in-memory only for this simplified implementation)
     status: ReentrancyStatus,

@@ -13,7 +13,7 @@ pub mod pagination;
 
 use alloc::vec::Vec;
 use alloc::string::String;
-use crate::types::builtin::string::ByteString;
+
 use crate::find_options::FindOptions;
 use crate::static_values::Hash160;
 

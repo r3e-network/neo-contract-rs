@@ -54,6 +54,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .to_string(),
         ),
         manifest_template: None,
+        manifest_overrides: Some(Vec::new()),
+        output_dir: Some(std::env::current_dir()?),
     };
 
     // 3. Compile the module

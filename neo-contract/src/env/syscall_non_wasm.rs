@@ -5,18 +5,15 @@
 //! This module provides access to the Neo N3 VM system calls from native code.
 //! These functions are only available in non-WASM environments.
 
-use alloc::vec::Vec;
+
 use crate::call_flags::CallFlags;
 use crate::types::builtin::array::Array;
 use crate::types::builtin::h160::H160;
 use crate::types::builtin::h256::H256;
-use crate::types::builtin::int256::Int256;
+
 use crate::types::builtin::string::ByteString;
 use crate::types::builtin::any::Any;
-use crate::types::bytes::Bytes;
-use crate::types::contract::NeoCandidate;
-use crate::types::notification::Notification;
-use crate::types::placeholder::Placeholder;
+
 use crate::types::context::StorageContext;
 use crate::prelude::FindOptions;
 
@@ -39,7 +36,7 @@ pub unsafe fn system_runtime_entry_script_hash() -> H160 {
 }
 
 /// Check if the witness is valid
-pub unsafe fn system_runtime_check_witness(hash: H160) -> bool {
+pub unsafe fn system_runtime_check_witness(_hash: H160) -> bool {
     // Stub implementation
     false
 }
@@ -69,21 +66,21 @@ pub unsafe fn system_runtime_time() -> u64 {
 }
 
 /// Notify an event
-pub unsafe fn system_runtime_notify(event_name: ByteString, args: Array) {
+pub unsafe fn system_runtime_notify(_event_name: ByteString, _args: Array) {
     // Stub implementation
 }
 
 /// Log a message
-pub unsafe fn system_runtime_log(message: ByteString) {
+pub unsafe fn system_runtime_log(_message: ByteString) {
     // Stub implementation
 }
 
 /// Call a contract
 pub unsafe fn system_contract_call(
-    hash: H160,
-    method: ByteString,
-    flags: CallFlags,
-    args: Array,
+    _hash: H160,
+    _method: ByteString,
+    _flags: CallFlags,
+    _args: Array,
 ) -> Any {
     // Stub implementation
     Any::default()
@@ -101,7 +98,7 @@ pub unsafe fn system_contract_create(
 
 /// Get the call flags
 pub unsafe fn system_contract_get_call_flags() -> CallFlags {
-    CallFlags::All
+    CallFlags::ALL
 }
 
 /// Get candidates
@@ -141,45 +138,45 @@ pub unsafe fn system_storage_as_readonly(context: StorageContext) -> StorageCont
 }
 
 /// Put a value in storage
-pub unsafe fn system_storage_put(context: StorageContext, key: ByteString, value: ByteString) {
+pub unsafe fn system_storage_put(_context: StorageContext, _key: ByteString, _value: ByteString) {
     // Stub implementation
 }
 
 /// Get a value from storage
-pub unsafe fn system_storage_get(context: StorageContext, key: ByteString) -> ByteString {
+pub unsafe fn system_storage_get(_context: StorageContext, _key: ByteString) -> ByteString {
     // Stub implementation
     ByteString::default()
 }
 
 /// Delete a value from storage
-pub unsafe fn system_storage_delete(context: StorageContext, key: ByteString) {
+pub unsafe fn system_storage_delete(_context: StorageContext, _key: ByteString) {
     // Stub implementation
 }
 
 /// Find values in storage
-pub unsafe fn system_storage_find(context: StorageContext, prefix: ByteString) -> i32 {
+pub unsafe fn system_storage_find(_context: StorageContext, _prefix: ByteString) -> i32 {
     // Stub implementation
     0
 }
 
 /// Find values in storage with options
 pub unsafe fn system_storage_find_with_options(
-    context: StorageContext,
-    prefix: ByteString,
-    options: FindOptions,
+    _context: StorageContext,
+    _prefix: ByteString,
+    _options: FindOptions,
 ) -> i32 {
     // Stub implementation
     0
 }
 
 /// Check a signature
-pub unsafe fn system_crypto_check_sign(public_key: ByteString, sign: ByteString) -> bool {
+pub unsafe fn system_crypto_check_sign(_public_key: ByteString, _sign: ByteString) -> bool {
     // Stub implementation
     false
 }
 
 /// Check multiple signatures
-pub unsafe fn system_crypto_check_multi_signs(public_keys: Array, signs: Array) -> bool {
+pub unsafe fn system_crypto_check_multi_signs(_public_keys: Array, _signs: Array) -> bool {
     // Stub implementation
     false
 }
@@ -206,6 +203,12 @@ pub unsafe fn system_runtime_get_random() -> u64 {
 pub unsafe fn system_runtime_get_notifications(_hash: H160) -> Array {
     // Stub implementation
     Array::new()
+}
+
+/// Get the current block hash
+pub unsafe fn system_runtime_get_current_block_hash() -> H256 {
+    // Stub implementation
+    H256::zero()
 }
 
 /// Enter the native contract context
@@ -255,37 +258,37 @@ pub unsafe fn system_crypto_ripemd160(_data: ByteString) -> H160 {
 }
 
 /// Generic hash function
-pub unsafe fn system_crypto_hash(data: ByteString, hash_type: u32) -> ByteString {
+pub unsafe fn system_crypto_hash(_data: ByteString, _hash_type: u32) -> ByteString {
     // Stub implementation
     ByteString::default()
 }
 
 /// Check multisig
-pub unsafe fn system_crypto_check_multisig(message: ByteString, signatures: Array, public_keys: Array) -> bool {
+pub unsafe fn system_crypto_check_multisig(_message: ByteString, _signatures: Array, _public_keys: Array) -> bool {
     // Stub implementation
     false
 }
 
 /// Convert script hash to address
-pub unsafe fn system_crypto_to_address(script_hash: H160) -> ByteString {
+pub unsafe fn system_crypto_to_address(_script_hash: H160) -> ByteString {
     // Stub implementation
     ByteString::default()
 }
 
 /// Convert address to script hash
-pub unsafe fn system_crypto_to_script_hash(address: ByteString) -> H160 {
+pub unsafe fn system_crypto_to_script_hash(_address: ByteString) -> H160 {
     // Stub implementation
     H160::zero()
 }
 
 /// Generate BLS signature
-pub unsafe fn system_crypto_bls_generate(message: ByteString, private_key: ByteString) -> ByteString {
+pub unsafe fn system_crypto_bls_generate(_message: ByteString, _private_key: ByteString) -> ByteString {
     // Stub implementation
     ByteString::default()
 }
 
 /// Verify BLS signature
-pub unsafe fn system_crypto_bls_verify(message: ByteString, signature: ByteString, public_key: ByteString) -> bool {
+pub unsafe fn system_crypto_bls_verify(_message: ByteString, _signature: ByteString, _public_key: ByteString) -> bool {
     // Stub implementation
     false
 }

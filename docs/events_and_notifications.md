@@ -12,75 +12,113 @@ Events serve several important purposes:
 - Enable real-time monitoring of contract activities
 - Support for decentralized applications (dApps) frontends
 
-## Defining Events
+## Events in Neo N3
 
-In the Neo Contract Rust Framework, events are defined using the `#[event]` attribute on a struct:
+In Neo N3, events are properly emitted using the `Runtime::notify` method rather than using an attribute-based struct approach. This direct approach aligns with Neo N3's architecture and provides better compatibility with the Neo VM.
 
-```rust
-use neo_contract::prelude::*;
+### Event Structure
 
-#[event]
-pub struct Transfer {
-    #[indexed]
-    from: Option<Address>,
-    #[indexed]
-    to: Option<Address>,
-    amount: u64,
-}
-```
+Events in Neo N3 consist of:
 
-### Event Fields and Indexing
+1. An event name (as a ByteString)
+2. An array of parameters (as Array<Any>)
 
-Events can have any number of fields of any serializable type. The `#[indexed]` attribute marks fields that should be indexed, making them more efficiently searchable by blockchain explorers and clients.
+Each parameter can be of any type that can be converted to the `Any` type.
 
-Guidelines for indexed fields:
-- Use indexing for fields that will be frequently searched
-- Limit indexed fields to 2-3 per event (performance best practice)
-- Index fields like addresses, identifiers, and categorization values
+### Parameter Types
 
-Indexed fields in Neo are similar to "topics" in Ethereum events, allowing for more efficient filtering.
+Event parameters can include various types of data:
+
+- Addresses (`H160`)
+- Numbers (integers, etc.)
+- Strings (as `ByteString`)
+- Boolean values
+- Byte arrays
+- Null/None values (represented as empty `Any`)
+
+### Searchability
+
+In Neo N3, the first argument in the event data array is typically used for filtering and searching. For better searchability:
+
+- Place identifiable fields like addresses or IDs first in the event data array
+- Use consistent event names across your contract
+- Limit the number of parameters to what's essential
 
 ## Emitting Events
 
-To emit an event from your contract, use the `emit!` macro:
+To emit an event from your contract, use the `Runtime::notify` method with a properly formatted event name and data array:
 
 ```rust
 // Inside a contract method
-emit!(Transfer {
-    from: Some(sender),
-    to: Some(recipient),
-    amount: 100
-});
+pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: u64) {
+    // Create event name as ByteString
+    let event_name = ByteString::from("Transfer");
+    
+    // Create an Array to hold parameters
+    let mut event_data = Array::<Any>::new();
+    
+    // Add parameters as Any values
+    match from {
+        Some(addr) => event_data.push(Any::from(addr)),
+        None => event_data.push(Any::new()), // For null values
+    }
+    
+    match to {
+        Some(addr) => event_data.push(Any::from(addr)),
+        None => event_data.push(Any::new()),
+    }
+    
+    event_data.push(Any::from(amount));
+    
+    // Emit the event
+    Runtime::notify(&event_name, &event_data);
+}
 ```
 
 You can also emit events conditionally:
 
 ```rust
 if amount > 0 {
-    emit!(Transfer {
-        from: Some(sender),
-        to: Some(recipient),
-        amount
-    });
+    let event_name = ByteString::from("Transfer");
+    let mut event_data = Array::<Any>::new();
+    
+    // Add parameters
+    event_data.push(Any::from(from));
+    event_data.push(Any::from(to));
+    event_data.push(Any::from(amount));
+    
+    Runtime::notify(&event_name, &event_data);
 }
 ```
 
 ## Standard Events
 
-Neo has several standardized events that should be used for compatibility:
+Neo N3 has several standardized events that should be used for compatibility:
 
 ### NEP-17 Token Events
 
-For fungible token contracts following the NEP-17 standard:
+For fungible token contracts following the NEP-17 standard, the `Transfer` event is essential:
 
 ```rust
-#[event]
-pub struct Transfer {
-    #[indexed]
-    from: Option<Address>,
-    #[indexed]
-    to: Option<Address>,
-    amount: u64,
+// Function to emit a NEP-17 compliant Transfer event
+pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: u64) {
+    let event_name = ByteString::from("Transfer");
+    let mut event_data = Array::<Any>::new();
+    
+    // Add parameters as Any values
+    match from {
+        Some(addr) => event_data.push(Any::from(addr)),
+        None => event_data.push(Any::new()),
+    }
+    
+    match to {
+        Some(addr) => event_data.push(Any::from(addr)),
+        None => event_data.push(Any::new()),
+    }
+    
+    event_data.push(Any::from(amount));
+    
+    Runtime::notify(&event_name, &event_data);
 }
 ```
 

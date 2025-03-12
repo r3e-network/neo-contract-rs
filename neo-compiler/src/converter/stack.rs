@@ -232,7 +232,6 @@ impl StackAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wasmparser::{FuncType, ValType};
 
     #[test]
     fn test_stack_analysis_simple() {
@@ -245,8 +244,8 @@ mod tests {
             0x0B,       // end
         ];
         
-        let func_type = FuncType::new(vec![], vec![ValType::I32]);
         // Create a WasmFunction with its fields directly instead of using new()
+        #[allow(unused_variables)]
         let func = crate::wasm::WasmFunction {
             name: None,
             index: 0,

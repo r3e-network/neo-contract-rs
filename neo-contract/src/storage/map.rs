@@ -4,10 +4,10 @@
 
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-use crate::error::{Error, ErrorCode, Result};
+use crate::error::Result;
 use crate::find_options::FindOptions;
 use super::context::Context;
-use super::item::{Item, Codec};
+use super::item::Codec;
 
 /// A high-level storage map
 pub struct Map<K, V> {
@@ -162,6 +162,11 @@ where
     /// Clears the context for this map
     pub fn clear_context(&mut self) {
         self.context = None;
+    }
+    
+    /// Returns an iterator over all key-value pairs in the map
+    pub fn iter(&self) -> Vec<(K, V)> {
+        self.find(FindOptions::default())
     }
     
     /// Clears all entries in the map

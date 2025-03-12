@@ -6,12 +6,12 @@
 //! and implementing role-based access control.
 
 use alloc::format;
-use alloc::string::String;
+
 use alloc::vec::Vec;
 use crate::prelude::{H160, ByteString, StorageMap};
 use crate::runtime::Runtime;
-use crate::policy::voting::Storable;
-use crate::error::{Error, ErrorCode, Result};
+
+use crate::error::Result;
 use crate::policy::Policy;
 
 /// A role in the role-based access control system
@@ -60,21 +60,25 @@ impl RoleManager {
     /// Assign a role to an address
     pub fn assign_role(&self, role: &Role, address: H160) -> Result<()> {
         let role_map = self.get_role_map(role);
-        role_map.put(&address, &true);
+        let _ = role_map.put(&address, &true);
         Ok(())
     }
     
     /// Remove a role from an address
     pub fn revoke_role(&self, role: &Role, address: H160) -> Result<()> {
         let role_map = self.get_role_map(role);
-        role_map.delete(&address);
+        let _ = role_map.delete(&address);
         Ok(())
     }
     
     /// Check if an address has a role
     pub fn has_role(&self, role: &Role, address: H160) -> bool {
         let role_map = self.get_role_map(role);
-        role_map.get(&address).unwrap_or(false)
+        // Properly unwrap the nested Option or default to false
+        match role_map.get(&address) {
+            Ok(Some(value)) => value,
+            _ => false
+        }
     }
     
     /// Get all addresses with a specific role
@@ -82,12 +86,16 @@ impl RoleManager {
         let role_map = self.get_role_map(role);
         let mut members = Vec::new();
         
-        for item in role_map.find(&H160::zero()) {
-            let (key_bytes, value_bytes) = item;
-            let key = H160::try_from(key_bytes.0.as_slice()).unwrap();
-            let value = value_bytes.len() > 0 && value_bytes[0] != 0;
-            if value {
-                members.push(key);
+        // Create proper FindOptions for the search
+        use crate::find_options::FindOptions;
+        let _options = FindOptions::default();
+        
+        // Iterate through items and collect addresses with the role
+        for item_result in role_map.iter() {
+            // item_result is already a (H160, bool) tuple
+            let (address, has_role) = item_result;
+            if has_role {
+                members.push(address);
             }
         }
         

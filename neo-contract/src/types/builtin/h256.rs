@@ -5,12 +5,15 @@
 use core::fmt;
 use core::ops::Deref;
 use core::convert::TryFrom;
-use alloc::string::{String, ToString};
-use alloc::vec::Vec;
+use alloc::string::String;
+
 use alloc::format;
 
 /// H256 represents a 256-bit hash (32 bytes) like a transaction hash
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Default)]
+/// H256 represents a 256-bit hash value, commonly used for tx hashes in Neo
+/// Uses repr(transparent) to ensure FFI compatibility with Neo VM
+#[repr(transparent)]
 pub struct H256(pub [u8; 32]);
 
 impl H256 {

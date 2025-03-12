@@ -1,293 +1,337 @@
 #![no_std]
 
+extern crate alloc;
+
+use alloc::string::String;
+
+//! # Ink-Style Token Contract with Attributes
+//!
+//! An implementation of a fungible token using Neo N3 annotations with an Ink-inspired style
+//! This contract implements:
+//! - NEP-17 standard token features
+//! - Event handling with annotations
+//! - Method visibility controls
+//! - Storage management
+
 #[neo_contract::contract]
-#[manifest_extra(
-    author = "Neo Project",
-    email = "contact@neo.org",
-    description = "A sample NEP-17 token implementation using ink!-style syntax with attributes",
-    version = "1.0.0"
-)]
-#[supported_standards("NEP-17")]
-pub mod token {
+mod ink_token {
     use neo_contract::prelude::*;
-
-    // Define the Transfer event
+    use alloc::string::String;
+    
+    /// Token transfer event with Neo N3 indexing
     #[event]
-    pub struct Transfer {
+    struct Transfer {
         #[index]
-        pub from: Option<Address>,
+        from: Option<Address>,
         #[index]
-        pub to: Option<Address>,
-        pub amount: u64,
+        to: Option<Address>,
+        amount: u64
     }
     
-    // Define static values
-    #[contract_hash]
-    const GAS_TOKEN_HASH: Hash160 = hex!("d2a4cff31913016155e38e474a2c06d08be276cf");
-    
-    #[string]
-    const TOKEN_NAME: &str = "Ink Style Token";
-    
-    #[string]
-    const TOKEN_SYMBOL: &str = "IST";
-    
-    #[integer]
-    const TOKEN_DECIMALS: u8 = 8;
-    
-    #[integer]
-    const INITIAL_SUPPLY: u64 = 100_000_000;
-
-    // Token storage with attributes
-    #[storage]
-    pub struct TokenContract {
-        // Token metadata
-        pub name: Item<String>,
-        pub symbol: Item<String>,
-        pub decimals: Item<u8>,
-        pub total_supply: Item<u64>,
-        
-        // Owner with admin rights
-        pub owner: Item<Address>,
-        
-        // Token balances
-        pub balances: Map<Address, u64>,
-        
-        // Record of frozen accounts
-        pub frozen_accounts: Map<Address, bool>,
-        
-        // Minting allowed flag
-        pub minting_allowed: Item<bool>,
-    }
-
-    // Implementation with security attributes
-    impl TokenContract {
-        #[constructor]
-        pub fn new(owner: Address) -> Self {
-            // Create balance for the owner with the initial supply
-            let mut balances = Map::new();
-            balances.insert(owner, INITIAL_SUPPLY);
+    /// Implementation for properly emitting the Transfer event using Neo N3 standards
+    impl Transfer {
+        /// Static method to emit the Transfer event in Neo N3 format
+        pub fn emit(from: Option<Address>, to: Option<Address>, amount: u64) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("Transfer");
             
-            // Emit transfer event (mint)
-            runtime::emit_event(Transfer {
-                from: None,
-                to: Some(owner),
-                amount: INITIAL_SUPPLY,
-            });
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
             
-            Self {
-                name: Item::new(TOKEN_NAME.to_string()),
-                symbol: Item::new(TOKEN_SYMBOL.to_string()),
-                decimals: Item::new(TOKEN_DECIMALS),
-                total_supply: Item::new(INITIAL_SUPPLY),
-                owner: Item::new(owner),
-                balances,
-                frozen_accounts: Map::new(),
-                minting_allowed: Item::new(true),
+            // Add parameters with proper Neo N3 format
+            match from {
+                Some(addr) => event_data.push(Any::from(addr)),
+                None => event_data.push(Any::from(ByteArray::new())), // null for minting
             }
+            
+            match to {
+                Some(addr) => event_data.push(Any::from(addr)),
+                None => event_data.push(Any::from(ByteArray::new())), // null for burning
+            }
+            
+            event_data.push(Any::from(amount));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
+    /// Event emitted when ownership is transferred
+    #[event]
+    struct OwnershipTransferred {
+        #[index]
+        previous_owner: Address,
+        #[index]
+        new_owner: Address,
+    }
+    
+    /// Implementation for properly emitting the OwnershipTransferred event using Neo N3 standards
+    impl OwnershipTransferred {
+        /// Static method to emit the OwnershipTransferred event in Neo N3 format
+        pub fn emit(previous_owner: Address, new_owner: Address) {
+            // Create event name as ByteString (required for Neo N3)
+            let event_name = ByteString::from("OwnershipTransferred");
+            
+            // Create Array to hold event parameters (required for Neo N3)
+            let mut event_data = Array::<Any>::new();
+            
+            // Add parameters with proper Neo N3 format
+            event_data.push(Any::from(previous_owner));
+            event_data.push(Any::from(new_owner));
+            
+            // Emit the event using Runtime::notify (required for Neo N3)
+            Runtime::notify(&event_name, &event_data);
+        }
+    }
+    
+    /// Contract storage structure using Neo N3 storage annotation
+    #[storage]
+    struct InkToken {
+        /// Token name
+        name: Item<String>,
+        
+        /// Token symbol
+        symbol: Item<String>,
+        
+        /// Number of decimal places
+        decimals: Item<u8>,
+        
+        /// Total supply of tokens
+        total_supply: Item<u64>,
+        
+        /// Token balances mapped by address
+        balances: Map<Address, u64>,
+        
+        /// Contract owner address
+        owner: Item<Address>,
+    }
+    
+    impl InkToken {
+        /// Initialize a new token contract with the specified parameters
+        #[constructor]
+        fn new(
+            owner: Address,
+            name: String,
+            symbol: String,
+            decimals: u8,
+            total_supply: u64
+        ) -> Self {
+            // Create the storage structure
+            let mut instance = Self {
+                name: Item::new("name"),
+                symbol: Item::new("symbol"),
+                decimals: Item::new("decimals"),
+                total_supply: Item::new("total_supply"),
+                balances: Map::new(),
+                owner: Item::new("owner"),
+            };
+            
+            // Initialize token metadata
+            instance.name.set(name);
+            instance.symbol.set(symbol);
+            instance.decimals.set(decimals);
+            instance.total_supply.set(total_supply);
+            instance.owner.set(owner);
+            
+            // Initialize the balance of the token owner with the total supply
+            instance.balances.insert(owner, total_supply);
+            
+            // Emit the transfer event for the initial supply (from null address)
+            Transfer::emit(None, Some(owner), total_supply);
+            
+            instance
         }
         
-        // NEP-17 standard methods
-        
+        /// Get the token name
+        #[method]
         #[safe]
-        pub fn symbol(&self) -> String {
-            self.symbol.get().clone()
+        fn name(&self) -> String {
+            self.name.get().unwrap_or_default()
         }
         
+        /// Get the token symbol
+        #[method]
         #[safe]
-        pub fn name(&self) -> String {
-            self.name.get().clone()
+        fn symbol(&self) -> String {
+            self.symbol.get().unwrap_or_default()
         }
         
+        /// Get the number of decimal places
+        #[method]
         #[safe]
-        pub fn decimals(&self) -> u8 {
-            *self.decimals.get()
+        fn decimals(&self) -> u8 {
+            self.decimals.get().unwrap_or_default()
         }
         
+        /// Get the total token supply
+        #[method]
         #[safe]
-        pub fn total_supply(&self) -> u64 {
-            *self.total_supply.get()
+        fn total_supply(&self) -> u64 {
+            self.total_supply.get().unwrap_or_default()
         }
         
+        /// Get the token balance for a specific account
+        #[method]
         #[safe]
-        pub fn balance_of(&self, account: Address) -> u64 {
+        fn balance_of(&self, account: Address) -> u64 {
             self.balances.get(&account).unwrap_or_default()
         }
         
-        // Transfer with security attributes
+        /// Transfer tokens from one account to another
         #[method]
-        #[no_reentrant]
-        pub fn transfer(&mut self, from: Address, to: Address, amount: u64, data: Option<Vec<u8>>) -> bool {
-            // Check that the sender is authorized
-            assert!(runtime::check_witness(&from), "No authorization");
+        #[no_reentry]
+        fn transfer(&mut self, from: Address, to: Address, amount: u64, data: Option<ByteArray>) -> bool {
+            // Verify transaction signature
+            assert!(Runtime::check_witness(&from), "Unauthorized");
             
-            // Check that accounts are not frozen
-            assert!(!self.frozen_accounts.get(&from).unwrap_or_default(), "Sender account is frozen");
-            assert!(!self.frozen_accounts.get(&to).unwrap_or_default(), "Recipient account is frozen");
+            // Check for valid receiving address
+            assert!(to != Address::zero(), "Invalid receiving address");
             
-            // Check that the recipient is valid
-            assert!(to != Address::zero(), "Invalid recipient address");
-            
-            // Get the sender's balance
+            // Get sender's balance
             let from_balance = self.balances.get(&from).unwrap_or_default();
             
-            // Check that the sender has enough tokens
+            // Ensure sender has enough tokens
             assert!(from_balance >= amount, "Insufficient balance");
             
-            // Update balances
-            if amount > 0 {
-                // Reduce sender's balance
-                let new_from_balance = from_balance - amount;
-                if new_from_balance > 0 {
-                    self.balances.insert(from, new_from_balance);
-                } else {
-                    self.balances.remove(&from);
-                }
-                
-                // Increase recipient's balance
-                let to_balance = self.balances.get(&to).unwrap_or_default();
-                self.balances.insert(to, to_balance + amount);
-                
-                // Emit transfer event
-                runtime::emit_event(Transfer {
-                    from: Some(from),
-                    to: Some(to),
-                    amount,
-                });
-                
-                // If the recipient is a contract, call onNEP17Payment
-                if self.is_contract(&to) {
-                    let _ = self.call_contract::<bool>(
-                        &to,
-                        "onNEP17Payment",
-                        (from, amount, data.unwrap_or_default()),
-                    );
-                }
+            // Skip if amount is zero
+            if amount == 0 {
+                return true;
             }
             
-            true
-        }
-        
-        // Admin methods with access control
-        
-        #[method]
-        pub fn mint(&mut self, to: Address, amount: u64) -> bool {
-            // Ensure only the contract owner can mint
-            let owner = self.owner.get().clone();
-            assert!(runtime::check_witness(&owner), "Only owner can mint");
+            // Calculate new balances
+            let new_from_balance = from_balance - amount;
             
-            // Ensure minting is allowed
-            assert!(*self.minting_allowed.get(), "Minting is disabled");
-            
-            // Ensure recipient account is not frozen
-            assert!(!self.frozen_accounts.get(&to).unwrap_or_default(), "Recipient account is frozen");
-            
-            // Update total supply
-            let current_supply = *self.total_supply.get();
-            self.total_supply.set(current_supply + amount);
-            
-            // Update recipient balance
-            let balance = self.balances.get(&to).unwrap_or_default();
-            self.balances.insert(to, balance + amount);
-            
-            // Emit transfer event (mint = transfer from None)
-            runtime::emit_event(Transfer {
-                from: None,
-                to: Some(to),
-                amount,
-            });
-            
-            true
-        }
-        
-        #[method]
-        pub fn burn(&mut self, from: Address, amount: u64) -> bool {
-            // Ensure the token owner is authorizing the burn
-            assert!(runtime::check_witness(&from), "No authorization");
-            
-            // Ensure account is not frozen
-            assert!(!self.frozen_accounts.get(&from).unwrap_or_default(), "Account is frozen");
-            
-            // Get current balance
-            let balance = self.balances.get(&from).unwrap_or_default();
-            assert!(balance >= amount, "Insufficient balance to burn");
-            
-            // Update balance
-            let new_balance = balance - amount;
-            if new_balance > 0 {
-                self.balances.insert(from, new_balance);
+            // Update sender's balance
+            if new_from_balance > 0 {
+                self.balances.insert(from, new_from_balance);
             } else {
                 self.balances.remove(&from);
             }
             
+            // Update receiver's balance
+            let to_balance = self.balances.get(&to).unwrap_or_default();
+            self.balances.insert(to.clone(), to_balance + amount);
+            
+            // Emit transfer event with proper Neo N3 format
+            Transfer::emit(Some(from), Some(to.clone()), amount);
+            
+            // NEP-17 standard: Call onNEP17Payment if the recipient is a contract
+            if to != from {
+                let contract_called = Runtime::calling_script_hash();
+                
+                // Only allow notification to receiving contract when it's not the caller
+                if contract_called != to {
+                    let on_nep17_payment_method = "onNEP17Payment";
+                    
+                    // Prepare arguments
+                    let mut args = Array::<Any>::new();
+                    args.push(Any::from(from));
+                    args.push(Any::from(amount));
+                    if let Some(data_value) = data {
+                        args.push(Any::from(data_value));
+                    } else {
+                        args.push(Any::from(ByteArray::new())); // empty data
+                    }
+                    
+                    // Call receiver's onNEP17Payment method
+                    // Ignore errors to ensure the transfer succeeds regardless
+                    let _: Result<(), Error> = Runtime::call_contract(&to, on_nep17_payment_method, &args);
+                }
+            }
+            
+            true
+        }
+        
+        /// Mint new tokens (only callable by owner)
+        #[method]
+        #[no_reentry]
+        fn mint(&mut self, to: Address, amount: u64) -> bool {
+            // Verify owner authorization
+            let owner = self.owner.get().unwrap_or_default();
+            assert!(Runtime::check_witness(&owner), "Only owner can mint tokens");
+            
+            // Amount must be greater than zero
+            assert!(amount > 0, "Mint amount must be greater than 0");
+            
+            // Get current values
+            let current_supply = self.total_supply.get().unwrap_or_default();
+            let to_balance = self.balances.get(&to).unwrap_or_default();
+            
             // Update total supply
-            let current_supply = *self.total_supply.get();
+            self.total_supply.set(current_supply + amount);
+            
+            // Update receiver's balance
+            self.balances.insert(to, to_balance + amount);
+            
+            // Emit transfer event (mint = transfer from None) with proper Neo N3 format
+            Transfer::emit(None, Some(to), amount);
+            
+            true
+        }
+        
+        /// Burn tokens
+        #[method]
+        #[no_reentry]
+        fn burn(&mut self, from: Address, amount: u64) -> bool {
+            // Verify authorization
+            assert!(Runtime::check_witness(&from), "Unauthorized");
+            
+            // Amount must be greater than zero
+            assert!(amount > 0, "Burn amount must be greater than 0");
+            
+            // Get current balance
+            let from_balance = self.balances.get(&from).unwrap_or_default();
+            
+            // Ensure account has enough tokens
+            assert!(from_balance >= amount, "Insufficient balance");
+            
+            // Get current supply
+            let current_supply = self.total_supply.get().unwrap_or_default();
+            
+            // Update total supply
             self.total_supply.set(current_supply - amount);
             
-            // Emit transfer event (burn = transfer to None)
-            runtime::emit_event(Transfer {
-                from: Some(from),
-                to: None,
-                amount,
-            });
+            // Update sender's balance
+            let new_from_balance = from_balance - amount;
+            if new_from_balance > 0 {
+                self.balances.insert(from, new_from_balance);
+            } else {
+                self.balances.remove(&from);
+            }
+            
+            // Emit transfer event (burn = transfer to None) with proper Neo N3 format
+            Transfer::emit(Some(from), None, amount);
             
             true
         }
         
+        /// Transfer ownership of the contract
         #[method]
-        pub fn freeze_account(&mut self, account: Address, frozen: bool) -> bool {
-            // Ensure only the contract owner can freeze accounts
-            let owner = self.owner.get().clone();
-            assert!(runtime::check_witness(&owner), "Only owner can freeze accounts");
+        #[no_reentry]
+        fn transfer_ownership(&mut self, new_owner: Address) -> bool {
+            // Get current owner
+            let current_owner = self.owner.get().unwrap_or_default();
             
-            // Update frozen status
-            self.frozen_accounts.insert(account, frozen);
-            true
-        }
-        
-        #[method]
-        pub fn set_minting_allowed(&mut self, allowed: bool) -> bool {
-            // Ensure only the contract owner can change minting status
-            let owner = self.owner.get().clone();
-            assert!(runtime::check_witness(&owner), "Only owner can change minting status");
+            // Verify ownership
+            assert!(Runtime::check_witness(&current_owner), "Only owner can transfer ownership");
             
-            self.minting_allowed.set(allowed);
-            true
-        }
-        
-        #[method]
-        pub fn transfer_ownership(&mut self, new_owner: Address) -> bool {
-            // Ensure only the current owner can transfer ownership
-            let owner = self.owner.get().clone();
-            assert!(runtime::check_witness(&owner), "Only owner can transfer ownership");
+            // Ensure new owner is not zero address
+            assert!(new_owner != Address::zero(), "Cannot transfer to zero address");
             
-            // Ensure the new owner is valid
-            assert!(new_owner != Address::zero(), "Invalid new owner address");
-            
+            // Update owner
             self.owner.set(new_owner);
+            
+            // Emit ownership transfer event
+            OwnershipTransferred::emit(current_owner, new_owner);
+            
             true
         }
         
-        // Helper methods
-        
+        /// Get the current owner of the contract
+        #[method]
         #[safe]
-        pub fn is_frozen(&self, account: Address) -> bool {
-            self.frozen_accounts.get(&account).unwrap_or_default()
-        }
-        
-        #[safe]
-        pub fn is_minting_allowed(&self) -> bool {
-            *self.minting_allowed.get()
-        }
-        
-        #[safe]
-        pub fn get_owner(&self) -> Address {
-            self.owner.get().clone()
-        }
-        
-        // Internal helper method
-        fn is_contract(&self, address: &Address) -> bool {
-            address != &Address::zero() && 
-            runtime::contract_exists(address)
+        fn get_owner(&self) -> Address {
+            self.owner.get().unwrap_or_default()
         }
     }
 }

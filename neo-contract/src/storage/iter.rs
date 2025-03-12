@@ -70,8 +70,8 @@ where
         // Try to decode the key and value
         match (K::decode(key_bytes), V::decode(value)) {
             (Ok(k), Ok(v)) => Some(Ok((k, v))),
-            (Err(e), _) => Some(Err(Error::new(ErrorCode::DecodingError))),
-            (_, Err(e)) => Some(Err(Error::new(ErrorCode::DecodingError))),
+            (Err(_e), _) => Some(Err(Error::new(ErrorCode::DecodingError))),
+            (_, Err(_e)) => Some(Err(Error::new(ErrorCode::DecodingError))),
         }
     }
     
