@@ -1,0 +1,25 @@
+[package]
+name = "neo-nft-basic"
+version = "0.1.0"
+edition = "2021"
+description = "NEO N3 Basic NFT Smart Contract Example"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+neo-contract = { path = "../../../", default-features = false }
+
+[features]
+default = []
+std = ["neo-contract/std"]
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true 
