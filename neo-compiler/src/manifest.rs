@@ -23,10 +23,7 @@ pub struct ContractParameterDefinition {
 impl ContractParameterDefinition {
     /// Creates a new contract parameter definition.
     pub fn new(name: impl Into<String>, param_type: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            param_type: param_type.into(),
-        }
+        Self { name: name.into(), param_type: param_type.into() }
     }
 }
 
@@ -83,10 +80,7 @@ pub struct ContractEventDefinition {
 impl ContractEventDefinition {
     /// Creates a new contract event definition.
     pub fn new(name: impl Into<String>, parameters: Vec<ContractParameterDefinition>) -> Self {
-        Self {
-            name: name.into(),
-            parameters,
-        }
+        Self { name: name.into(), parameters }
     }
 }
 
@@ -101,20 +95,12 @@ pub struct ContractAbi {
 
 impl ContractAbi {
     /// Creates a new contract ABI.
-    pub fn new(
-        methods: Vec<ContractMethodDefinition>,
-        events: Vec<ContractEventDefinition>,
-    ) -> Self {
+    pub fn new(methods: Vec<ContractMethodDefinition>, events: Vec<ContractEventDefinition>) -> Self {
         Self { methods, events }
     }
 
     /// Creates an empty contract ABI.
-    pub fn empty() -> Self {
-        Self {
-            methods: Vec::new(),
-            events: Vec::new(),
-        }
-    }
+    pub fn empty() -> Self { Self { methods: Vec::new(), events: Vec::new() } }
 }
 
 /// Contract features.
@@ -140,19 +126,11 @@ pub struct ContractPermission {
 impl ContractPermission {
     /// Creates a new contract permission.
     pub fn new(contract: impl Into<String>, methods: Vec<String>) -> Self {
-        Self {
-            contract: contract.into(),
-            methods,
-        }
+        Self { contract: contract.into(), methods }
     }
 
     /// Creates a wildcard permission (allows access to all contracts and methods).
-    pub fn wildcard() -> Self {
-        Self {
-            contract: "*".to_string(),
-            methods: vec!["*".to_string()],
-        }
-    }
+    pub fn wildcard() -> Self { Self { contract: "*".to_string(), methods: vec!["*".to_string()] } }
 }
 
 /// Contract group.
@@ -167,10 +145,7 @@ pub struct ContractGroup {
 impl ContractGroup {
     /// Creates a new contract group.
     pub fn new(pubkey: impl Into<String>, signature: impl Into<String>) -> Self {
-        Self {
-            pubkey: pubkey.into(),
-            signature: signature.into(),
-        }
+        Self { pubkey: pubkey.into(), signature: signature.into() }
     }
 }
 
@@ -215,12 +190,7 @@ impl Default for Manifest {
 
 impl Manifest {
     /// Creates a new manifest with the given name.
-    pub fn new(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            ..Self::default()
-        }
-    }
+    pub fn new(name: impl Into<String>) -> Self { Self { name: name.into(), ..Self::default() } }
 
     /// Sets the ABI of the manifest.
     pub fn with_abi(mut self, abi: ContractAbi) -> Self {
@@ -234,29 +204,19 @@ impl Manifest {
     }
 
     /// Adds a permission to the manifest.
-    pub fn add_permission(&mut self, permission: ContractPermission) {
-        self.permissions.push(permission);
-    }
+    pub fn add_permission(&mut self, permission: ContractPermission) { self.permissions.push(permission); }
 
     /// Adds a trusted contract to the manifest.
-    pub fn add_trusted_contract(&mut self, contract_hash: impl Into<String>) {
-        self.trusts.push(contract_hash.into());
-    }
+    pub fn add_trusted_contract(&mut self, contract_hash: impl Into<String>) { self.trusts.push(contract_hash.into()); }
 
     /// Adds a group to the manifest.
-    pub fn add_group(&mut self, group: ContractGroup) {
-        self.groups.push(group);
-    }
+    pub fn add_group(&mut self, group: ContractGroup) { self.groups.push(group); }
 
     /// Adds a method to the ABI.
-    pub fn add_method(&mut self, method: ContractMethodDefinition) {
-        self.abi.methods.push(method);
-    }
+    pub fn add_method(&mut self, method: ContractMethodDefinition) { self.abi.methods.push(method); }
 
     /// Adds an event to the ABI.
-    pub fn add_event(&mut self, event: ContractEventDefinition) {
-        self.abi.events.push(event);
-    }
+    pub fn add_event(&mut self, event: ContractEventDefinition) { self.abi.events.push(event); }
 
     /// Sets a feature value.
     pub fn set_feature(&mut self, name: &str, value: bool) -> Result<(), Error> {
@@ -270,10 +230,8 @@ impl Manifest {
 
     /// Sets an extra field in the manifest.
     pub fn set_extra<T: Serialize>(&mut self, key: &str, value: T) -> Result<(), Error> {
-        self.extra.insert(
-            key.to_string(),
-            serde_json::to_value(value).map_err(|e| Error::Serialization(e.to_string()))?,
-        );
+        self.extra
+            .insert(key.to_string(), serde_json::to_value(value).map_err(|e| Error::Serialization(e.to_string()))?);
         Ok(())
     }
 
@@ -314,10 +272,7 @@ impl Manifest {
                 return Err(Error::invalid_manifest("Method name cannot be empty"));
             }
             if !method_names.insert(&method.name) {
-                return Err(Error::invalid_manifest(format!(
-                    "Duplicate method name: {}",
-                    method.name
-                )));
+                return Err(Error::invalid_manifest(format!("Duplicate method name: {}", method.name)));
             }
         }
 
@@ -328,10 +283,7 @@ impl Manifest {
                 return Err(Error::invalid_manifest("Event name cannot be empty"));
             }
             if !event_names.insert(&event.name) {
-                return Err(Error::invalid_manifest(format!(
-                    "Duplicate event name: {}",
-                    event.name
-                )));
+                return Err(Error::invalid_manifest(format!("Duplicate event name: {}", event.name)));
             }
         }
 
@@ -340,17 +292,13 @@ impl Manifest {
     }
 
     /// Creates a manifest from a template file, filling in the specified fields.
-    pub fn from_template<P: AsRef<Path>>(
-        template_path: P,
-        name: &str,
-        abi: ContractAbi,
-    ) -> Result<Self, Error> {
+    pub fn from_template<P: AsRef<Path>>(template_path: P, name: &str, abi: ContractAbi) -> Result<Self, Error> {
         let template_json = fs::read_to_string(template_path)?;
         let mut manifest: Self = Self::from_json(&template_json)?;
-        
+
         manifest.name = name.to_string();
         manifest.abi = abi;
-        
+
         Ok(manifest)
     }
 }
@@ -362,22 +310,17 @@ mod tests {
     #[test]
     fn test_manifest_serialization() {
         let mut manifest = Manifest::new("MyContract");
-        
+
         // Add parameters for a method
         let params = vec![
             ContractParameterDefinition::new("owner", "Hash160"),
             ContractParameterDefinition::new("amount", "Integer"),
         ];
-        
+
         // Add a method to the ABI
-        let method = ContractMethodDefinition::new(
-            "transfer",
-            params,
-            "Boolean",
-            false,
-        );
+        let method = ContractMethodDefinition::new("transfer", params, "Boolean", false);
         manifest.add_method(method);
-        
+
         // Add an event to the ABI
         let event_params = vec![
             ContractParameterDefinition::new("from", "Hash160"),
@@ -386,23 +329,23 @@ mod tests {
         ];
         let event = ContractEventDefinition::new("Transfer", event_params);
         manifest.add_event(event);
-        
+
         // Set features
         manifest.set_feature("storage", true).unwrap();
         manifest.set_feature("payable", true).unwrap();
-        
+
         // Add a supported standard
         manifest.add_supported_standard("NEP-17");
-        
+
         // Add an extra field
         manifest.set_extra("description", "My first Neo contract").unwrap();
-        
+
         // Serialize to JSON
         let json = manifest.to_json().unwrap();
-        
+
         // Deserialize from JSON
         let deserialized = Manifest::from_json(&json).unwrap();
-        
+
         // Check if the deserialized manifest is equal to the original
         assert_eq!(manifest, deserialized);
         assert_eq!(deserialized.name, "MyContract");
@@ -425,12 +368,12 @@ mod tests {
         );
         manifest.add_method(method);
         assert!(manifest.validate().is_ok());
-        
+
         // Invalid: empty name
         let mut invalid = manifest.clone();
         invalid.name = "".to_string();
         assert!(invalid.validate().is_err());
-        
+
         // Invalid: duplicate method names
         let mut invalid = manifest.clone();
         let duplicate_method = ContractMethodDefinition::new(

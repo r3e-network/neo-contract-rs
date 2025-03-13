@@ -76,33 +76,28 @@ mod token_contract {
             }
         }
         
-        // Define public methods with #[message] attribute
+        // Define public methods with #[method] attribute
         // Using #[safe] to indicate these are read-only methods
-        #[message]
         #[safe]
         pub fn get_name(&self) -> ByteString {
             self.token_name.clone()
         }
         
-        #[message]
         #[safe]
         pub fn get_symbol(&self) -> ByteString {
             self.token_symbol.clone()
         }
         
-        #[message]
         #[safe]
         pub fn get_decimals(&self) -> Int256 {
             self.token_decimals.clone()
         }
         
-        #[message]
         #[safe]
         pub fn get_total_supply(&self) -> Int256 {
             self.total_supply.clone()
         }
         
-        #[message]
         #[safe]
         pub fn balance_of(&self, account: H160) -> Int256 {
             match self.balances.get(&account) {
@@ -112,7 +107,7 @@ mod token_contract {
         }
         
         // State-modifying methods don't have the #[safe] attribute
-        #[message]
+        #[method]
         pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
             // Validate inputs
             if amount <= Int256::zero() {
@@ -155,7 +150,7 @@ mod token_contract {
         }
         
         // State-modifying methods don't have the #[safe] attribute
-        #[message]
+        #[method]
         pub fn mint(&mut self, to: H160, amount: Int256) -> bool {
             // Only owner can mint
             if !Runtime::check_witness(self.owner.clone()) {
@@ -186,7 +181,7 @@ mod token_contract {
         }
         
         // State-modifying methods don't have the #[safe] attribute
-        #[message]
+        #[method]
         pub fn burn(&mut self, from: H160, amount: Int256) -> bool {
             // Must be owner or the account itself
             if !Runtime::check_witness(from.clone()) && !Runtime::check_witness(self.owner.clone()) {

@@ -2,19 +2,29 @@
 
 extern crate alloc;
 
-//! # Simple DEX Contract
-//!
-//! A decentralized exchange implementation supporting token swaps,
-//! liquidity provision, and automated market making.
-//! Built on Neo N3 blockchain using the neo-contract-rs framework.
-//!
-//! This contract implements:
-//! - Liquidity pool creation and management
-//! - Liquidity provision and withdrawal
-//! - Token swaps with configurable fees
-//! - Price quotes and liquidity tracking
+//! # Decentralized Exchange (DEX) Contract for Neo N3
+//! 
+//! This contract implements a constant product AMM (Automated Market Maker) DEX
+//! that allows users to:
+//! 1. Create liquidity pools for any pair of tokens
+//! 2. Add liquidity to existing pools
+//! 3. Remove liquidity from pools
+//! 4. Swap tokens using pools
+//! 
+//! ## Event Handling
+//! This contract uses the standardized Neo N3 event pattern:
+//! - Events are defined as structs with the `#[event]` attribute
+//! - Event parameters that need to be indexed for efficient filtering use the `#[index]` attribute
+//! - Events are emitted using the `EventName::emit(params)` method
+//! 
+//! This approach is automatically provided by the neo-contract framework and is the
+//! recommended way to handle events in Neo N3 smart contracts.
 
-#[neo_contract::contract]
+#[contract]
+#[contract_author("R3E Network")]
+#[contract_description("Decentralized Exchange (DEX) for Neo N3")]
+#[contract_version("0.1.0")]
+#[supported_standards("NEP-17")]
 mod neo_dex {
     use neo_contract::prelude::*;
     use alloc::vec::Vec;
@@ -72,7 +82,7 @@ mod neo_dex {
         timestamp: u64,
     }
     
-    /// Event emitted when a new pool is created
+    /// Event emitted when a pool is created
     #[event]
     struct PoolCreated {
         #[index]
@@ -80,27 +90,6 @@ mod neo_dex {
         token_a: Hash160,
         token_b: Hash160,
         fee_rate: u16,
-    }
-    
-    /// Implementation for properly emitting the PoolCreated event using Neo N3 standards
-    impl PoolCreated {
-        /// Static method to emit the PoolCreated event in Neo N3 format
-        pub fn emit(pool_id: u32, token_a: Hash160, token_b: Hash160, fee_rate: u16) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("PoolCreated");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(pool_id));
-            event_data.push(Any::from(token_a));
-            event_data.push(Any::from(token_b));
-            event_data.push(Any::from(fee_rate));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     /// Event emitted when liquidity is added to a pool
@@ -115,28 +104,6 @@ mod neo_dex {
         liquidity_minted: u64,
     }
     
-    /// Implementation for properly emitting the LiquidityAdded event using Neo N3 standards
-    impl LiquidityAdded {
-        /// Static method to emit the LiquidityAdded event in Neo N3 format
-        pub fn emit(pool_id: u32, provider: Address, amount_a: u64, amount_b: u64, liquidity_minted: u64) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("LiquidityAdded");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(pool_id));
-            event_data.push(Any::from(provider));
-            event_data.push(Any::from(amount_a));
-            event_data.push(Any::from(amount_b));
-            event_data.push(Any::from(liquidity_minted));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
-    }
-    
     /// Event emitted when liquidity is removed from a pool
     #[event]
     struct LiquidityRemoved {
@@ -147,28 +114,6 @@ mod neo_dex {
         amount_a: u64,
         amount_b: u64,
         liquidity_burned: u64,
-    }
-    
-    /// Implementation for properly emitting the LiquidityRemoved event using Neo N3 standards
-    impl LiquidityRemoved {
-        /// Static method to emit the LiquidityRemoved event in Neo N3 format
-        pub fn emit(pool_id: u32, provider: Address, amount_a: u64, amount_b: u64, liquidity_burned: u64) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("LiquidityRemoved");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(pool_id));
-            event_data.push(Any::from(provider));
-            event_data.push(Any::from(amount_a));
-            event_data.push(Any::from(amount_b));
-            event_data.push(Any::from(liquidity_burned));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     /// Event emitted when a swap occurs
@@ -183,31 +128,6 @@ mod neo_dex {
         amount_in: u64,
         amount_out: u64,
         fee_amount: u64,
-    }
-    
-    /// Implementation for properly emitting the Swap event using Neo N3 standards
-    impl Swap {
-        /// Static method to emit the Swap event in Neo N3 format
-        pub fn emit(pool_id: u32, user: Address, token_in: Hash160, token_out: Hash160, 
-                    amount_in: u64, amount_out: u64, fee_amount: u64) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("Swap");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(pool_id));
-            event_data.push(Any::from(user));
-            event_data.push(Any::from(token_in));
-            event_data.push(Any::from(token_out));
-            event_data.push(Any::from(amount_in));
-            event_data.push(Any::from(amount_out));
-            event_data.push(Any::from(fee_amount));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     /// DEX contract storage
@@ -332,7 +252,7 @@ mod neo_dex {
             self.pools.insert(pool_id, pool);
             self.pool_by_tokens.insert(token_pair, pool_id);
             
-            // Emit pool created event with proper Neo N3 format
+            // Emit pool created event
             PoolCreated::emit(pool_id, first_token, second_token, fee);
             
             pool_id
@@ -448,7 +368,7 @@ mod neo_dex {
                 self.pool_providers.insert(pool_id, pool_providers);
             }
             
-            // Emit liquidity added event with proper Neo N3 format
+            // Emit liquidity added event
             LiquidityAdded::emit(pool_id, provider, amount_a, amount_b, liquidity);
             
             (amount_a, amount_b, liquidity)
@@ -542,7 +462,7 @@ mod neo_dex {
             self.transfer_token_from_contract(&pool.token_a, &provider, amount_a);
             self.transfer_token_from_contract(&pool.token_b, &provider, amount_b);
             
-            // Emit liquidity removed event with proper Neo N3 format
+            // Emit liquidity removed event
             LiquidityRemoved::emit(pool_id, provider, amount_a, amount_b, liquidity);
             
             (amount_a, amount_b)
@@ -557,7 +477,6 @@ mod neo_dex {
         ///
         /// # Returns
         /// The amount of token B needed
-        #[method]
         #[safe]
         fn quote(&self, amount_a: u64, reserve_a: u64, reserve_b: u64) -> u64 {
             assert!(amount_a > 0, "Amount must be positive");
@@ -657,7 +576,7 @@ mod neo_dex {
                 self.recent_swaps.remove(&(swap_id - max_swaps));
             }
             
-            // Emit swap event with proper Neo N3 format
+            // Emit swap event
             Swap::emit(pool_id, user, token_in, token_out, amount_in, amount_out, fee_amount);
             
             amount_out
@@ -756,7 +675,7 @@ mod neo_dex {
                 self.recent_swaps.remove(&(swap_id - max_swaps));
             }
             
-            // Emit swap event with proper Neo N3 format
+            // Emit swap event
             Swap::emit(pool_id, user, token_in, token_out, amount_in, amount_out, fee_amount);
             
             amount_in
@@ -770,7 +689,6 @@ mod neo_dex {
         ///
         /// # Returns
         /// The pool ID, if it exists
-        #[method]
         #[safe]
         fn get_pool_id(&self, token_a: Hash160, token_b: Hash160) -> Option<u32> {
             // Order tokens to ensure consistent lookup
@@ -790,7 +708,6 @@ mod neo_dex {
         ///
         /// # Returns
         /// The liquidity pool details
-        #[method]
         #[safe]
         fn get_pool(&self, pool_id: u32) -> Option<LiquidityPool> {
             self.pools.get(&pool_id)
@@ -804,7 +721,6 @@ mod neo_dex {
         ///
         /// # Returns
         /// The liquidity position details
-        #[method]
         #[safe]
         fn get_position(&self, provider: Address, pool_id: u32) -> Option<LiquidityPosition> {
             self.positions.get(&(provider, pool_id))
@@ -817,7 +733,6 @@ mod neo_dex {
         ///
         /// # Returns
         /// A list of pool IDs
-        #[method]
         #[safe]
         fn get_provider_pools(&self, provider: Address) -> Vec<u32> {
             self.provider_pools.get(&provider).unwrap_or_default()
@@ -830,7 +745,6 @@ mod neo_dex {
         ///
         /// # Returns
         /// A list of provider addresses
-        #[method]
         #[safe]
         fn get_pool_providers(&self, pool_id: u32) -> Vec<Address> {
             self.pool_providers.get(&pool_id).unwrap_or_default()
@@ -843,7 +757,6 @@ mod neo_dex {
         ///
         /// # Returns
         /// The swap operation details
-        #[method]
         #[safe]
         fn get_swap(&self, swap_id: u32) -> Option<SwapOperation> {
             self.recent_swaps.get(&swap_id)
@@ -853,7 +766,6 @@ mod neo_dex {
         ///
         /// # Returns
         /// The owner's address
-        #[method]
         #[safe]
         fn get_owner(&self) -> Address {
             self.owner.get().unwrap_or_default()

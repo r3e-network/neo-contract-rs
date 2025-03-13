@@ -3,13 +3,13 @@
 //! This module defines the common types used throughout the framework.
 
 // Re-export core types
+pub use self::builtin::any::Any;
+pub use self::builtin::array::Array;
 pub use self::builtin::h160::H160;
 pub use self::builtin::h256::H256;
-pub use self::builtin::string::ByteString;
 pub use self::builtin::int256::Int256;
-pub use self::builtin::array::Array;
 pub use self::builtin::map::Map;
-pub use self::builtin::any::Any;
+pub use self::builtin::string::ByteString;
 
 pub mod block;
 pub mod bytes;

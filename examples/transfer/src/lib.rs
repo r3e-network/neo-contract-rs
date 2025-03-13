@@ -72,7 +72,6 @@ impl Transfer {
     ///
     /// # Returns
     /// The Neo balance of the contract
-    #[method]
     #[safe]
     pub fn get_neo_balance(&self) -> Int256 {
         let executing = Runtime::executing_script_hash();
@@ -83,7 +82,6 @@ impl Transfer {
     ///
     /// # Returns
     /// The Gas balance of the contract
-    #[method]
     #[safe]
     pub fn get_gas_balance(&self) -> Int256 {
         let executing = Runtime::executing_script_hash();

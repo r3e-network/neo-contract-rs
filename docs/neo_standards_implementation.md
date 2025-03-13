@@ -25,9 +25,9 @@ NEP-17 is the standard for fungible tokens on Neo N3, similar to ERC-20 on Ether
 ```rust
 #[event]
 pub struct Transfer {
-    #[indexed]
+    #[index]
     from: Option<Address>,
-    #[indexed]
+    #[index]
     to: Option<Address>,
     amount: u64,
 }
@@ -40,9 +40,9 @@ use neo_contract::prelude::*;
 
 #[event]
 pub struct Transfer {
-    #[indexed]
+    #[index]
     from: Option<Address>,
-    #[indexed]
+    #[index]
     to: Option<Address>,
     amount: u64,
 }
@@ -190,11 +190,11 @@ NEP-11 is the standard for non-fungible tokens (NFTs) on Neo N3, similar to ERC-
 ```rust
 #[event]
 pub struct Transfer {
-    #[indexed]
+    #[index]
     from: Option<Address>,
-    #[indexed]
+    #[index]
     to: Option<Address>,
-    #[indexed]
+    #[index]
     token_id: ByteArray,
     amount: u64,  // Only for divisible tokens
 }
@@ -207,11 +207,11 @@ use neo_contract::prelude::*;
 
 #[event]
 pub struct Transfer {
-    #[indexed]
+    #[index]
     from: Option<Address>,
-    #[indexed]
+    #[index]
     to: Option<Address>,
-    #[indexed]
+    #[index]
     token_id: ByteArray,
 }
 
@@ -396,11 +396,11 @@ For divisible NFTs (like semi-fungible tokens), the implementation is a bit more
 
 #[event]
 pub struct Transfer {
-    #[indexed]
+    #[index]
     from: Option<Address>,
-    #[indexed]
+    #[index]
     to: Option<Address>,
-    #[indexed]
+    #[index]
     token_id: ByteArray,
     amount: u64,
 }

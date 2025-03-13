@@ -11,6 +11,9 @@ pub use crate::types::builtin::{h160::H160, h256::H256, int256::Int256, string::
 // Runtime
 pub use crate::runtime::Runtime;
 
+// Event system
+pub use crate::event::{register_event, EventBuilder, emit_transfer, emit_event, emit_event2, emit_event3};
+
 // Contract attributes
 pub use crate::{
     contract, storage, constructor, method, event,
@@ -52,8 +55,7 @@ pub use core::panic;
 pub use crate::storage::{StorageContext, StorageMap, StorageKey};
 
 // Neo N3 Event utilities
-pub use crate::event::{EventBuilder, emit_transfer, emit_event2, emit_event3, emit_event_array, 
-    null_or_value, EventEmitter, StandardEventEmitter, register_transfer_event};
+pub use crate::event::{EventEmitter, StandardEventEmitter, null_or_value};
 
 // Neo N3 specific utilities
 pub use crate::manifest::{ContractManifest, ContractABI, ContractMethod, ContractEvent};

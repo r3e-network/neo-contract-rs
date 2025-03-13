@@ -3,33 +3,31 @@
 
 //! Token interfaces and implementations for the Neo blockchain
 
-
-
 // Update to use prelude
-use crate::prelude::{H160, ByteString, Int256, Array, Any};
+use crate::prelude::{Any, Array, ByteString, Int256, H160};
 // use crate::env;
-use crate::runtime::Runtime;  // Use the correct import for Runtime
+use crate::runtime::Runtime; // Use the correct import for Runtime
 
 /// Standard token interface
 pub trait Token {
     /// Get the name of the token
     fn name(&self) -> ByteString;
-    
+
     /// Get the symbol of the token
     fn symbol(&self) -> ByteString;
-    
+
     /// Get the number of decimals for the token
     fn decimals(&self) -> u8;
-    
+
     /// Get the total supply of the token
     fn total_supply(&self) -> Int256;
-    
+
     /// Get the balance of an account
     fn balance_of(&self, account: &H160) -> Int256;
-    
+
     /// Transfer tokens from the sender to a recipient
     fn transfer(&self, to: &H160, amount: Int256) -> bool;
-    
+
     /// Transfer tokens from one account to another
     fn transfer_from(&self, from: &H160, to: &H160, amount: Int256) -> bool;
 }
@@ -45,19 +43,19 @@ impl TokenEvents for () {
     fn emit_transfer(&self, from: Option<H160>, to: Option<H160>, amount: Int256) {
         let event_name = ByteString::from("Transfer");
         let mut event_data = Array::new();
-        
+
         match from {
             Some(addr) => event_data.push(Any::from(addr)),
             None => event_data.push(Any::from(ByteString::from(""))),
         }
-        
+
         match to {
             Some(addr) => event_data.push(Any::from(addr)),
             None => event_data.push(Any::from(ByteString::from(""))),
         }
-        
+
         event_data.push(Any::from(amount));
-        
+
         Runtime::notify(&event_name, &event_data);
     }
 }
@@ -66,7 +64,7 @@ impl TokenEvents for () {
 pub trait NEP5Token: Token {
     /// Get the owner of the token contract
     fn get_owner(&self) -> H160;
-    
+
     /// Set a new owner for the token contract
     fn set_owner(&self, new_owner: H160) -> bool;
 }
@@ -75,11 +73,11 @@ pub trait NEP5Token: Token {
 pub trait NEP17Token: Token {
     /// Get the owner of the token contract
     fn get_owner(&self) -> H160;
-    
+
     /// Set a new owner for the token contract
     fn set_owner(&self, new_owner: H160) -> bool;
 }
 
-pub mod nep17;
 pub mod fungible;
+pub mod nep17;
 pub mod nonfungible;

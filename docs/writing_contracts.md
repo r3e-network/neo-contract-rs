@@ -168,9 +168,9 @@ Events allow contracts to notify external applications about state changes:
 ```rust
 #[event]
 pub struct Transfer {
-    #[indexed]
+    #[index]
     pub from: Address,
-    #[indexed]
+    #[index]
     pub to: Address,
     pub amount: u64,
 }
@@ -277,9 +277,9 @@ pub mod token {
     
     #[event]
     pub struct Transfer {
-        #[indexed]
+        #[index]
         pub from: Option<Address>,
-        #[indexed]
+        #[index]
         pub to: Option<Address>,
         pub amount: u64,
     }
@@ -312,25 +312,21 @@ pub mod token {
             token
         }
         
-        #[method]
         #[safe]
         pub fn symbol(&self) -> String {
             "TKN".to_string()
         }
         
-        #[method]
         #[safe]
         pub fn decimals(&self) -> u8 {
             8
         }
         
-        #[method]
         #[safe]
         pub fn total_supply(&self) -> u64 {
             self.total_supply.get().unwrap_or_default()
         }
         
-        #[method]
         #[safe]
         pub fn balance_of(&self, owner: Address) -> u64 {
             self.balances.get(&owner).unwrap_or_default()

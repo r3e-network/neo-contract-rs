@@ -2,11 +2,11 @@
 //!
 //! This module provides functionality for working with Neo VM scripts.
 
-use crate::neo::OpCode;
 use crate::error::Error;
-use std::path::Path;
+use crate::neo::OpCode;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::path::Path;
 
 /// Represents a Neo VM instruction with its opcode and operand.
 #[derive(Debug, Clone, PartialEq)]
@@ -19,26 +19,19 @@ pub struct Instruction {
 
 impl Instruction {
     /// Creates a new instruction with the given opcode and no operand.
-    pub fn new(opcode: OpCode) -> Self {
-        Self {
-            opcode,
-            operand: Vec::new(),
-        }
-    }
+    pub fn new(opcode: OpCode) -> Self { Self { opcode, operand: Vec::new() } }
 
     /// Creates a new instruction with the given opcode and operand.
-    pub fn with_operand(opcode: OpCode, operand: Vec<u8>) -> Self {
-        Self { opcode, operand }
-    }
+    pub fn with_operand(opcode: OpCode, operand: Vec<u8>) -> Self { Self { opcode, operand } }
 
     /// Encodes the instruction to bytes.
     pub fn encode(&self) -> Result<Vec<u8>, Error> {
         let mut writer = Vec::new();
         writer.write_all(&[self.opcode as u8])?;
-        
+
         if let Some(size_prefix) = self.opcode.size_prefix() {
             let size = self.operand.len();
-            
+
             match size_prefix {
                 1 => writer.write_all(&[size as u8])?,
                 2 => writer.write_all(&(size as u16).to_le_bytes())?,
@@ -46,7 +39,7 @@ impl Instruction {
                 _ => return Err(Error::general(format!("Invalid size prefix: {}", size_prefix))),
             }
         }
-        
+
         writer.write_all(&self.operand)?;
         Ok(writer)
     }
@@ -54,11 +47,11 @@ impl Instruction {
     /// Returns the size of the instruction in bytes.
     pub fn size(&self) -> usize {
         let mut size = 1; // opcode byte
-        
+
         if let Some(size_prefix) = self.opcode.size_prefix() {
             size += size_prefix; // size prefix bytes
         }
-        
+
         size += self.operand.len();
         size
     }
@@ -73,11 +66,7 @@ pub struct Script {
 
 impl Script {
     /// Creates a new empty script.
-    pub fn new() -> Self {
-        Self {
-            instructions: Vec::new(),
-        }
-    }
+    pub fn new() -> Self { Self { instructions: Vec::new() } }
 
     /// Creates a script from a sequence of bytes.
     pub fn from_bytes(bytes: &[u8]) -> Self {
@@ -87,20 +76,14 @@ impl Script {
     }
 
     /// Returns the size of the script in bytes.
-    pub fn size(&self) -> usize {
-        self.instructions.iter().map(|i| i.size()).sum()
-    }
-    
+    pub fn size(&self) -> usize { self.instructions.iter().map(|i| i.size()).sum() }
+
     /// Returns the current position in the script (number of instructions).
-    pub fn len(&self) -> usize {
-        self.instructions.len()
-    }
-    
+    pub fn len(&self) -> usize { self.instructions.len() }
+
     /// Returns true if the script has no instructions.
-    pub fn is_empty(&self) -> bool {
-        self.instructions.is_empty()
-    }
-    
+    pub fn is_empty(&self) -> bool { self.instructions.is_empty() }
+
     /// Emits a u32 value to the script.
     pub fn emit_u32(&mut self, value: u32) {
         let bytes = value.to_le_bytes().to_vec();
@@ -108,9 +91,7 @@ impl Script {
     }
 
     /// Emits an opcode without an operand.
-    pub fn emit_opcode(&mut self, opcode: OpCode) {
-        self.add_instruction(Instruction::new(opcode));
-    }
+    pub fn emit_opcode(&mut self, opcode: OpCode) { self.add_instruction(Instruction::new(opcode)); }
 
     /// Emits an opcode with an operand.
     pub fn emit_with_operand(&mut self, opcode: OpCode, operand: Vec<u8>) {
@@ -126,7 +107,7 @@ impl Script {
         } else {
             OpCode::PUSHDATA4
         };
-        
+
         self.emit_with_operand(opcode, data.to_vec());
         Ok(())
     }
@@ -172,8 +153,8 @@ impl Script {
     }
 
     /// Adds a comment to the script.
-    /// 
-    /// Note: Since Neo N3 does not support the COMMENT opcode, this function 
+    ///
+    /// Note: Since Neo N3 does not support the COMMENT opcode, this function
     /// now only stores the comment in memory without adding it to the bytecode.
     /// Comments will be available in the source code but not in the compiled script.
     pub fn emit_comment(&mut self, _comment: &str) {
@@ -183,49 +164,45 @@ impl Script {
     }
 
     /// Adds an instruction to the script.
-    pub fn add_instruction(&mut self, instruction: Instruction) {
-        self.instructions.push(instruction);
-    }
+    pub fn add_instruction(&mut self, instruction: Instruction) { self.instructions.push(instruction); }
 
     /// Returns the script as bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut result = Vec::new();
-        
+
         for instruction in &self.instructions {
             if let Ok(bytes) = instruction.encode() {
                 result.extend_from_slice(&bytes);
             }
         }
-        
+
         result
     }
 
     /// Returns a reference to the script's bytes.
-    pub fn bytes(&self) -> Vec<u8> {
-        self.to_bytes()
-    }
-    
+    pub fn bytes(&self) -> Vec<u8> { self.to_bytes() }
+
     /// Updates the operand of an instruction at a specific offset.
     /// This is particularly useful for jump targets that need to be updated
     /// after the full script is generated.
     pub fn update_operand_at(&mut self, offset: usize, new_operand: &[u8]) -> bool {
         let mut current_offset = 0;
-        
+
         for instruction in &mut self.instructions {
             let instr_size = instruction.size();
-            
+
             // Check if the target offset is within this instruction
             if offset >= current_offset && offset < current_offset + instr_size {
                 // Calculate the offset within the instruction
                 let instr_offset = offset - current_offset;
-                
+
                 // For most instructions, the operand starts after the opcode
                 // and possibly after the size prefix
                 let operand_start = match instruction.opcode.size_prefix() {
                     Some(size_prefix) => 1 + size_prefix, // opcode + size prefix
-                    None => 1, // just opcode
+                    None => 1,                            // just opcode
                 };
-                
+
                 // If the offset points to the operand part
                 if instr_offset == operand_start {
                     // Replace the operand
@@ -233,10 +210,10 @@ impl Script {
                     return true;
                 }
             }
-            
+
             current_offset += instr_size;
         }
-        
+
         false // Offset not found
     }
 
@@ -273,27 +250,24 @@ pub fn load_script<P: AsRef<Path>>(path: P) -> Result<Script, Error> {
 /// Disassemble a script to a string
 pub fn disassemble_script(script: &Script) -> String {
     let mut result = String::new();
-    
+
     for (i, instruction) in script.instructions.iter().enumerate() {
         result.push_str(&format!("{:04X}: {:?}", i, instruction.opcode));
-        
+
         if !instruction.operand.is_empty() {
             if instruction.operand.len() <= 8 {
                 // For small operands, show the bytes
-                let hex = instruction.operand.iter()
-                    .map(|b| format!("{:02X}", b))
-                    .collect::<Vec<_>>()
-                    .join(" ");
+                let hex = instruction.operand.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
                 result.push_str(&format!(" {}", hex));
             } else {
                 // For larger operands, just show the length
                 result.push_str(&format!(" [{}]", instruction.operand.len()));
             }
         }
-        
+
         result.push('\n');
     }
-    
+
     result
 }
 

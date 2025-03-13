@@ -1,10 +1,10 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use alloc::string::String;
-use alloc::vec::Vec;
 use crate::types::builtin::h160::H160;
 use crate::types::builtin::string::ByteString;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 /// Contract represents a smart contract
 #[derive(Debug, Clone)]

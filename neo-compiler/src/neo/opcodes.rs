@@ -711,13 +711,9 @@ impl OpCode {
 impl TryFrom<u8> for OpCode {
     type Error = &'static str;
 
-    fn try_from(byte: u8) -> Result<Self, Self::Error> {
-        Self::from_byte(byte).ok_or("Invalid opcode")
-    }
+    fn try_from(byte: u8) -> Result<Self, Self::Error> { Self::from_byte(byte).ok_or("Invalid opcode") }
 }
 
 impl From<OpCode> for u8 {
-    fn from(op_code: OpCode) -> Self {
-        op_code as u8
-    }
+    fn from(op_code: OpCode) -> Self { op_code as u8 }
 }

@@ -1,7 +1,6 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-
 use crate::types::builtin::h256::H256;
 use crate::types::builtin::string::ByteString;
 
@@ -43,7 +42,5 @@ impl Tx {
 }
 
 impl Default for Tx {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }

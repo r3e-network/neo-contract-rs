@@ -3,14 +3,10 @@
 //! This module provides access to the Neo N3 contract execution environment,
 //! including interop services, blockchain information, and runtime context.
 
-
 use crate::types::builtin::h160::H160;
 use crate::types::builtin::h256::H256;
 use crate::types::builtin::string::ByteString;
 use alloc::vec;
-
-
-
 
 /// Module for syscalls in non-WASM environments
 pub mod syscall_non_wasm;
@@ -71,13 +67,13 @@ pub mod runtime {
             extern "C" {
                 fn neo_runtime_get_calling_script_hash(output_ptr: *mut u8) -> usize;
             }
-            
+
             // Allocate buffer for the H160 (20 bytes)
             let mut buffer = [0u8; 20];
-            
+
             // Call the syscall to get the calling script hash
             let size = neo_runtime_get_calling_script_hash(buffer.as_mut_ptr());
-            
+
             if size == 20 {
                 // Convert the buffer to H160
                 H160::from_slice(&buffer)
@@ -94,13 +90,13 @@ pub mod runtime {
             extern "C" {
                 fn neo_runtime_get_executing_script_hash(output_ptr: *mut u8) -> usize;
             }
-            
+
             // Allocate buffer for the H160 (20 bytes)
             let mut buffer = [0u8; 20];
-            
+
             // Call the syscall to get the executing script hash
             let size = neo_runtime_get_executing_script_hash(buffer.as_mut_ptr());
-            
+
             if size == 20 {
                 // Convert the buffer to H160
                 H160::from_slice(&buffer)
@@ -132,7 +128,7 @@ pub mod runtime {
     }
 
     /// Create a notification event during contract execution
-    /// 
+    ///
     /// In Neo N3, notifications should use ByteString for the event name
     /// and Array<Any> for parameters. Example usage:
     /// ```
@@ -153,12 +149,7 @@ pub mod runtime {
                     arg_len: usize,
                 );
             }
-            neo_runtime_notify(
-                event_name.as_ptr(),
-                event_name.len(),
-                args_data.as_ptr(),
-                args_data.len(),
-            );
+            neo_runtime_notify(event_name.as_ptr(), event_name.len(), args_data.as_ptr(), args_data.len());
         }
     }
 
@@ -180,11 +171,11 @@ pub mod runtime {
                 fn neo_runtime_platform() -> *const u8;
                 fn neo_runtime_platform_length() -> usize;
             }
-            
+
             // Get the platform string pointer and length
             let ptr = neo_runtime_platform();
             let len = neo_runtime_platform_length();
-            
+
             // Convert to ByteString safely
             if ptr.is_null() || len == 0 {
                 ByteString::default()
@@ -245,40 +236,38 @@ pub mod blockchain {
         unsafe {
             extern "C" {
                 fn neo_blockchain_get_block(
-                    hash_ptr: *const u8, hash_len: usize,
-                    output_ptr: *mut u8, output_len: usize
+                    hash_ptr: *const u8,
+                    hash_len: usize,
+                    output_ptr: *mut u8,
+                    output_len: usize,
                 ) -> usize;
             }
-            
+
             // Convert height to bytes (u32 -> [u8; 4])
             let height_bytes = height.to_le_bytes();
-            
+
             // First call with null to get the required buffer size
-            let required_size = neo_blockchain_get_block(
-                height_bytes.as_ptr(), height_bytes.len(),
-                core::ptr::null_mut(), 0
-            );
-            
+            let required_size =
+                neo_blockchain_get_block(height_bytes.as_ptr(), height_bytes.len(), core::ptr::null_mut(), 0);
+
             if required_size == 0 {
                 return None;
             }
-            
+
             // Allocate buffer of the required size
             let mut buffer = vec![0u8; required_size];
-            
+
             // Second call to get the actual data
-            let actual_size = neo_blockchain_get_block(
-                height_bytes.as_ptr(), height_bytes.len(),
-                buffer.as_mut_ptr(), buffer.len()
-            );
-            
+            let actual_size =
+                neo_blockchain_get_block(height_bytes.as_ptr(), height_bytes.len(), buffer.as_mut_ptr(), buffer.len());
+
             if actual_size == 0 {
                 None
             } else {
                 // Deserialize the binary data into a Block structure
                 // For this implementation, we'll create a basic Block with just the height
                 // but in a full implementation, you would parse all block fields from buffer
-                Some(Block { 
+                Some(Block {
                     height,
                     // Additional fields would be parsed from buffer
                     // timestamp: read_u64_from_buffer(&buffer),
@@ -294,38 +283,35 @@ pub mod blockchain {
         unsafe {
             extern "C" {
                 fn neo_blockchain_get_transaction(
-                    hash_ptr: *const u8, hash_len: usize,
-                    output_ptr: *mut u8, output_len: usize
+                    hash_ptr: *const u8,
+                    hash_len: usize,
+                    output_ptr: *mut u8,
+                    output_len: usize,
                 ) -> usize;
             }
-            
+
             // First call with null to get the required buffer size
-            let required_size = neo_blockchain_get_transaction(
-                hash.as_ptr(), hash.as_bytes().len(),
-                core::ptr::null_mut(), 0
-            );
-            
+            let required_size =
+                neo_blockchain_get_transaction(hash.as_ptr(), hash.as_bytes().len(), core::ptr::null_mut(), 0);
+
             if required_size == 0 {
                 return None;
             }
-            
+
             // Allocate buffer of the required size
             let mut buffer = vec![0u8; required_size];
-            
+
             // Second call to get the actual data
-            let actual_size = neo_blockchain_get_transaction(
-                hash.as_ptr(), hash.as_bytes().len(),
-                buffer.as_mut_ptr(), buffer.len()
-            );
-            
+            let actual_size =
+                neo_blockchain_get_transaction(hash.as_ptr(), hash.as_bytes().len(), buffer.as_mut_ptr(), buffer.len());
+
             if actual_size == 0 {
                 None
             } else {
-                
                 // Deserialize the binary data into a Transaction structure
                 // For this implementation, we'll create a basic Transaction with just the hash
                 // but in a full implementation, you would parse all transaction fields from buffer
-                Some(Transaction { 
+                Some(Transaction {
                     hash: *hash,
                     // Additional fields would be parsed from buffer
                     // type: decode_tx_type_from_buffer(&buffer),
@@ -341,39 +327,37 @@ pub mod blockchain {
         unsafe {
             extern "C" {
                 fn neo_blockchain_get_contract(
-                    hash_ptr: *const u8, hash_len: usize,
-                    output_ptr: *mut u8, output_len: usize
+                    hash_ptr: *const u8,
+                    hash_len: usize,
+                    output_ptr: *mut u8,
+                    output_len: usize,
                 ) -> usize;
             }
-            
+
             // First call with null to get the required buffer size
-            let required_size = neo_blockchain_get_contract(
-                hash.as_ptr(), hash.as_bytes().len(),
-                core::ptr::null_mut(), 0
-            );
-            
+            let required_size =
+                neo_blockchain_get_contract(hash.as_ptr(), hash.as_bytes().len(), core::ptr::null_mut(), 0);
+
             if required_size == 0 {
                 return None;
             }
-            
+
             // Allocate buffer of the required size
             let mut buffer = vec![0u8; required_size];
-            
+
             // Second call to get the actual data
-            let actual_size = neo_blockchain_get_contract(
-                hash.as_ptr(), hash.as_bytes().len(),
-                buffer.as_mut_ptr(), buffer.len()
-            );
-            
+            let actual_size =
+                neo_blockchain_get_contract(hash.as_ptr(), hash.as_bytes().len(), buffer.as_mut_ptr(), buffer.len());
+
             if actual_size == 0 {
                 None
             } else {
                 // Use the buffer to deserialize the contract data
                 // In a real implementation, we would deserialize all contract fields from the buffer
                 // which contains the serialized NEO contract data
-                
+
                 // For this implementation, we'll just create a basic Contract with the hash
-                Some(Contract { 
+                Some(Contract {
                     hash: *hash,
                     // Additional fields would be parsed from buffer
                     // name: decode_string_from_buffer(&buffer),
@@ -406,30 +390,34 @@ pub mod storage {
     use crate::types::context::StorageContext;
 
     /// Get the current storage context
-    pub fn current_context() -> StorageContext {
-        StorageContext::current()
-    }
+    pub fn current_context() -> StorageContext { StorageContext::current() }
 
     /// Get value from storage
     pub fn get(context: &StorageContext, key: &[u8]) -> Option<ByteString> {
         unsafe {
             extern "C" {
                 fn neo_storage_get(
-                    context_ptr: *const u8, context_len: usize,
-                    key_ptr: *const u8, key_len: usize,
-                    value_ptr: *mut u8, value_len: usize
+                    context_ptr: *const u8,
+                    context_len: usize,
+                    key_ptr: *const u8,
+                    key_len: usize,
+                    value_ptr: *mut u8,
+                    value_len: usize,
                 ) -> usize;
             }
             // Create a buffer to hold the value
             let mut buffer = [0u8; 1024]; // Using a fixed buffer size for simplicity
             let buffer_len = buffer.len();
-            
+
             let value_size = neo_storage_get(
-                context.as_ptr(), context.as_bytes().len(),
-                key.as_ptr(), key.len(),
-                buffer.as_mut_ptr(), buffer_len
+                context.as_ptr(),
+                context.as_bytes().len(),
+                key.as_ptr(),
+                key.len(),
+                buffer.as_mut_ptr(),
+                buffer_len,
             );
-            
+
             if value_size == 0 {
                 None
             } else {
@@ -444,15 +432,21 @@ pub mod storage {
         unsafe {
             extern "C" {
                 fn neo_storage_put(
-                    context_ptr: *const u8, context_len: usize,
-                    key_ptr: *const u8, key_len: usize,
-                    value_ptr: *const u8, value_len: usize
+                    context_ptr: *const u8,
+                    context_len: usize,
+                    key_ptr: *const u8,
+                    key_len: usize,
+                    value_ptr: *const u8,
+                    value_len: usize,
                 );
             }
             neo_storage_put(
-                context.as_ptr(), context.as_bytes().len(),
-                key.as_ptr(), key.len(),
-                value.as_ptr(), value.len()
+                context.as_ptr(),
+                context.as_bytes().len(),
+                key.as_ptr(),
+                key.len(),
+                value.as_ptr(),
+                value.len(),
             );
         }
     }
@@ -461,15 +455,9 @@ pub mod storage {
     pub fn delete(context: &StorageContext, key: &[u8]) {
         unsafe {
             extern "C" {
-                fn neo_storage_delete(
-                    context_ptr: *const u8, context_len: usize,
-                    key_ptr: *const u8, key_len: usize
-                );
+                fn neo_storage_delete(context_ptr: *const u8, context_len: usize, key_ptr: *const u8, key_len: usize);
             }
-            neo_storage_delete(
-                context.as_ptr(), context.as_bytes().len(),
-                key.as_ptr(), key.len()
-            );
+            neo_storage_delete(context.as_ptr(), context.as_bytes().len(), key.as_ptr(), key.len());
         }
     }
 
@@ -478,17 +466,15 @@ pub mod storage {
         unsafe {
             extern "C" {
                 fn neo_storage_find(
-                    context_ptr: *const u8, context_len: usize,
-                    prefix_ptr: *const u8, prefix_len: usize
+                    context_ptr: *const u8,
+                    context_len: usize,
+                    prefix_ptr: *const u8,
+                    prefix_len: usize,
                 ) -> u32;
             }
-            let iterator_id = neo_storage_find(
-                context.as_ptr(), context.as_bytes().len(),
-                prefix.as_ptr(), prefix.len()
-            );
-            StorageIterator {
-                id: iterator_id,
-            }
+            let iterator_id =
+                neo_storage_find(context.as_ptr(), context.as_bytes().len(), prefix.as_ptr(), prefix.len());
+            StorageIterator { id: iterator_id }
         }
     }
 
@@ -513,29 +499,26 @@ pub mod storage {
             if !self.has_next() {
                 return None;
             }
-            
+
             unsafe {
                 extern "C" {
                     fn neo_iterator_next(iterator_id: u32) -> bool;
                     fn neo_iterator_key(iterator_id: u32, output_ptr: *mut u8, output_len: usize) -> usize;
                     fn neo_iterator_value(iterator_id: u32, output_ptr: *mut u8, output_len: usize) -> usize;
                 }
-                
+
                 let success = neo_iterator_next(self.id);
-                
+
                 if success {
                     // Buffers to hold key and value
                     let mut key_buffer = [0u8; 1024];
                     let mut value_buffer = [0u8; 1024];
-                    
+
                     let key_size = neo_iterator_key(self.id, key_buffer.as_mut_ptr(), key_buffer.len());
                     let value_size = neo_iterator_value(self.id, value_buffer.as_mut_ptr(), value_buffer.len());
-                    
+
                     if key_size > 0 && value_size > 0 {
-                        Some((
-                            ByteString::from(&key_buffer[..key_size]),
-                            ByteString::from(&value_buffer[..value_size]),
-                        ))
+                        Some((ByteString::from(&key_buffer[..key_size]), ByteString::from(&value_buffer[..value_size])))
                     } else {
                         None
                     }
@@ -550,13 +533,13 @@ pub mod storage {
 /// Helper module for converting types to Neo VM values
 pub mod into_val {
     use super::*;
-    
+
     /// Trait for converting Rust types to Neo VM values
     pub trait IntoVal {
         /// Convert self to a Neo VM value
         fn into_val(&self) -> ByteString;
     }
-    
+
     // Implementation for common types would go here
     impl IntoVal for i32 {
         fn into_val(&self) -> ByteString {
@@ -564,22 +547,22 @@ pub mod into_val {
             ByteString::from(self.to_le_bytes().to_vec())
         }
     }
-    
+
     use alloc::string::String;
-    
+
     impl IntoVal for String {
         fn into_val(&self) -> ByteString {
             // Placeholder implementation
             ByteString::from(self.as_bytes().to_vec())
         }
     }
-    
+
     impl IntoVal for H160 {
         fn into_val(&self) -> ByteString {
             // Placeholder implementation
             ByteString::from(self.as_bytes().to_vec())
         }
     }
-    
+
     // More implementations would be needed for a complete framework
 }

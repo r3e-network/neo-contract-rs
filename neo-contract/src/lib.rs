@@ -20,8 +20,8 @@ pub mod attributes;
 pub mod call_flags;
 pub mod codec;
 pub mod error;
+pub mod event; // New Neo N3 standard event utilities
 pub mod events; // Old events module - kept for backward compatibility
-pub mod event;  // New Neo N3 standard event utilities
 pub mod find_options;
 pub mod manifest;
 pub mod role;
@@ -29,35 +29,44 @@ pub mod static_values;
 pub mod transaction_attribute_type;
 
 // Core functionality
-pub mod types;
-pub mod storage;
 pub mod env;
+pub mod macros;
 pub mod num256;
 pub mod policy;
-pub mod utils;
-pub mod macros;
 pub mod runtime;
+pub mod storage;
+pub mod types;
+pub mod utils;
 
 // Token standards and implementations
 pub mod token;
 
 // Type re-exports for convenience
+pub use types::builtin::any::Any;
+pub use types::builtin::array::Array;
 pub use types::builtin::h160::H160;
 pub use types::builtin::h256::H256;
-pub use types::builtin::string::ByteString;
 pub use types::builtin::int256::Int256;
-pub use types::builtin::array::Array;
-pub use types::builtin::any::Any;
 pub use types::builtin::map::Map;
+pub use types::builtin::string::ByteString;
 
 // Re-export all Neo N3 attribute macros
 pub use neo_macros::{
-    // Basic contract structure macros
-    event, index, storage, constructor, method, safe,
+    constructor,
     // Contract macros
-    contract, no_reentrant,
+    contract,
+    contract_permission,
+    contract_trust,
+    // Basic contract structure macros
+    event,
+    index,
     // Manifest related macros
-    manifest_extra, supported_standards, contract_permission, contract_trust
+    manifest_extra,
+    method,
+    no_reentrant,
+    safe,
+    storage,
+    supported_standards,
 };
 
 // Module re-exports for convenience - env module already has these
@@ -66,10 +75,13 @@ pub use neo_macros::{
 pub use self::runtime::Runtime;
 
 // Re-export manifest functions for proc-macros
-pub use self::manifest::{register_contract, register_method, register_event, register_supported_standard};
+pub use self::manifest::{register_contract, register_event, register_method, register_supported_standard};
 
 // Re-export event helpers for easier Neo N3 standard event emission
-pub use self::event::{EventBuilder, emit_transfer, emit_event2, emit_event3, emit_event_array, register_transfer_event, null_or_value, EventEmitter, StandardEventEmitter};
+pub use self::event::{
+    emit_event2, emit_event3, emit_event_array, emit_transfer, null_or_value, register_transfer_event, EventBuilder,
+    EventEmitter, StandardEventEmitter,
+};
 
 // Contract module
 pub mod contract;
@@ -87,56 +99,49 @@ pub mod profiling;
 pub mod prelude {
     //! The prelude module exports all the most commonly used types and functions.
     //! This allows users to import everything they need with a single import.
-    
+
     // Import env modules
-    pub use crate::env::{storage, runtime, blockchain, contract};
+    pub use crate::env::{blockchain, contract, runtime, storage};
     // Import crypto and system directly from crate
     pub use crate::crypto;
-    
+
+    pub use crate::types::builtin::any::Any;
+    pub use crate::types::builtin::array::Array;
     pub use crate::types::builtin::h160::H160;
     pub use crate::types::builtin::h256::H256;
-    pub use crate::types::builtin::string::ByteString;
     pub use crate::types::builtin::int256::Int256;
-    pub use crate::types::builtin::array::Array;
-    pub use crate::types::builtin::any::Any;
     pub use crate::types::builtin::map::Map;
-    
+    pub use crate::types::builtin::string::ByteString;
+
     // Manifest module for Neo N3 registration
     pub use crate::manifest;
-    
+
     pub use crate::call_flags::CallFlags;
     pub use crate::error::{Error, ErrorCode, Result};
     pub use crate::events;
     pub use crate::find_options::FindOptions;
     pub use crate::role::Role;
-    
+
     // Storage modules are now properly implemented
     pub use crate::storage::{
-        Context as StorageContext,  // Import Context directly from storage module
         item::Item,
-        map::Map as StorageMap,
-        versioned::VersionedItem,
         iter::{StorageIter, StorageIterator},
+        map::Map as StorageMap,
         pagination::{Page, Paginator},
+        versioned::VersionedItem,
+        Context as StorageContext, // Import Context directly from storage module
     };
-    
+
     // macros are imported directly where needed
-    
+
     // Attribute macros
-    pub use neo_macros::{contract,
-        contract_permission,
-        contract_trust,
-        manifest_extra,
-        supported_standards,
-        no_reentrant,
-        safe,
-        method,
-        constructor,
-        storage,
+    pub use neo_macros::{
+        constructor, contract, contract_permission, contract_trust, manifest_extra, method, no_reentrant, safe,
+        storage, supported_standards,
     };
-    
+
     // Commonly used alloc types
-    pub use alloc::{string::String, vec::Vec, boxed::Box};
+    pub use alloc::{boxed::Box, string::String, vec::Vec};
 }
 
 // Note: macros are already imported above, so we don't need to import them again

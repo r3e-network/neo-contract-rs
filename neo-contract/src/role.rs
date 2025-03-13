@@ -4,33 +4,30 @@
 
 use core::fmt;
 
-
 /// Roles in the Neo governance system
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Role {
     /// State validator - validates the state of the blockchain
     StateValidator = 0x04,
-    
+
     /// Oracle - provides external data to smart contracts
     Oracle = 0x08,
-    
+
     /// NeoFS Alphabet node - NeoFS storage nodes with special permissions
     NeoFSAlphabetNode = 0x10,
-    
+
     /// Policy committee - committee that decides on policy changes
     PolicyCommittee = 0x20,
-    
+
     /// Contract deployer - allowed to deploy contracts
     ContractDeployer = 0x40,
 }
 
 impl Role {
     /// Returns the byte value of the role
-    pub fn value(&self) -> u8 {
-        *self as u8
-    }
-    
+    pub fn value(&self) -> u8 { *self as u8 }
+
     /// Tries to convert a byte value to a Role
     pub fn from_value(value: u8) -> Option<Self> {
         match value {
@@ -42,7 +39,7 @@ impl Role {
             _ => None,
         }
     }
-    
+
     /// Returns a human-readable name for the role
     pub fn name(&self) -> &'static str {
         match self {
@@ -56,23 +53,17 @@ impl Role {
 }
 
 impl fmt::Display for Role {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.name()) }
 }
 
 /// Converts a Role to a u8
 impl From<Role> for u8 {
-    fn from(role: Role) -> Self {
-        role.value()
-    }
+    fn from(role: Role) -> Self { role.value() }
 }
 
 /// Tries to convert a u8 to a Role
 impl TryFrom<u8> for Role {
     type Error = ();
-    
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Role::from_value(value).ok_or(())
-    }
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> { Role::from_value(value).ok_or(()) }
 }

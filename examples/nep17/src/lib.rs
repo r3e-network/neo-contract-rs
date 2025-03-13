@@ -12,7 +12,11 @@ extern crate alloc;
 //! - Method security controls and visibility
 //! - Owner management functions
 
-#[neo_contract::contract]
+#[contract]
+#[contract_author("R3E Network")]
+#[contract_description("NEP-17 Token Implementation for Neo N3")]
+#[contract_version("0.1.0")]
+#[supported_standards("NEP-17")]
 mod nep17_token {
     use neo_contract::prelude::*;
     use alloc::string::String;
@@ -33,34 +37,6 @@ mod nep17_token {
         amount: u64,
     }
     
-    /// Implementation for properly emitting the Transfer event using Neo N3 standards
-    impl Transfer {
-        /// Static method to emit the Transfer event in Neo N3 format
-        pub fn emit(from: Option<Address>, to: Option<Address>, amount: u64) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("Transfer");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            match from {
-                Some(addr) => event_data.push(Any::from(addr)),
-                None => event_data.push(Any::from(ByteArray::new())), // null for minting
-            }
-            
-            match to {
-                Some(addr) => event_data.push(Any::from(addr)),
-                None => event_data.push(Any::from(ByteArray::new())), // null for burning
-            }
-            
-            event_data.push(Any::from(amount));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
-    }
-    
     /// Event emitted when ownership is transferred
     #[event]
     struct OwnershipTransferred {
@@ -68,25 +44,6 @@ mod nep17_token {
         previous_owner: Address,
         #[index]
         new_owner: Address,
-    }
-    
-    /// Implementation for properly emitting the OwnershipTransferred event using Neo N3 standards
-    impl OwnershipTransferred {
-        /// Static method to emit the OwnershipTransferred event in Neo N3 format
-        pub fn emit(previous_owner: Address, new_owner: Address) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("OwnershipTransferred");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(previous_owner));
-            event_data.push(Any::from(new_owner));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     /// Contract storage
@@ -126,37 +83,32 @@ mod nep17_token {
         }
         
         /// Get the name of the token
-        #[method]
         #[safe]
-        fn name(&self) -> String {
-            TOKEN_NAME.to_string()
+        pub fn name(&self) -> String {
+            TOKEN_NAME.into()
         }
         
         /// Get the symbol of the token
-        #[method]
         #[safe]
-        fn symbol(&self) -> String {
-            TOKEN_SYMBOL.to_string()
+        pub fn symbol(&self) -> String {
+            TOKEN_SYMBOL.into()
         }
         
         /// Get the number of decimals the token uses
-        #[method]
         #[safe]
-        fn decimals(&self) -> u8 {
+        pub fn decimals(&self) -> u8 {
             TOKEN_DECIMALS
         }
         
         /// Get the total token supply
-        #[method]
         #[safe]
-        fn total_supply(&self) -> u64 {
+        pub fn total_supply(&self) -> u64 {
             self.total_supply.get().unwrap_or_default()
         }
         
         /// Get the token balance of the specified address
-        #[method]
         #[safe]
-        fn balance_of(&self, address: Address) -> u64 {
+        pub fn balance_of(&self, address: Address) -> u64 {
             self.balances.get(&address).unwrap_or_default()
         }
         
@@ -306,9 +258,8 @@ mod nep17_token {
         }
         
         /// Get the current owner of the contract
-        #[method]
         #[safe]
-        fn get_owner(&self) -> Address {
+        pub fn get_owner(&self) -> Address {
             self.owner.get().unwrap_or_default()
         }
     }

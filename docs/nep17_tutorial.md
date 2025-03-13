@@ -91,10 +91,10 @@ pub mod token {
     // Events
     #[event]
     pub struct Transfer {
-        #[indexed]
+        #[index]
         pub from: Option<Address>,
         
-        #[indexed]
+        #[index]
         pub to: Option<Address>,
         
         pub amount: u64,
@@ -291,10 +291,10 @@ pub struct TokenContract {
 
 #[event]
 pub struct Approval {
-    #[indexed]
+    #[index]
     pub owner: Address,
     
-    #[indexed]
+    #[index]
     pub spender: Address,
     
     pub amount: u64,

@@ -11,7 +11,11 @@ use alloc::string::String;
 //! The lottery uses block hash data as a source of randomness combined with user inputs.
 //! This contract follows Neo N3 standards and best practices.
 
-#[neo_contract::contract]
+#[contract]
+#[contract_author("R3E Network")]
+#[contract_description("Lottery Smart Contract for Neo N3")]
+#[contract_version("0.1.0")]
+#[supported_standards("NEP-17")]
 mod neo_lottery {
     use neo_contract::prelude::*;
     use alloc::vec::Vec;
@@ -78,88 +82,22 @@ mod neo_lottery {
         max_tickets_per_user: u32,
     }
     
-    /// Implementation for properly emitting the LotteryCreated event using Neo N3 standards
-    impl LotteryCreated {
-        /// Static method to emit the LotteryCreated event in Neo N3 format
-        pub fn emit(round_id: u32, ticket_price: u64, start_time: u64, end_time: u64, max_tickets_per_user: u32) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("LotteryCreated");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(round_id));
-            event_data.push(Any::from(ticket_price));
-            event_data.push(Any::from(start_time));
-            event_data.push(Any::from(end_time));
-            event_data.push(Any::from(max_tickets_per_user));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
-    }
-    
     #[event]
     struct TicketsPurchased {
         #[index]
         round_id: u32,
-        #[index]
         user: Address,
         ticket_count: u32,
         total_cost: u64,
-    }
-    
-    /// Implementation for properly emitting the TicketsPurchased event using Neo N3 standards
-    impl TicketsPurchased {
-        /// Static method to emit the TicketsPurchased event in Neo N3 format
-        pub fn emit(round_id: u32, user: Address, ticket_count: u32, total_cost: u64) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("TicketsPurchased");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(round_id));
-            event_data.push(Any::from(user));
-            event_data.push(Any::from(ticket_count));
-            event_data.push(Any::from(total_cost));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     #[event]
     struct WinnerSelected {
         #[index]
         round_id: u32,
-        #[index]
         winner: Address,
         prize_amount: u64,
         winning_block: u32,
-    }
-    
-    /// Implementation for properly emitting the WinnerSelected event using Neo N3 standards
-    impl WinnerSelected {
-        /// Static method to emit the WinnerSelected event in Neo N3 format
-        pub fn emit(round_id: u32, winner: Address, prize_amount: u64, winning_block: u32) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("WinnerSelected");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(round_id));
-            event_data.push(Any::from(winner));
-            event_data.push(Any::from(prize_amount));
-            event_data.push(Any::from(winning_block));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     #[event]
@@ -170,28 +108,6 @@ mod neo_lottery {
         total_tickets: u32,
         total_prize: u64,
         commission_amount: u64,
-    }
-    
-    /// Implementation for properly emitting the LotteryCompleted event using Neo N3 standards
-    impl LotteryCompleted {
-        /// Static method to emit the LotteryCompleted event in Neo N3 format
-        pub fn emit(round_id: u32, total_participants: u32, total_tickets: u32, total_prize: u64, commission_amount: u64) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("LotteryCompleted");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(round_id));
-            event_data.push(Any::from(total_participants));
-            event_data.push(Any::from(total_tickets));
-            event_data.push(Any::from(total_prize));
-            event_data.push(Any::from(commission_amount));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     /// Lottery contract storage
@@ -301,7 +217,7 @@ mod neo_lottery {
             // Initialize participants list
             self.round_participants.insert(round_id, Vec::new());
             
-            // Emit event with proper Neo N3 format
+            // Emit event
             LotteryCreated::emit(
                 round_id,
                 ticket_price,
@@ -398,7 +314,7 @@ mod neo_lottery {
                 self.ticket_owners.insert((round_id, ticket_number), buyer);
             }
             
-            // Emit event with proper Neo N3 format
+            // Emit event
             TicketsPurchased::emit(round_id, buyer, ticket_count, total_cost);
             
             true
@@ -489,10 +405,10 @@ mod neo_lottery {
                 assert!(success, "Commission transfer failed");
             }
             
-            // Emit winner event with proper Neo N3 format
+            // Emit winner event
             WinnerSelected::emit(round_id, winner, prize_amount, current_block);
             
-            // Emit completion event with proper Neo N3 format
+            // Emit completion event
             let participants = self.round_participants.get(&round_id).unwrap_or_default();
             LotteryCompleted::emit(
                 round_id,
@@ -606,9 +522,8 @@ mod neo_lottery {
         }
         
         /// Get lottery round information
-        #[method]
         #[safe]
-        fn get_lottery_info(&self, round_id: u32) -> Option<(u64, u64, u64, u32, u64, u16, u8)> {
+        pub fn get_lottery_info(&self, round_id: u32) -> Option<(u64, u64, u64, u32, u64, u16, u8)> {
             let lottery = self.rounds.get(&round_id)?;
             
             // Return lottery details:
@@ -629,33 +544,29 @@ mod neo_lottery {
         }
         
         /// Get lottery winners
-        #[method]
         #[safe]
-        fn get_lottery_winners(&self, round_id: u32) -> Option<Vec<Address>> {
+        pub fn get_lottery_winners(&self, round_id: u32) -> Option<Vec<Address>> {
             let lottery = self.rounds.get(&round_id)?;
             
             Some(lottery.winners.clone())
         }
         
         /// Get user tickets for a specific lottery round
-        #[method]
         #[safe]
-        fn get_user_tickets(&self, round_id: u32, user: Address) -> u32 {
+        pub fn get_user_tickets(&self, round_id: u32, user: Address) -> u32 {
             self.user_tickets.get(&(round_id, user)).unwrap_or_default()
         }
         
         /// Get total participants in a lottery round
-        #[method]
         #[safe]
-        fn get_total_participants(&self, round_id: u32) -> u32 {
+        pub fn get_total_participants(&self, round_id: u32) -> u32 {
             let participants = self.round_participants.get(&round_id).unwrap_or_default();
             participants.len() as u32
         }
         
         /// Get the current active lottery round ID
-        #[method]
         #[safe]
-        fn get_current_lottery(&self) -> u32 {
+        pub fn get_current_lottery(&self) -> u32 {
             let current_id = self.current_round_id.get().unwrap_or_default();
             
             // Check if the current round is still active
@@ -671,9 +582,8 @@ mod neo_lottery {
         }
         
         /// Check winning odds for a user in a specific lottery round
-        #[method]
         #[safe]
-        fn get_winning_odds(&self, round_id: u32, user: Address) -> (u32, u32, u64) {
+        pub fn get_winning_odds(&self, round_id: u32, user: Address) -> (u32, u32, u64) {
             let lottery = match self.rounds.get(&round_id) {
                 Some(l) => l,
                 None => return (0, 0, 0),

@@ -11,20 +11,17 @@ extern crate alloc;
 //! - Liquidity generation
 //! - Deflationary tokenomics
 
-#[neo_contract::contract]
+#[contract]
+#[contract_author("R3E Network")]
+#[contract_description("MOON DOGE Meme Coin for Neo N3")]
+#[contract_version("0.1.0")]
+#[supported_standards("NEP-17")]
 mod moon_doge {
     use neo_contract::prelude::*;
     use alloc::string::String;
     
     /// Events emitted by the token contract
-    #[event]
-    struct Transfer {
-        #[index]
-        from: Option<Address>,
-        #[index]
-        to: Option<Address>,
-        amount: u64,
-    }
+    struct Transfer {}
     
     /// Implementation for properly emitting the Transfer event using Neo N3 standards
     impl Transfer {
@@ -49,16 +46,12 @@ mod moon_doge {
             
             event_data.push(Any::from(amount));
             
-            // Emit the event using Runtime::notify (required for Neo N3)
+            // Emit the event using Neo N3 Runtime notify
             Runtime::notify(&event_name, &event_data);
         }
     }
     
-    #[event]
-    struct TokensBurned {
-        #[index]
-        amount: u64,
-    }
+    struct TokensBurned {}
     
     /// Implementation for properly emitting the TokensBurned event using Neo N3 standards
     impl TokensBurned {
@@ -73,16 +66,12 @@ mod moon_doge {
             // Add parameters with proper Neo N3 format
             event_data.push(Any::from(amount));
             
-            // Emit the event using Runtime::notify (required for Neo N3)
+            // Emit the event using Neo N3 Runtime notify
             Runtime::notify(&event_name, &event_data);
         }
     }
     
-    #[event]
-    struct RewardsDistributed {
-        total_amount: u64,
-        recipients: u64,
-    }
+    struct RewardsDistributed {}
     
     /// Implementation for properly emitting the RewardsDistributed event using Neo N3 standards
     impl RewardsDistributed {
@@ -98,18 +87,12 @@ mod moon_doge {
             event_data.push(Any::from(total_amount));
             event_data.push(Any::from(recipients));
             
-            // Emit the event using Runtime::notify (required for Neo N3)
+            // Emit the event using Neo N3 Runtime notify
             Runtime::notify(&event_name, &event_data);
         }
     }
     
-    #[event]
-    struct TaxRatesUpdated {
-        liquidity_tax: u16,
-        marketing_tax: u16,
-        buyback_tax: u16,
-        reflection_tax: u16,
-    }
+    struct TaxRatesUpdated {}
     
     /// Implementation for properly emitting the TaxRatesUpdated event using Neo N3 standards
     impl TaxRatesUpdated {
@@ -127,7 +110,7 @@ mod moon_doge {
             event_data.push(Any::from(buyback_tax));
             event_data.push(Any::from(reflection_tax));
             
-            // Emit the event using Runtime::notify (required for Neo N3)
+            // Emit the event using Neo N3 Runtime notify
             Runtime::notify(&event_name, &event_data);
         }
     }
@@ -284,30 +267,26 @@ mod moon_doge {
         /// NEP-17 methods
         
         /// Get the token symbol
-        #[method]
         #[safe]
-        fn symbol(&self) -> String {
+        pub fn symbol(&self) -> String {
             self.symbol.get().unwrap_or_default()
         }
         
         /// Get the token decimals
-        #[method]
         #[safe]
-        fn decimals(&self) -> u8 {
+        pub fn decimals(&self) -> u8 {
             self.decimals.get().unwrap_or_default()
         }
         
         /// Get the total token supply
-        #[method]
         #[safe]
-        fn total_supply(&self) -> u64 {
+        pub fn total_supply(&self) -> u64 {
             self.total_supply.get().unwrap_or_default()
         }
         
         /// Get the token balance for an account
-        #[method]
         #[safe]
-        fn balance_of(&self, account: Address) -> u64 {
+        pub fn balance_of(&self, account: Address) -> u64 {
             self.balances.get(&account).unwrap_or_default()
         }
         
@@ -523,9 +502,8 @@ mod moon_doge {
         }
         
         /// Get token statistics
-        #[method]
         #[safe]
-        fn get_stats(&self) -> (u64, u64, u64, u64, u64, u64) {
+        pub fn get_stats(&self) -> (u64, u64, u64, u64, u64, u64) {
             (
                 self.total_supply.get().unwrap_or_default(),
                 self.circulating_supply.get().unwrap_or_default(),
@@ -537,9 +515,8 @@ mod moon_doge {
         }
         
         /// Get tax information
-        #[method]
         #[safe]
-        fn get_tax_info(&self) -> (u16, u16, u16, u16) {
+        pub fn get_tax_info(&self) -> (u16, u16, u16, u16) {
             (
                 self.liquidity_tax.get().unwrap_or_default(),
                 self.marketing_tax.get().unwrap_or_default(),
@@ -650,6 +627,7 @@ mod moon_doge {
         }
         
         /// Check if an address is exempt from taxes
+        #[safe]
         fn is_tax_exempt(&self, address: &Address) -> bool {
             self.tax_exempt.get(address).unwrap_or_default()
         }

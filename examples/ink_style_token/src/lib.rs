@@ -6,17 +6,40 @@
 use neo_contract::prelude::*;
 
 /// Event emitted when tokens are transferred
-#[event]
-pub struct Transfer {
-    #[indexed]
-    from: Option<Address>,
-    #[indexed]
-    to: Option<Address>,
-    amount: u64,
+struct Transfer {}
+
+impl Transfer {
+    pub fn emit(from: Option<Address>, to: Option<Address>, amount: u64) {
+        // Create event name as ByteString
+        let event_name = ByteString::from("Transfer");
+        
+        // Create an Array to hold parameters
+        let mut event_data = Array::<Any>::new();
+        
+        // Add parameters as Any values
+        match from {
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
+        }
+        
+        match to {
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
+        }
+        
+        event_data.push(Any::from(amount));
+        
+        // Emit the event
+        Runtime::notify(&event_name, &event_data);
+    }
 }
 
 /// A NEP-17 compatible token implementation
 #[contract]
+#[contract_author("R3E Network")]
+#[contract_description("NEP-17 Token Example using ink! style")]
+#[contract_version("0.1.0")]
+#[supported_standards("NEP-17")]
 pub mod token {
     use super::*;
     
@@ -58,11 +81,7 @@ pub mod token {
             this.balances.insert(&owner, total_supply);
             
             // Emit transfer event (from None to owner)
-            emit!(Transfer {
-                from: None,
-                to: Some(owner),
-                amount: total_supply,
-            });
+            Transfer::emit(None, Some(owner), total_supply);
             
             this
         }
@@ -111,11 +130,7 @@ pub mod token {
             
             // Handle the case where amount is 0
             if amount == 0 {
-                emit!(Transfer {
-                    from: Some(from),
-                    to: Some(to),
-                    amount: 0,
-                });
+                Transfer::emit(Some(from), Some(to), 0);
                 return true;
             }
             
@@ -132,11 +147,7 @@ pub mod token {
             self.balances.insert(&to, new_to_balance);
             
             // Emit transfer event
-            emit!(Transfer {
-                from: Some(from),
-                to: Some(to),
-                amount,
-            });
+            Transfer::emit(Some(from), Some(to), amount);
             
             true
         }
@@ -155,11 +166,7 @@ pub mod token {
             
             // Handle the case where amount is 0
             if amount == 0 {
-                emit!(Transfer {
-                    from: Some(from),
-                    to: Some(to),
-                    amount: 0,
-                });
+                Transfer::emit(Some(from), Some(to), 0);
                 return true;
             }
             
@@ -176,11 +183,7 @@ pub mod token {
             self.balances.insert(&to, new_to_balance);
             
             // Emit transfer event
-            emit!(Transfer {
-                from: Some(from),
-                to: Some(to),
-                amount,
-            });
+            Transfer::emit(Some(from), Some(to), amount);
             
             true
         }

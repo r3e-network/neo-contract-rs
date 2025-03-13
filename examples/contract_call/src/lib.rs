@@ -13,7 +13,10 @@ use alloc::string::String;
 //! - Event logging with Neo N3 indexing
 //! - Method visibility controls with Neo N3 annotations
 
-#[neo_contract::contract]
+#[contract]
+#[contract_author("R3E Network")]
+#[contract_description("Contract Call Example for Neo N3")]
+#[contract_version("0.1.0")]
 mod contract_caller {
     use neo_contract::prelude::*;
     use alloc::string::String;
@@ -169,7 +172,6 @@ mod contract_caller {
         }
         
         /// Get an integer value from another contract
-        #[method]
         #[safe]
         fn get_integer(&self, script_hash: Hash160, method: String) -> u32 {
             // Call the target contract
@@ -184,7 +186,6 @@ mod contract_caller {
         }
         
         /// Get a string value from another contract
-        #[method]
         #[safe]
         fn get_string(&self, script_hash: Hash160, method: String) -> String {
             // Call the target contract
@@ -199,28 +200,24 @@ mod contract_caller {
         }
         
         /// Get the number of successful calls
-        #[method]
         #[safe]
         fn get_successful_calls(&self) -> u32 {
             self.successful_calls.get().unwrap_or_default()
         }
         
         /// Get the number of failed calls
-        #[method]
         #[safe]
         fn get_failed_calls(&self) -> u32 {
             self.failed_calls.get().unwrap_or_default()
         }
         
         /// Get the last called contract
-        #[method]
         #[safe]
         fn get_last_called(&self) -> Hash160 {
             self.last_called.get().unwrap_or_default()
         }
         
         /// Get the contract owner
-        #[method]
         #[safe]
         fn get_owner(&self) -> Address {
             self.owner.get().unwrap_or_default()

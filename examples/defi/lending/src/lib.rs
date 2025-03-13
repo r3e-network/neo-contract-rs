@@ -10,7 +10,11 @@
 //! - Liquidation mechanisms
 //! - Risk parameters management
 
-#[neo_contract::contract]
+#[contract]
+#[contract_author("R3E Network")]
+#[contract_description("Lending Protocol Smart Contract for Neo N3")]
+#[contract_version("0.1.0")]
+#[supported_standards("NEP-17")]
 mod neo_lending {
     use neo_contract::prelude::*;
     
@@ -125,79 +129,129 @@ mod neo_lending {
     }
     
     /// Events emitted by the lending protocol
-    #[event]
-    struct MarketListed {
-        #[index]
-        token: Hash160,
-        a_token: Hash160,
+    struct MarketListed {}
+    
+    impl MarketListed {
+        pub fn emit(token: Hash160, a_token: Hash160) {
+            let event_name = ByteString::from("MarketListed");
+            let mut event_data = Array::<Any>::new();
+            
+            event_data.push(Any::from(token));
+            event_data.push(Any::from(a_token));
+            
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
-    #[event]
-    struct Supply {
-        #[index]
-        supplier: Address,
-        #[index]
-        token: Hash160,
-        amount: u64,
-        a_token_minted: u64,
+    struct Supply {}
+    
+    impl Supply {
+        pub fn emit(supplier: Address, token: Hash160, amount: u64, tokens_minted: u64) {
+            let event_name = ByteString::from("Supply");
+            let mut event_data = Array::<Any>::new();
+            
+            event_data.push(Any::from(supplier));
+            event_data.push(Any::from(token));
+            event_data.push(Any::from(amount));
+            event_data.push(Any::from(tokens_minted));
+            
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
-    #[event]
-    struct Withdraw {
-        #[index]
-        supplier: Address,
-        #[index]
-        token: Hash160,
-        amount: u64,
-        a_token_burned: u64,
+    struct Withdraw {}
+    
+    impl Withdraw {
+        pub fn emit(supplier: Address, token: Hash160, amount: u64, tokens_burned: u64) {
+            let event_name = ByteString::from("Withdraw");
+            let mut event_data = Array::<Any>::new();
+            
+            event_data.push(Any::from(supplier));
+            event_data.push(Any::from(token));
+            event_data.push(Any::from(amount));
+            event_data.push(Any::from(tokens_burned));
+            
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
-    #[event]
-    struct Borrow {
-        #[index]
-        borrower: Address,
-        #[index]
-        token: Hash160,
-        amount: u64,
+    struct Borrow {}
+    
+    impl Borrow {
+        pub fn emit(borrower: Address, token: Hash160, amount: u64) {
+            let event_name = ByteString::from("Borrow");
+            let mut event_data = Array::<Any>::new();
+            
+            event_data.push(Any::from(borrower));
+            event_data.push(Any::from(token));
+            event_data.push(Any::from(amount));
+            
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
-    #[event]
-    struct Repay {
-        #[index]
-        repayer: Address,
-        #[index]
-        borrower: Address,
-        #[index]
-        token: Hash160,
-        amount: u64,
+    struct Repay {}
+    
+    impl Repay {
+        pub fn emit(payer: Address, borrower: Address, token: Hash160, amount: u64) {
+            let event_name = ByteString::from("Repay");
+            let mut event_data = Array::<Any>::new();
+            
+            event_data.push(Any::from(payer));
+            event_data.push(Any::from(borrower));
+            event_data.push(Any::from(token));
+            event_data.push(Any::from(amount));
+            
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
-    #[event]
-    struct LiquidateBorrow {
-        #[index]
-        liquidator: Address,
-        #[index]
-        borrower: Address,
-        repay_token: Hash160,
-        repay_amount: u64,
-        collateral_token: Hash160, 
-        seize_amount: u64,
+    struct LiquidateBorrow {}
+    
+    impl LiquidateBorrow {
+        pub fn emit(liquidator: Address, borrower: Address, repay_token: Hash160, repay_amount: u64, collateral_token: Hash160, seize_amount: u64) {
+            let event_name = ByteString::from("LiquidateBorrow");
+            let mut event_data = Array::<Any>::new();
+            
+            event_data.push(Any::from(liquidator));
+            event_data.push(Any::from(borrower));
+            event_data.push(Any::from(repay_token));
+            event_data.push(Any::from(repay_amount));
+            event_data.push(Any::from(collateral_token));
+            event_data.push(Any::from(seize_amount));
+            
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
-    #[event]
-    struct NewReserveFactor {
-        #[index]
-        token: Hash160,
-        old_reserve_factor_mantissa: u64,
-        new_reserve_factor_mantissa: u64,
+    struct NewReserveFactor {}
+    
+    impl NewReserveFactor {
+        pub fn emit(token: Hash160, old_factor_mantissa: u64, new_factor_mantissa: u64) {
+            let event_name = ByteString::from("NewReserveFactor");
+            let mut event_data = Array::<Any>::new();
+            
+            event_data.push(Any::from(token));
+            event_data.push(Any::from(old_factor_mantissa));
+            event_data.push(Any::from(new_factor_mantissa));
+            
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
-    #[event]
-    struct NewCollateralFactor {
-        #[index]
-        token: Hash160,
-        old_collateral_factor_mantissa: u64,
-        new_collateral_factor_mantissa: u64,
+    struct NewCollateralFactor {}
+    
+    impl NewCollateralFactor {
+        pub fn emit(token: Hash160, old_factor_mantissa: u64, new_factor_mantissa: u64) {
+            let event_name = ByteString::from("NewCollateralFactor");
+            let mut event_data = Array::<Any>::new();
+            
+            event_data.push(Any::from(token));
+            event_data.push(Any::from(old_factor_mantissa));
+            event_data.push(Any::from(new_factor_mantissa));
+            
+            Runtime::notify(&event_name, &event_data);
+        }
     }
     
     /// Lending protocol storage
@@ -334,10 +388,7 @@ mod neo_lending {
             self.collateral_asset_allowed.insert(token, true);
             
             // Emit event
-            self.emit(MarketListed {
-                token,
-                a_token,
-            });
+            MarketListed::emit(token, a_token);
             
             true
         }
@@ -403,12 +454,7 @@ mod neo_lending {
             self.markets.insert(token, market);
             
             // Emit event
-            self.emit(Supply {
-                supplier,
-                token,
-                amount,
-                a_token_minted: a_tokens_to_mint,
-            });
+            Supply::emit(supplier, token, amount, a_tokens_to_mint);
             
             true
         }
@@ -484,12 +530,7 @@ mod neo_lending {
             self.transfer_token_from_contract(&token, &supplier, amount);
             
             // Emit event
-            self.emit(Withdraw {
-                supplier,
-                token,
-                amount,
-                a_token_burned: a_tokens_to_burn,
-            });
+            Withdraw::emit(supplier, token, amount, a_tokens_to_burn);
             
             true
         }
@@ -550,11 +591,7 @@ mod neo_lending {
             self.transfer_token_from_contract(&token, &borrower, amount);
             
             // Emit event
-            self.emit(Borrow {
-                borrower,
-                token,
-                amount,
-            });
+            Borrow::emit(borrower, token, amount);
             
             true
         }
@@ -615,12 +652,7 @@ mod neo_lending {
             self.markets.insert(token, market);
             
             // Emit event
-            self.emit(Repay {
-                repayer,
-                borrower: actual_borrower,
-                token,
-                amount: repay_amount,
-            });
+            Repay::emit(repayer, actual_borrower, token, repay_amount);
             
             true
         }
@@ -797,14 +829,7 @@ mod neo_lending {
             self.record_liquidation(liquidator, borrower, repay_token, actual_repay_amount, collateral_token, seize_tokens);
             
             // Emit event
-            self.emit(LiquidateBorrow {
-                liquidator,
-                borrower,
-                repay_token,
-                repay_amount: actual_repay_amount,
-                collateral_token,
-                seize_amount: seize_tokens,
-            });
+            LiquidateBorrow::emit(liquidator, borrower, repay_token, actual_repay_amount, collateral_token, seize_tokens);
             
             true
         }
@@ -910,11 +935,7 @@ mod neo_lending {
             self.markets.insert(token, market);
             
             // Emit event
-            self.emit(NewCollateralFactor {
-                token,
-                old_collateral_factor_mantissa: old_collateral_factor,
-                new_collateral_factor_mantissa: new_collateral_factor_mantissa,
-            });
+            NewCollateralFactor::emit(token, old_collateral_factor, new_collateral_factor_mantissa);
             
             true
         }
@@ -942,11 +963,7 @@ mod neo_lending {
             self.markets.insert(token, market);
             
             // Emit event
-            self.emit(NewReserveFactor {
-                token,
-                old_reserve_factor_mantissa: old_reserve_factor,
-                new_reserve_factor_mantissa: new_reserve_factor_mantissa,
-            });
+            NewReserveFactor::emit(token, old_reserve_factor, new_reserve_factor_mantissa);
             
             true
         }

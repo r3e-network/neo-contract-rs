@@ -20,15 +20,42 @@ const TOKEN_SYMBOL: &str = "SIMPLE";
 const TOKEN_DECIMALS: u8 = 8;
 
 // Define transfer event for NEP-17 compliance
-#[neo_contract::event(
-    from: Option<H160>,
-    to: Option<H160>,
-    amount: u64
-)]
 struct Transfer {}
 
+// Implementation for properly emitting the Transfer event using Neo N3 standards
+impl Transfer {
+    // Static method to emit the Transfer event in Neo N3 format
+    pub fn emit(from: Option<H160>, to: Option<H160>, amount: u64) {
+        // Create event name as ByteString
+        let event_name = ByteString::from("Transfer");
+        
+        // Create an Array to hold parameters
+        let mut event_data = Array::<Any>::new();
+        
+        // Add parameters as Any values
+        match from {
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
+        }
+        
+        match to {
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
+        }
+        
+        event_data.push(Any::from(amount));
+        
+        // Emit the event
+        Runtime::notify(&event_name, &event_data);
+    }
+}
+
 // Main contract using Neo Contract annotation syntax
-#[neo_contract::contract]
+#[contract]
+#[contract_author("R3E Network")]
+#[contract_description("Simple NEP-17 Token Example")]
+#[contract_version("0.1.0")]
+#[supported_standards("NEP-17")]
 pub struct SimpleToken {
     // Total token supply
     total_supply: StorageMap<String, u64>,
@@ -38,7 +65,6 @@ pub struct SimpleToken {
     owner: StorageMap<String, H160>,
 }
 
-#[neo_contract::manifest]
 impl SimpleToken {
     // Constructor - called when the contract is deployed
     #[constructor]
@@ -62,7 +88,7 @@ impl SimpleToken {
         instance.total_supply.insert("value", initial_supply);
         
         // Emit transfer event (from None to owner)
-        Transfer {}.notify(&Option::<H160>::None, &Some(owner), &initial_supply);
+        Transfer::emit(None, Some(owner), initial_supply);
         
         instance
     }
@@ -70,35 +96,30 @@ impl SimpleToken {
     // --- NEP-17 Standard Methods ---
     
     // Get the token symbol
-    #[method]
     #[safe]
     pub fn symbol(&self) -> String {
         TOKEN_SYMBOL.to_string()
     }
     
     // Get the token name
-    #[method]
     #[safe]
     pub fn name(&self) -> String {
         TOKEN_NAME.to_string()
     }
     
     // Get token decimals
-    #[method]
     #[safe]
     pub fn decimals(&self) -> u8 {
         TOKEN_DECIMALS
     }
     
     // Get total supply
-    #[method]
     #[safe]
     pub fn total_supply(&self) -> u64 {
         self.total_supply.get("value").unwrap_or_default()
     }
     
     // Get balance of an address
-    #[method]
     #[safe]
     pub fn balance_of(&self, account: H160) -> u64 {
         self.balances.get(&account).unwrap_or_default()
@@ -141,7 +162,7 @@ impl SimpleToken {
         self.balances.insert(to, receiver_balance + amount);
         
         // Emit transfer event
-        Transfer {}.notify(&Option::<H160>::None, &Some(to), &amount);
+        Transfer::emit(None, Some(to), amount);
         
         true
     }
@@ -176,7 +197,7 @@ impl SimpleToken {
         self.total_supply.insert("value", current_supply - amount);
         
         // Emit transfer event
-        Transfer {}.notify(&Some(from), &Option::<H160>::None, &amount);
+        Transfer::emit(Some(from), None, amount);
         
         true
     }
@@ -216,7 +237,7 @@ impl SimpleToken {
         self.balances.insert(to, to_balance + amount);
         
         // Emit transfer event
-        Transfer {}.notify(&Some(from), &Some(to), &amount);
+        Transfer::emit(Some(from), Some(to), amount);
         
         true
     }

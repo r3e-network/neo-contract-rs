@@ -67,10 +67,10 @@ pub fn wasm_to_neo_type(ty: ValType) -> NeoVmType {
     match ty {
         ValType::I32 => NeoVmType::Integer,
         ValType::I64 => NeoVmType::Integer,
-        ValType::F32 => NeoVmType::Integer, // Map to integer, limited support
-        ValType::F64 => NeoVmType::Integer, // Map to integer, limited support
+        ValType::F32 => NeoVmType::Integer,    // Map to integer, limited support
+        ValType::F64 => NeoVmType::Integer,    // Map to integer, limited support
         ValType::V128 => NeoVmType::ByteArray, // Map vector to byte array
-        ValType::Ref(_) => NeoVmType::Any // References map to Any
+        ValType::Ref(_) => NeoVmType::Any,     // References map to Any
     }
 }
 
@@ -79,11 +79,11 @@ pub fn get_return_type(types: &[ValType]) -> NeoVmType {
     if types.is_empty() {
         return NeoVmType::Void;
     }
-    
+
     if types.len() == 1 {
         return wasm_to_neo_type(types[0]);
     }
-    
+
     // Multiple return values not directly supported in Neo VM
     // We'll return them as an array
     NeoVmType::Array
@@ -106,7 +106,7 @@ mod tests {
     fn test_neo_type_string_conversion() {
         assert_eq!(NeoVmType::Integer.to_string(), "Integer");
         assert_eq!(NeoVmType::ByteArray.to_string(), "ByteArray");
-        
+
         assert_eq!(NeoVmType::from_string("Integer").unwrap(), NeoVmType::Integer);
         assert_eq!(NeoVmType::from_string("ByteArray").unwrap(), NeoVmType::ByteArray);
         assert!(NeoVmType::from_string("Unknown").is_err());

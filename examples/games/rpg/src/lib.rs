@@ -11,7 +11,11 @@ use alloc::vec::Vec;
 //! quests, and combat mechanics. This example demonstrates how complex
 //! game logic can be implemented in a blockchain environment.
 
-#[neo_contract::contract]
+#[contract]
+#[contract_author("R3E Network")]
+#[contract_description("On-Chain RPG Game for Neo N3")]
+#[contract_version("0.1.0")]
+#[supported_standards("NEP-17")]
 mod neo_rpg {
     use neo_contract::prelude::*;
     use alloc::string::String;
@@ -196,27 +200,7 @@ mod neo_rpg {
         #[index]
         player: Address,
         name: String,
-        class: u8, // 0=Warrior, 1=Rogue, 2=Mage, 3=Ranger, 4=Cleric
-    }
-    
-    /// Implementation for properly emitting the CharacterCreated event using Neo N3 standards
-    impl CharacterCreated {
-        /// Static method to emit the CharacterCreated event in Neo N3 format
-        pub fn emit(player: Address, name: String, class: u8) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("CharacterCreated");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(player));
-            event_data.push(Any::from(name));
-            event_data.push(Any::from(class));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
+        class: u8,
     }
     
     #[event]
@@ -226,139 +210,42 @@ mod neo_rpg {
         new_level: u16,
     }
     
-    /// Implementation for properly emitting the LevelUp event using Neo N3 standards
-    impl LevelUp {
-        /// Static method to emit the LevelUp event in Neo N3 format
-        pub fn emit(player: Address, new_level: u16) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("LevelUp");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(player));
-            event_data.push(Any::from(new_level));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
-    }
-    
-    #[event]
-    struct ItemAcquired {
-        #[index]
-        player: Address,
-        item_id: u32,
-        quantity: u32,
-    }
-    
-    /// Implementation for properly emitting the ItemAcquired event using Neo N3 standards
-    impl ItemAcquired {
-        /// Static method to emit the ItemAcquired event in Neo N3 format
-        pub fn emit(player: Address, item_id: u32, quantity: u32) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("ItemAcquired");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(player));
-            event_data.push(Any::from(item_id));
-            event_data.push(Any::from(quantity));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
-    }
-    
     #[event]
     struct QuestStarted {
         #[index]
         player: Address,
+        #[index]
         quest_id: u32,
-    }
-    
-    /// Implementation for properly emitting the QuestStarted event using Neo N3 standards
-    impl QuestStarted {
-        /// Static method to emit the QuestStarted event in Neo N3 format
-        pub fn emit(player: Address, quest_id: u32) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("QuestStarted");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(player));
-            event_data.push(Any::from(quest_id));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     #[event]
     struct QuestCompleted {
         #[index]
         player: Address,
+        #[index]
         quest_id: u32,
         reward_exp: u64,
         reward_gold: u64,
-    }
-    
-    /// Implementation for properly emitting the QuestCompleted event using Neo N3 standards
-    impl QuestCompleted {
-        /// Static method to emit the QuestCompleted event in Neo N3 format
-        pub fn emit(player: Address, quest_id: u32, reward_exp: u64, reward_gold: u64) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("QuestCompleted");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(player));
-            event_data.push(Any::from(quest_id));
-            event_data.push(Any::from(reward_exp));
-            event_data.push(Any::from(reward_gold));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     #[event]
     struct CombatResult {
         #[index]
         player: Address,
+        #[index]
         monster_id: u32,
         victory: bool,
         reward_exp: u64,
         reward_gold: u64,
     }
     
-    /// Implementation for properly emitting the CombatResult event using Neo N3 standards
-    impl CombatResult {
-        /// Static method to emit the CombatResult event in Neo N3 format
-        pub fn emit(player: Address, monster_id: u32, victory: bool, reward_exp: u64, reward_gold: u64) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("CombatResult");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(player));
-            event_data.push(Any::from(monster_id));
-            event_data.push(Any::from(victory));
-            event_data.push(Any::from(reward_exp));
-            event_data.push(Any::from(reward_gold));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
+    #[event]
+    struct ItemAcquired {
+        #[index]
+        player: Address,
+        #[index]
+        item_id: u32,
+        quantity: u32,
     }
     
     /// Game storage
@@ -557,7 +444,7 @@ mod neo_rpg {
             self.equip_item(&player, starter_weapon_id);
             self.equip_item(&player, starter_armor_id);
             
-            // Emit event with proper Neo N3 format
+            // Emit event
             CharacterCreated::emit(player, name, class_id);
             
             true
@@ -1195,7 +1082,6 @@ mod neo_rpg {
         }
         
         /// Get character info
-        #[method]
         #[safe]
         fn get_character(&self, player: Address) -> Option<(
             String, u8, u16, u64, u64, u32, u32, u32, u32, u32, u32, u32
@@ -1220,7 +1106,6 @@ mod neo_rpg {
         }
         
         /// Get character inventory
-        #[method]
         #[safe]
         fn get_inventory(&self, player: Address) -> Vec<(u32, u32, bool)> {
             let character = match self.characters.get(&player) {
@@ -1235,7 +1120,6 @@ mod neo_rpg {
         }
         
         /// Get item details
-        #[method]
         #[safe]
         fn get_item(&self, item_id: u32) -> Option<(
             String, u8, u8, u16, Option<u8>, Option<u16>, Option<u16>, Option<u16>, Option<u16>, Option<u16>, u64
@@ -1259,9 +1143,8 @@ mod neo_rpg {
         }
         
         /// Get quest details
-        #[method]
         #[safe]
-        fn get_quest(&self, quest_id: u32) -> Option<(
+        pub fn get_quest(&self, quest_id: u32) -> Option<(
             String, String, u16, u64, u64
         )> {
             let quest = self.quests.get(&quest_id)?;
@@ -1277,9 +1160,8 @@ mod neo_rpg {
         }
         
         /// Get quest objectives
-        #[method]
         #[safe]
-        fn get_quest_objectives(&self, quest_id: u32) -> Vec<(u8, u32, u32)> {
+        pub fn get_quest_objectives(&self, quest_id: u32) -> Vec<(u8, u32, u32)> {
             let quest = match self.quests.get(&quest_id) {
                 Some(q) => q,
                 None => return Vec::new(),
@@ -1296,18 +1178,16 @@ mod neo_rpg {
         }
         
         /// Get quest progress for a player
-        #[method]
         #[safe]
-        fn get_quest_progress(&self, player: Address, quest_id: u32) -> Option<Vec<u32>> {
+        pub fn get_quest_progress(&self, player: Address, quest_id: u32) -> Option<Vec<u32>> {
             let progress = self.quest_progress.get(&(player, quest_id))?;
             
             Some(progress.objectives_progress.clone())
         }
         
         /// Get active combat session
-        #[method]
         #[safe]
-        fn get_combat_session(&self, player: Address) -> Option<(
+        pub fn get_combat_session(&self, player: Address) -> Option<(
             u32, u32, u8, Vec<(String, String, u32, bool)>
         )> {
             let session = self.combat_sessions.get(&player)?;
@@ -1412,7 +1292,7 @@ mod neo_rpg {
             // Store updated character
             self.characters.insert(*player, character);
             
-            // Emit event with proper Neo N3 format
+            // Emit event
             ItemAcquired::emit(*player, item_id, quantity);
         }
         
@@ -1460,7 +1340,7 @@ mod neo_rpg {
             // Store updated character
             self.characters.insert(*player, character);
             
-            // Emit event with proper Neo N3 format
+            // Emit event
             QuestCompleted::emit(*player, *quest_id, quest.reward_experience, quest.reward_gold);
         }
         
@@ -1637,27 +1517,69 @@ mod neo_rpg {
             
             // Apply defense reduction
             let defense_reduction = u32::min(base_damage, character_defense);
-                // If enough exp, level up
-                if character.experience >= exp_required {
-                    character.level = next_level;
-                    
-                    // Update stats for new level
-                    self.update_character_stats(character);
-                    
-                    // Fully restore health and mana on level up
-                    character.health = character.max_health;
-                    character.mana = character.max_mana;
-                    
-                    // Emit level up event
-                    self.emit(LevelUp {
-                        player: *player,
-                        new_level: character.level,
-                    });
-                } else {
-                    // Not enough exp for next level
-                    break;
+            
+            base_damage - defense_reduction
+        }
+        
+        /// Grant experience to a character
+        fn grant_experience(&mut self, player: &Address, character: &mut Character, experience: u64) {
+            character.experience += experience;
+            
+            // Check for level up
+            let next_level = character.level + 1;
+            let exp_required = self.level_exp_requirements.get(&next_level).expect("Level not found");
+            
+            // If enough exp, level up
+            if character.experience >= exp_required {
+                character.level = next_level;
+                
+                // Update stats for new level
+                self.update_character_stats(character);
+                
+                // Fully restore health and mana on level up
+                character.health = character.max_health;
+                character.mana = character.max_mana;
+                
+                // Emit level up event
+                LevelUp::emit(*player, character.level);
+            } else {
+                // Not enough exp for next level
+                return;
+            }
+        }
+        
+        /// Roll for critical hit
+        fn roll_critical(&self, character: &Character) -> bool {
+            // Simplified critical hit chance based on luck
+            let critical_chance = character.stats.luck as u32 * 5;
+            
+            // Roll a random number between 1 and 100
+            let roll = Runtime::random(1, 101);
+            
+            roll <= critical_chance
+        }
+        
+        /// Process combat result
+        fn process_combat_result(&mut self, player: &Address, combat_session: &CombatSession) {
+            // Get character and monster
+            let character = self.characters.get(player).expect("Character not found");
+            let monster = self.monsters.get(&combat_session.monster_id).expect("Monster not found");
+            
+            // Grant experience reward
+            self.grant_experience(player, &mut character, monster.experience_reward);
+            
+            // Grant gold reward
+            character.gold += monster.gold_reward;
+            
+            // Grant item drops
+            for (item_id, drop_chance) in &monster.item_drops {
+                if Runtime::random(1, 101) <= *drop_chance as u32 {
+                    self.add_item_to_player(player, *item_id, 1);
                 }
             }
+            
+            // Emit combat result event
+            CombatResult::emit(*player, combat_session.monster_id, combat_session.status == CombatStatus::Victory, monster.experience_reward, monster.gold_reward);
         }
         
         // Utility methods to convert enums to IDs for external interfaces

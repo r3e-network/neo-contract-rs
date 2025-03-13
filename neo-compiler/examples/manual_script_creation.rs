@@ -5,36 +5,40 @@
 //! 2. Write the script to a file
 //! 3. Create a NEF file from the script
 
-use neo_compiler::{nef::NefFile, script::{Script, save_script}, neo::OpCode};
+use neo_compiler::{
+    nef::NefFile,
+    neo::OpCode,
+    script::{save_script, Script},
+};
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let output_dir = PathBuf::from("output");
     std::fs::create_dir_all(&output_dir)?;
-    
+
     println!("Creating Neo script examples...");
-    
+
     // Example 1: Simple add function
     let add_script = create_add_script();
     let add_path = output_dir.join("add.neo");
     save_script(&add_script, &add_path)?;
     println!("  Created add script: {}", add_path.display());
-    
+
     // Example 2: Storage example
     let storage_script = create_storage_script();
     let storage_path = output_dir.join("storage.neo");
     save_script(&storage_script, &storage_path)?;
     println!("  Created storage script: {}", storage_path.display());
-    
+
     // Example 3: Create NEF file from script
     let nef = NefFile::with_script(storage_script.to_bytes());
     let nef_path = output_dir.join("storage.nef");
     nef.save_to(&nef_path)?;
     println!("  Created NEF file: {}", nef_path.display());
-    
+
     println!("All examples created successfully!");
     println!("Script files are available in: {}", output_dir.display());
-    
+
     Ok(())
 }
 
@@ -47,20 +51,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn create_add_script() -> Script {
     println!("\nCreating add script...");
     println!("  This script adds two integers and returns the result.");
-    
+
     let mut script = Script::new();
-    
+
     // Add comments for clarity in the script - won't be included in Neo N3 bytecode
     script.emit_comment("Function: add(a, b)");
-    
+
     // Get the two parameters from the stack (already there)
     script.emit_comment("Add the two parameters");
     script.emit_opcode(OpCode::ADD);
-    
+
     // Return the result
     script.emit_comment("Return the result");
     script.emit_opcode(OpCode::RET);
-    
+
     script
 }
 
@@ -73,28 +77,28 @@ fn create_add_script() -> Script {
 fn create_storage_script() -> Script {
     println!("\nCreating storage script...");
     println!("  This script demonstrates storage operations in Neo.");
-    
+
     let mut script = Script::new();
-    
+
     // Initialize the script - comments won't be included in Neo N3 bytecode
     script.emit_comment("Storage example");
-    
+
     // Store key-value: storage.put("name", "Neo")
     script.emit_comment("Store key-value pair");
-    script.emit_push_data(b"name").unwrap();       // Key
-    script.emit_push_data(b"Neo").unwrap();        // Value
-    script.emit_opcode(OpCode::PACKMAP);           // Create map with one key-value pair
-    script.emit_opcode(OpCode::STSFLD0);        // Store in static slot 0
-    
+    script.emit_push_data(b"name").unwrap(); // Key
+    script.emit_push_data(b"Neo").unwrap(); // Value
+    script.emit_opcode(OpCode::PACKMAP); // Create map with one key-value pair
+    script.emit_opcode(OpCode::STSFLD0); // Store in static slot 0
+
     // Get value from storage: storage.get("name")
     script.emit_comment("Retrieve value from storage");
-    script.emit_push_data(b"name").unwrap();       // Key
-    script.emit_opcode(OpCode::LDSFLD0);        // Get from static slot 0
-    
+    script.emit_push_data(b"name").unwrap(); // Key
+    script.emit_opcode(OpCode::LDSFLD0); // Get from static slot 0
+
     // Return the retrieved value
     script.emit_comment("Return the retrieved value");
     script.emit_opcode(OpCode::RET);
-    
+
     script
 }
 
@@ -102,48 +106,48 @@ fn create_storage_script() -> Script {
 fn create_contract_script() -> Script {
     println!("\nCreating contract script...");
     println!("  This script demonstrates a contract with multiple functions.");
-    
+
     let mut script = Script::new();
-    
+
     // Contract entrypoint - dispatch based on method name
     script.emit_comment("Contract entrypoint");
-    script.emit_opcode(OpCode::LDARG0);            // Load the first argument (method name)
-    
+    script.emit_opcode(OpCode::LDARG0); // Load the first argument (method name)
+
     // Check for "name" method
     script.emit_comment("Check for 'name' method");
     script.emit_opcode(OpCode::DUP);
     script.emit_push_data(b"name").unwrap();
     script.emit_opcode(OpCode::EQUAL);
-    
+
     // Jump to name implementation if matched
     script.emit_opcode(OpCode::JMPIF);
-    script.emit_push_data(100)?;                 // Jump to offset 100 (placeholder)
-    
+    script.emit_push_data(100)?; // Jump to offset 100 (placeholder)
+
     // Check for "balanceOf" method
     script.emit_comment("Check for 'balanceOf' method");
     script.emit_opcode(OpCode::DUP);
     script.emit_push_data(b"balanceOf").unwrap();
     script.emit_opcode(OpCode::EQUAL);
-    
+
     // Jump to balanceOf implementation if matched
     script.emit_opcode(OpCode::JMPIF);
-    script.emit_push_data(200)?;                 // Jump to offset 200 (placeholder)
-    
+    script.emit_push_data(200)?; // Jump to offset 200 (placeholder)
+
     // If no method matched, throw error
     script.emit_comment("Method not found");
     script.emit_push_data(b"Method not found").unwrap();
     script.emit_opcode(OpCode::THROW);
-    
+
     // 'name' method implementation (would be at offset 100)
     script.emit_comment("'name' method implementation");
     script.emit_push_data(b"ExampleToken").unwrap();
     script.emit_opcode(OpCode::RET);
-    
+
     // 'balanceOf' method implementation (would be at offset 200)
     script.emit_comment("'balanceOf' method implementation");
-    script.emit_opcode(OpCode::LDARG1);            // Load account argument
-    script.emit_push_data(1000)?;                // Return fixed balance of 1000 for testing
+    script.emit_opcode(OpCode::LDARG1); // Load account argument
+    script.emit_push_data(1000)?; // Return fixed balance of 1000 for testing
     script.emit_opcode(OpCode::RET);
-    
+
     script
-} 
+}

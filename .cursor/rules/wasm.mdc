@@ -13,3 +13,4 @@ alwaysApply: false
 5. now make both of them work.
 6. you must ensure that the work is indeed for Neo N3, every thing is correct.
 7. you are an expert in wasm and neo vm, must ensure the things you output is correct.
+8. Smart contract must selectively use sorage, method, event, index, safe, contract, no_reentry, constructor annotations accordingly, make them work, and work as expected.

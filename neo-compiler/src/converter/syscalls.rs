@@ -2,8 +2,8 @@
 //!
 //! This module provides mapping between WebAssembly imports and Neo VM syscalls.
 
-use std::collections::HashMap;
 use lazy_static::lazy_static;
+use std::collections::HashMap;
 
 /// Neo VM interop service names.
 pub mod interop {
@@ -23,7 +23,7 @@ pub mod interop {
 lazy_static! {
     static ref SYSCALL_MAP: HashMap<(&'static str, &'static str), u32> = {
         let mut m = HashMap::new();
-        
+
         // System namespace
         m.insert(("neo", "runtime_get_trigger"), 0x75F5E941);
         m.insert(("neo", "runtime_check_witness"), 0xAC7E75F2);
@@ -42,15 +42,15 @@ lazy_static! {
         m.insert(("neo", "get_execution_engine"), 0xCACE9A7A);
         m.insert(("neo", "get_calling_script_hash"), 0x92D0DA5F);
         m.insert(("neo", "get_entry_script_hash"), 0x8E14B996);
-        
+
         // Crypto namespace
         m.insert(("neo", "crypto_check_sig"), 0x6B15F5FD);
         m.insert(("neo", "crypto_sha256"), 0xCE3A4DAB);
         m.insert(("neo", "crypto_ripemd160"), 0xD45F8300);
-        
+
         // Additional syscalls for compatibility with common WebAssembly imports
         m.insert(("env", "abort"), 0x6B15F5FD); // Map to a Neo VM abort equivalent
-        
+
         m
     };
 }
@@ -66,15 +66,11 @@ pub fn get_all_syscalls() -> Vec<((&'static str, &'static str), u32)> {
 }
 
 /// Checks if a given import is supported as a syscall.
-pub fn is_supported_syscall(module: &str, function: &str) -> bool {
-    SYSCALL_MAP.contains_key(&(module, function))
-}
+pub fn is_supported_syscall(module: &str, function: &str) -> bool { SYSCALL_MAP.contains_key(&(module, function)) }
 
 /// Resolves a syscall for a given import module and function name.
 /// If the syscall is supported, returns the hash; otherwise returns None.
-pub fn resolve_syscall(module: &str, function: &str) -> Option<u32> {
-    get_syscall_for_import(module, function)
-}
+pub fn resolve_syscall(module: &str, function: &str) -> Option<u32> { get_syscall_for_import(module, function) }
 
 #[cfg(test)]
 mod tests {

@@ -123,35 +123,30 @@ mod burger_governance {
         }
 
         /// Get the name of the token
-        #[message]
         #[safe]
         pub fn name(&self) -> ByteString {
             ByteString::from("BurgerGovernance")
         }
 
         /// Get the symbol of the token
-        #[message]
         #[safe]
         pub fn symbol(&self) -> ByteString {
             ByteString::from("bGOV")
         }
 
         /// Get the decimals of the token
-        #[message]
         #[safe]
         pub fn decimals(&self) -> u8 {
             8
         }
 
         /// Get the total supply of the token
-        #[message]
         #[safe]
         pub fn total_supply(&self) -> Int256 {
             self.total_supply.clone()
         }
 
         /// Get the balance of an account
-        #[message]
         #[safe]
         pub fn balance_of(&self, account: H160) -> Int256 {
             match self.balances.get(&account) {
@@ -161,7 +156,7 @@ mod burger_governance {
         }
 
         /// Transfer tokens from one account to another
-        #[message]
+        #[method]
         pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
             if amount <= Int256::zero() {
                 return false;
@@ -194,7 +189,7 @@ mod burger_governance {
         }
 
         /// Create a new proposal
-        #[message]
+        #[method]
         pub fn create_proposal(&mut self, description: ByteString) -> Int256 {
             if !runtime::check_witness(self.owner.clone()) {
                 return Int256::zero();
@@ -214,7 +209,7 @@ mod burger_governance {
         }
 
         /// Vote on a proposal
-        #[message]
+        #[method]
         pub fn vote(&mut self, proposal_id: Int256, amount: Int256) -> bool {
             let voter = runtime::calling_script_hash();
             
@@ -255,7 +250,7 @@ mod burger_governance {
         }
 
         /// Finalize a proposal
-        #[message]
+        #[method]
         pub fn finalize_proposal(&mut self, proposal_id: Int256, approve: bool) -> bool {
             if !runtime::check_witness(self.owner.clone()) {
                 return false;

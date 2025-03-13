@@ -132,7 +132,6 @@ mod nft_marketplace {
     }
     
     /// Events emitted by the marketplace
-    /// The #[event] attribute marks this as a standard event in the contract manifest
     #[event]
     struct ListingCreated {
         #[index]
@@ -143,34 +142,8 @@ mod nft_marketplace {
         token_id: ByteArray,
         price: u64,
         payment_token: Hash160,
-        listing_type: u8, // 0: Fixed Price, 1: Auction
+        listing_type: u8,
         expires_at: u64,
-    }
-    
-    /// Implementation for properly emitting the ListingCreated event using Neo N3 standards
-    impl ListingCreated {
-        /// Static method to emit the ListingCreated event in Neo N3 format
-        pub fn emit(listing_id: u64, seller: Address, nft_contract: Hash160, token_id: ByteArray, 
-                    price: u64, payment_token: Hash160, listing_type: u8, expires_at: u64) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("ListingCreated");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(listing_id));
-            event_data.push(Any::from(seller));
-            event_data.push(Any::from(nft_contract));
-            event_data.push(Any::from(token_id));
-            event_data.push(Any::from(price));
-            event_data.push(Any::from(payment_token));
-            event_data.push(Any::from(listing_type));
-            event_data.push(Any::from(expires_at));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     #[event]
@@ -179,25 +152,6 @@ mod nft_marketplace {
         listing_id: u64,
         #[index]
         seller: Address,
-    }
-    
-    /// Implementation for properly emitting the ListingCancelled event using Neo N3 standards
-    impl ListingCancelled {
-        /// Static method to emit the ListingCancelled event in Neo N3 format
-        pub fn emit(listing_id: u64, seller: Address) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("ListingCancelled");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(listing_id));
-            event_data.push(Any::from(seller));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     #[event]
@@ -214,31 +168,6 @@ mod nft_marketplace {
         payment_token: Hash160,
     }
     
-    /// Implementation for properly emitting the ListingSold event using Neo N3 standards
-    impl ListingSold {
-        /// Static method to emit the ListingSold event in Neo N3 format
-        pub fn emit(listing_id: u64, seller: Address, buyer: Address, nft_contract: Hash160, 
-                   token_id: ByteArray, price: u64, payment_token: Hash160) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("ListingSold");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(listing_id));
-            event_data.push(Any::from(seller));
-            event_data.push(Any::from(buyer));
-            event_data.push(Any::from(nft_contract));
-            event_data.push(Any::from(token_id));
-            event_data.push(Any::from(price));
-            event_data.push(Any::from(payment_token));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
-    }
-    
     #[event]
     struct AuctionBid {
         #[index]
@@ -246,26 +175,6 @@ mod nft_marketplace {
         #[index]
         bidder: Address,
         amount: u64,
-    }
-    
-    /// Implementation for properly emitting the AuctionBid event using Neo N3 standards
-    impl AuctionBid {
-        /// Static method to emit the AuctionBid event in Neo N3 format
-        pub fn emit(listing_id: u64, bidder: Address, amount: u64) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("AuctionBid");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(listing_id));
-            event_data.push(Any::from(bidder));
-            event_data.push(Any::from(amount));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
     }
     
     #[event]
@@ -307,24 +216,24 @@ mod nft_marketplace {
         #[index]
         seller: Address,
         #[index]
-        buyer: Address,
-        amount: u64,
+        offerer: Address,
+        price: u64,
     }
     
     #[event]
     struct CollectionVerified {
         #[index]
-        contract_hash: Hash160,
+        nft_contract: Hash160,
         name: ByteArray,
         creator: Address,
-        default_royalty: u16,
+        royalty: u16,
     }
     
     #[event]
     struct CollectionUpdated {
         #[index]
-        contract_hash: Hash160,
-        default_royalty: u16,
+        nft_contract: Hash160,
+        royalty: u16,
         verified: bool,
     }
     
@@ -340,8 +249,8 @@ mod nft_marketplace {
     
     #[event]
     struct FeePaid {
-        #[index]
         listing_id: u64,
+        collector: Address,
         amount: u64,
     }
     
@@ -490,7 +399,7 @@ mod nft_marketplace {
             
             assert!(transferred, "NFT transfer failed");
             
-            // Emit event with proper Neo N3 format
+            // Emit event
             ListingCreated::emit(
                 listing_id,
                 seller,
@@ -498,7 +407,7 @@ mod nft_marketplace {
                 token_id,
                 price,
                 payment_token,
-                0, // Fixed Price
+                0, // listing_type as u8
                 expires_at
             );
             
@@ -582,17 +491,17 @@ mod nft_marketplace {
             
             assert!(transferred, "NFT transfer failed");
             
-            // Emit event with proper Neo N3 format
+            // Emit event
             ListingCreated::emit(
                 listing_id,
                 seller,
                 nft_contract,
                 token_id,
-                price: start_price,
+                start_price,
                 payment_token,
-                listing_type: 1, // Auction
-                expires_at,
-            });
+                1, // listing_type as u8
+                expires_at
+            );
             
             listing_id
         }
@@ -657,16 +566,16 @@ mod nft_marketplace {
             // Remove from active listings
             self.active_listings.remove(&(listing.nft_contract, listing.token_id.clone()));
             
-            // Emit event with proper Neo N3 format
+            // Emit event
             ListingSold::emit(
                 listing_id,
-                seller: listing.owner,
+                listing.owner,
                 buyer,
-                nft_contract: listing.nft_contract,
-                token_id: listing.token_id,
-                price: listing.price,
-                payment_token: listing.payment_token,
-            });
+                listing.nft_contract,
+                listing.token_id,
+                listing.price,
+                listing.payment_token,
+            );
             
             true
         }
@@ -739,7 +648,7 @@ mod nft_marketplace {
                 self.listings.insert(listing_id, listing);
             }
             
-            // Emit event with proper Neo N3 format
+            // Emit event
             AuctionBid::emit(
                 listing_id,
                 bidder,
@@ -787,15 +696,15 @@ mod nft_marketplace {
                 self.active_listings.remove(&(listing.nft_contract, listing.token_id.clone()));
                 
                 // Emit event
-                self.emit(AuctionCompleted {
+                AuctionCompleted::emit(
                     listing_id,
-                    seller: listing.owner,
-                    winner: winning_bid.bidder,
-                    nft_contract: listing.nft_contract,
-                    token_id: listing.token_id,
-                    final_price: winning_bid.amount,
-                    payment_token: listing.payment_token,
-                });
+                    listing.owner,
+                    winning_bid.bidder,
+                    listing.nft_contract,
+                    listing.token_id,
+                    winning_bid.amount,
+                    listing.payment_token,
+                );
                 
                 return true;
             } else {
@@ -859,10 +768,10 @@ mod nft_marketplace {
             // Remove from active listings
             self.active_listings.remove(&(listing.nft_contract, listing.token_id.clone()));
             
-            // Emit event with proper Neo N3 format
+            // Emit event
             ListingCancelled::emit(
                 listing_id,
-                listing.owner
+                listing.owner,
             );
             
             true
@@ -925,12 +834,12 @@ mod nft_marketplace {
             self.offers.insert(offer_key, offer);
             
             // Emit event
-            self.emit(OfferCreated {
+            OfferCreated::emit(
                 listing_id,
                 offerer,
                 amount,
-                expires_at,
-            });
+                expires_at
+            );
             
             true
         }
@@ -963,10 +872,10 @@ mod nft_marketplace {
             self.offers.remove(&offer_key);
             
             // Emit event
-            self.emit(OfferCancelled {
+            OfferCancelled::emit(
                 listing_id,
                 offerer,
-            });
+            );
             
             true
         }
@@ -1027,12 +936,12 @@ mod nft_marketplace {
             // by keeping a list of offers per listing
             
             // Emit event
-            self.emit(OfferAccepted {
+            OfferAccepted::emit(
                 listing_id,
                 seller,
-                buyer: offerer,
-                amount: offer.amount,
-            });
+                offerer,
+                offer.amount
+            );
             
             true
         }
@@ -1062,12 +971,12 @@ mod nft_marketplace {
             self.verified_collections.insert(nft_contract, collection);
             
             // Emit event
-            self.emit(CollectionVerified {
-                contract_hash: nft_contract,
+            CollectionVerified::emit(
+                nft_contract,
                 name,
                 creator,
                 default_royalty,
-            });
+            );
             
             true
         }
@@ -1095,11 +1004,11 @@ mod nft_marketplace {
             self.verified_collections.insert(nft_contract, collection);
             
             // Emit event
-            self.emit(CollectionUpdated {
-                contract_hash: nft_contract,
+            CollectionUpdated::emit(
+                nft_contract,
                 default_royalty,
                 verified,
-            });
+            );
             
             true
         }
@@ -1349,10 +1258,11 @@ mod nft_marketplace {
                 assert!(fee_transferred, "Failed to transfer marketplace fee");
                 
                 // Emit fee paid event
-                self.emit(FeePaid {
+                FeePaid::emit(
                     listing_id,
-                    amount: marketplace_fee,
-                });
+                    fee_collector,
+                    marketplace_fee,
+                );
             }
             
             // Transfer royalty fee
@@ -1366,12 +1276,12 @@ mod nft_marketplace {
                 assert!(royalty_transferred, "Failed to transfer royalty fee");
                 
                 // Emit royalty paid event
-                self.emit(RoyaltyPaid {
-                    nft_contract: listing.nft_contract,
-                    token_id: listing.token_id.clone(),
-                    recipient: listing.royalty_recipient,
-                    amount: royalty_fee,
-                });
+                RoyaltyPaid::emit(
+                    listing.nft_contract,
+                    listing.token_id.clone(),
+                    listing.royalty_recipient,
+                    royalty_fee,
+                );
             }
             
             // Transfer payment to seller

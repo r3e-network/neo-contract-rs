@@ -21,7 +21,7 @@ macro_rules! contract_event {
             $(
                 args.push($arg.into());
             )*
-            
+
             unsafe {
                 neo_contract::env::syscall::system_runtime_notify(
                     neo_contract::types::builtin::ByteString::new(stringify!($name)),
@@ -39,32 +39,32 @@ macro_rules! storage_map {
     ($key_ty:ty) => {
         neo_contract::storage::StorageMap<$key_ty, neo_contract::builtin::Int256>
     };
-    
+
     // Two type version (for key and value types)
     ($key_ty:ty, $value_ty:ty) => {
         neo_contract::storage::StorageMap<$key_ty, $value_ty>
     };
-    
+
     // Original version with struct definition
     ($(#[$attr:meta])* $vis:vis $name:ident : $key_ty:ty => $value_ty:ty) => {
         $(#[$attr])*
         $vis struct $name;
-        
+
         impl $name {
             pub fn new() -> Self {
                 Self
             }
-            
+
             pub fn get(&self, key: &$key_ty) -> Option<$value_ty> {
                 let storage = neo_contract::storage::StorageMap::new();
                 storage.get(key)
             }
-            
+
             pub fn put(&self, key: &$key_ty, value: &$value_ty) {
                 let storage = neo_contract::storage::StorageMap::new();
                 storage.put(key, value);
             }
-            
+
             pub fn delete(&self, key: &$key_ty) {
                 let storage = neo_contract::storage::StorageMap::new();
                 storage.delete(key);

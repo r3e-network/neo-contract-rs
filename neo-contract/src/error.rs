@@ -11,61 +11,61 @@ use core::fmt;
 pub enum ErrorCode {
     /// Unknown error
     Unknown = 0,
-    
+
     /// Invalid argument
     InvalidArgument = 1,
-    
+
     /// Invalid format
     InvalidFormat = 2,
-    
+
     /// Invalid state
     InvalidState = 3,
-    
+
     /// Not found
     NotFound = 4,
-    
+
     /// Unauthorized
     Unauthorized = 5,
-    
+
     /// Insufficient funds
     InsufficientFunds = 6,
-    
+
     /// Overflow error
     OverflowError = 7,
-    
+
     /// Underflow error
     UnderflowError = 8,
-    
+
     /// Encoding error
     EncodingError = 9,
-    
+
     /// Decoding error
     DecodingError = 10,
-    
+
     /// Execution error
     ExecutionError = 11,
-    
+
     /// Storage error
     StorageError = 12,
-    
+
     /// VM error
     VMError = 13,
-    
+
     /// Contract error
     ContractError = 14,
-    
+
     /// System error
     SystemError = 15,
-    
+
     /// Reentrancy error
     ReentrancyError = 16,
-    
+
     /// Validation error
     ValidationError = 17,
-    
+
     /// Permission denied
     PermissionDenied = 18,
-    
+
     /// Assertion error
     AssertionError = 19,
 }
@@ -99,9 +99,7 @@ impl ErrorCode {
 }
 
 impl fmt::Display for ErrorCode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.name()) }
 }
 
 /// Error type for Neo Contract RS
@@ -109,147 +107,91 @@ impl fmt::Display for ErrorCode {
 pub struct Error {
     /// The error code
     code: ErrorCode,
-    
+
     /// The error message
     message: Option<String>,
 }
 
 impl Error {
     /// Creates a new error with the given code
-    pub fn new(code: ErrorCode) -> Self {
-        Error {
-            code,
-            message: None,
-        }
-    }
-    
+    pub fn new(code: ErrorCode) -> Self { Error { code, message: None } }
+
     /// Creates a new error with the given code and message
     pub fn with_message(code: ErrorCode, message: impl Into<String>) -> Self {
-        Error {
-            code,
-            message: Some(message.into()),
-        }
+        Error { code, message: Some(message.into()) }
     }
-    
+
     /// Gets the error code
-    pub fn code(&self) -> ErrorCode {
-        self.code
-    }
-    
+    pub fn code(&self) -> ErrorCode { self.code }
+
     /// Gets the error message
-    pub fn message(&self) -> Option<&str> {
-        self.message.as_deref()
-    }
-    
+    pub fn message(&self) -> Option<&str> { self.message.as_deref() }
+
     /// Sets the error message
-    pub fn set_message(&mut self, message: impl Into<String>) {
-        self.message = Some(message.into());
-    }
-    
+    pub fn set_message(&mut self, message: impl Into<String>) { self.message = Some(message.into()); }
+
     /// Clears the error message
-    pub fn clear_message(&mut self) {
-        self.message = None;
-    }
-    
+    pub fn clear_message(&mut self) { self.message = None; }
+
     /// Creates an unknown error
-    pub fn unknown() -> Self {
-        Self::new(ErrorCode::Unknown)
-    }
-    
+    pub fn unknown() -> Self { Self::new(ErrorCode::Unknown) }
+
     /// Creates an invalid argument error
-    pub fn invalid_argument() -> Self {
-        Self::new(ErrorCode::InvalidArgument)
-    }
-    
+    pub fn invalid_argument() -> Self { Self::new(ErrorCode::InvalidArgument) }
+
     /// Creates an invalid format error
-    pub fn invalid_format() -> Self {
-        Self::new(ErrorCode::InvalidFormat)
-    }
-    
+    pub fn invalid_format() -> Self { Self::new(ErrorCode::InvalidFormat) }
+
     /// Creates an invalid state error
-    pub fn invalid_state() -> Self {
-        Self::new(ErrorCode::InvalidState)
-    }
-    
+    pub fn invalid_state() -> Self { Self::new(ErrorCode::InvalidState) }
+
     /// Creates a not found error
-    pub fn not_found() -> Self {
-        Self::new(ErrorCode::NotFound)
-    }
-    
+    pub fn not_found() -> Self { Self::new(ErrorCode::NotFound) }
+
     /// Creates an unauthorized error
-    pub fn unauthorized() -> Self {
-        Self::new(ErrorCode::Unauthorized)
-    }
-    
+    pub fn unauthorized() -> Self { Self::new(ErrorCode::Unauthorized) }
+
     /// Creates an insufficient funds error
-    pub fn insufficient_funds() -> Self {
-        Self::new(ErrorCode::InsufficientFunds)
-    }
-    
+    pub fn insufficient_funds() -> Self { Self::new(ErrorCode::InsufficientFunds) }
+
     /// Creates an overflow error
-    pub fn overflow() -> Self {
-        Self::new(ErrorCode::OverflowError)
-    }
-    
+    pub fn overflow() -> Self { Self::new(ErrorCode::OverflowError) }
+
     /// Creates an underflow error
-    pub fn underflow() -> Self {
-        Self::new(ErrorCode::UnderflowError)
-    }
-    
+    pub fn underflow() -> Self { Self::new(ErrorCode::UnderflowError) }
+
     /// Creates an encoding error
-    pub fn encoding() -> Self {
-        Self::new(ErrorCode::EncodingError)
-    }
-    
+    pub fn encoding() -> Self { Self::new(ErrorCode::EncodingError) }
+
     /// Creates a decoding error
-    pub fn decoding() -> Self {
-        Self::new(ErrorCode::DecodingError)
-    }
-    
+    pub fn decoding() -> Self { Self::new(ErrorCode::DecodingError) }
+
     /// Creates an execution error
-    pub fn execution() -> Self {
-        Self::new(ErrorCode::ExecutionError)
-    }
-    
+    pub fn execution() -> Self { Self::new(ErrorCode::ExecutionError) }
+
     /// Creates a storage error
-    pub fn storage() -> Self {
-        Self::new(ErrorCode::StorageError)
-    }
-    
+    pub fn storage() -> Self { Self::new(ErrorCode::StorageError) }
+
     /// Creates a VM error
-    pub fn vm() -> Self {
-        Self::new(ErrorCode::VMError)
-    }
-    
+    pub fn vm() -> Self { Self::new(ErrorCode::VMError) }
+
     /// Creates a contract error
-    pub fn contract() -> Self {
-        Self::new(ErrorCode::ContractError)
-    }
-    
+    pub fn contract() -> Self { Self::new(ErrorCode::ContractError) }
+
     /// Creates a system error
-    pub fn system() -> Self {
-        Self::new(ErrorCode::SystemError)
-    }
-    
+    pub fn system() -> Self { Self::new(ErrorCode::SystemError) }
+
     /// Creates a reentrancy error
-    pub fn reentrancy() -> Self {
-        Self::new(ErrorCode::ReentrancyError)
-    }
-    
+    pub fn reentrancy() -> Self { Self::new(ErrorCode::ReentrancyError) }
+
     /// Creates a validation error
-    pub fn validation() -> Self {
-        Self::new(ErrorCode::ValidationError)
-    }
-    
+    pub fn validation() -> Self { Self::new(ErrorCode::ValidationError) }
+
     /// Creates a permission denied error
-    pub fn permission_denied() -> Self {
-        Self::new(ErrorCode::PermissionDenied)
-    }
-    
+    pub fn permission_denied() -> Self { Self::new(ErrorCode::PermissionDenied) }
+
     /// Creates an assertion error
-    pub fn assertion() -> Self {
-        Self::new(ErrorCode::AssertionError)
-    }
+    pub fn assertion() -> Self { Self::new(ErrorCode::AssertionError) }
 }
 
 impl fmt::Display for Error {

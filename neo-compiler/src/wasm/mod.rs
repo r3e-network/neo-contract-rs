@@ -4,7 +4,7 @@
 //! for Neo N3 smart contracts.
 
 use crate::error::Error;
-use wasmparser::{WasmFeatures, Parser, Payload, Validator};
+use wasmparser::{Parser, Payload, Validator, WasmFeatures};
 
 /// Represents a WebAssembly module.
 #[derive(Debug, Clone)]
@@ -32,20 +32,20 @@ impl WasmModule {
             imports: Vec::new(),
             globals: Vec::new(),
         };
-        
+
         // Set up a validator with default features
         let features = WasmFeatures::default();
         let mut validator = Validator::new_with_features(features);
-        
+
         // Validate the module first
         validator.validate_all(data)?;
-        
+
         // Parse the module
         for payload in Parser::new(0).parse_all(data) {
             let payload = payload?;
-            
+
             match payload {
-                Payload::Version { .. } => {},
+                Payload::Version { .. } => {}
                 Payload::ExportSection(reader) => {
                     for export in reader {
                         let export = export?;
@@ -55,7 +55,7 @@ impl WasmModule {
                             kind: format!("{:?}", export.kind),
                         });
                     }
-                },
+                }
                 Payload::ImportSection(reader) => {
                     for import in reader {
                         let import = import?;
@@ -66,11 +66,11 @@ impl WasmModule {
                             index: 0, // This will be set correctly in a real implementation
                         });
                     }
-                },
+                }
                 Payload::FunctionSection(reader) => {
                     for (index, type_idx_result) in reader.into_iter().enumerate() {
                         let _type_idx = type_idx_result?;
-                        
+
                         // In a real implementation, you'd extract the signature from the type section
                         // For now, we just create placeholder function entries
                         module.functions.push(WasmFunction {
@@ -82,30 +82,24 @@ impl WasmModule {
                             body: Vec::new(), // Empty body for now
                         });
                     }
-                },
+                }
                 // Handle other sections as needed
                 _ => {}
             }
         }
-        
+
         Ok(module)
     }
-    
+
     /// Get a reference to the module's exports.
-    pub fn exports(&self) -> &[WasmExport] {
-        &self.exports
-    }
-    
+    pub fn exports(&self) -> &[WasmExport] { &self.exports }
+
     /// Get a reference to the module's imports.
-    pub fn imports(&self) -> &[WasmImport] {
-        &self.imports
-    }
-    
+    pub fn imports(&self) -> &[WasmImport] { &self.imports }
+
     /// Get a reference to the module's functions.
-    pub fn functions(&self) -> &[WasmFunction] {
-        &self.functions
-    }
-    
+    pub fn functions(&self) -> &[WasmFunction] { &self.functions }
+
     /// Get a function by its index.
     pub fn get_function_by_index(&self, index: usize) -> Option<&WasmFunction> {
         self.functions.iter().find(|f| f.index as usize == index)
@@ -131,40 +125,32 @@ pub struct WasmFunction {
 
 impl WasmFunction {
     /// Create a new WebAssembly function instance.
-    /// 
+    ///
     /// This is primarily used for testing purposes.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The function index
     /// * `func_type` - The function type (signature)
     /// * `body` - The raw WebAssembly bytecode of the function
     /// * `locals_count` - The number of local variables
     /// * `params_count` - The number of parameters
-    pub fn new(index: u32, func_type: wasmparser::FuncType, body: Vec<u8>, _locals_count: u32, _params_count: u32) -> Self {
+    pub fn new(
+        index: u32,
+        func_type: wasmparser::FuncType,
+        body: Vec<u8>,
+        _locals_count: u32,
+        _params_count: u32,
+    ) -> Self {
         // Convert parameter and return types to string representations
-        let params = func_type.params().iter()
-            .map(|p| format!("{:?}", p))
-            .collect::<Vec<_>>();
-        
-        let returns = func_type.results().iter()
-            .map(|r| format!("{:?}", r))
-            .collect::<Vec<_>>();
-        
+        let params = func_type.params().iter().map(|p| format!("{:?}", p)).collect::<Vec<_>>();
+
+        let returns = func_type.results().iter().map(|r| format!("{:?}", r)).collect::<Vec<_>>();
+
         // Create signature string
-        let signature = format!("({}) -> ({})", 
-            params.join(", "), 
-            returns.join(", ")
-        );
-        
-        Self {
-            name: None,
-            index,
-            signature,
-            params,
-            returns,
-            body,
-        }
+        let signature = format!("({}) -> ({})", params.join(", "), returns.join(", "));
+
+        Self { name: None, index, signature, params, returns, body }
     }
 }
 

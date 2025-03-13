@@ -1,18 +1,19 @@
-# Neo Contract Compiler
+# Neo N3 Contract Compiler
 
-A compiler that converts WebAssembly modules to Neo N3 smart contracts. This allows writing Neo N3 smart contracts in Rust using an ink!-style API.
+A compiler that converts WebAssembly modules to Neo N3 smart contracts. This tool enables writing Neo N3 smart contracts in Rust and compiling them to Neo VM bytecode for deployment on the Neo N3 blockchain.
 
 ## Overview
 
-This project enables Rust developers to write smart contracts for the Neo N3 blockchain using familiar Rust syntax and patterns inspired by the ink! smart contract framework for Substrate. The compiler takes WebAssembly modules compiled from Rust code and converts them to Neo executable format (NEF) and contract manifests that can be deployed to the Neo N3 blockchain.
+The `neo-compiler` is a critical component of the Neo N3 smart contract development ecosystem in Rust. It takes WebAssembly modules compiled from Rust code and converts them to the Neo Executable Format (NEF) and contract manifests required for deployment to the Neo N3 blockchain.
 
 ## Features
 
-- **WebAssembly to Neo VM conversion**: Compile Rust to WebAssembly, then to Neo VM bytecode
-- **NEF file generation**: Create valid Neo Executable Format files
-- **Manifest generation**: Automatically generate contract manifests with proper ABI definitions
-- **Optimizations**: Apply various optimizations to the generated Neo VM bytecode
-- **Clean API**: Easy-to-use API for working with Neo VM scripts and NEF files
+- **WebAssembly to Neo N3 VM Conversion**: Compile Rust to WebAssembly, then to Neo N3 VM bytecode
+- **NEF File Generation**: Create valid Neo N3 Executable Format files for deployment
+- **Manifest Generation**: Automatically generate contract manifests with proper ABI definitions for Neo N3
+- **Safe Method Identification**: Properly mark read-only methods as "safe" in the manifest
+- **Neo N3 Optimizations**: Apply optimizations specific to Neo N3 VM bytecode
+- **Clean API**: Easy-to-use API for working with Neo N3 VM scripts and NEF files
 
 ## Installation
 
@@ -29,6 +30,8 @@ The simplest way to use the compiler is through the command line:
 ```bash
 neo-compiler compile your_contract.wasm --output-dir ./output
 ```
+
+This will produce both the NEF file and manifest required for Neo N3 deployment.
 
 ### Programmatic Usage
 
@@ -62,7 +65,7 @@ fn main() {
 
 ### Manual Script Creation
 
-You can also manually create Neo VM scripts without WebAssembly:
+For advanced use cases, you can manually create Neo N3 VM scripts:
 
 ```rust
 use neo_compiler::{script::Script, neo::OpCode, nef::NefFile};
@@ -73,7 +76,7 @@ fn main() {
     let mut script = Script::new();
     
     // Add instructions
-    script.emit_push_data(b"Hello, Neo!").unwrap();
+    script.emit_push_data(b"Hello, Neo N3!").unwrap();
     script.emit_opcode(OpCode::RET);
     
     // Save the script to a file
@@ -87,78 +90,37 @@ fn main() {
 }
 ```
 
+## Neo N3 Compilation Process
+
+The compilation process involves several stages:
+
+1. **Parse WebAssembly**: Read and analyze the WebAssembly binary format
+2. **Analyze Code**: Determine function signatures, types, and other metadata
+3. **Generate Neo N3 Bytecode**: Convert WebAssembly instructions to Neo N3 VM instructions
+4. **Create NEF**: Package the bytecode into the Neo N3 Executable Format
+5. **Generate Manifest**: Create a contract manifest with proper metadata, permissions, and ABI
+
 ## Documentation
 
 For more detailed documentation:
 
 - **[User Guide](docs/user_guide.md)**: Comprehensive guide on using the neo-compiler
-- **[Migration Guide](docs/migration_guide.md)**: Guide for migrating from previous versions
-- **[Roadmap](docs/roadmap.md)**: Future development plans for the project
-- **[Contributing](docs/contributing.md)**: Guidelines for contributing to the project
-- **[Restructuring](RESTRUCTURING.md)**: Information about the project structure
+- **[Neo N3 Implementation Guide](../docs/neo_n3_implementation_guide.md)**: Guide for Neo N3 contract patterns and best practices
+- **[Neo N3 Opcode Mapping](docs/neo_n3_opcode_mapping.md)**: Mapping between WebAssembly and Neo N3 opcodes
+- **[Contract Structure](docs/contract_structure.md)**: Understanding Neo N3 contract structure
 - **API Documentation**: Run `cargo doc --open` to view the API documentation
 
 ## Examples
 
-Several examples are provided in the `examples` directory:
+See the [examples directory](../examples/) for complete examples of Neo N3 contracts written in Rust:
 
-- **[simple_compilation.rs](examples/simple_compilation.rs)**: Demonstrates how to compile a WebAssembly module
-- **[manual_script_creation.rs](examples/manual_script_creation.rs)**: Shows how to manually create Neo scripts
-- **[nep17_token.rs](examples/nep17_token.rs)**: Complete NEP-17 token implementation example
+- **[NEP-17 Token](../examples/nep17/)**: Implementation of the Neo N3 fungible token standard
+- **[Event Demo](../examples/event_demo/)**: Demonstration of proper Neo N3 event emission
 
-To run an example:
+## Contributing
 
-```bash
-cargo run --example nep17_token
-```
-
-## API Overview
-
-### Core Components
-
-- **Compiler**: Main entry point for compilation
-- **WasmModule**: Representation of a WebAssembly module
-- **Script**: Representation of a Neo VM script
-- **NefFile**: Neo Executable Format file
-- **Manifest**: Contract manifest
-
-### Example: Working with Scripts
-
-```rust
-use neo_compiler::{script::Script, neo::OpCode};
-
-// Create a new script
-let mut script = Script::new();
-
-// Add simple operations
-script.emit_push_integer(42);
-script.emit_push_integer(58);
-script.emit_opcode(OpCode::ADD);
-script.emit_opcode(OpCode::RET);
-
-// Convert to bytecode
-let bytes = script.to_bytes().unwrap();
-```
-
-### Example: Working with NEF Files
-
-```rust
-use neo_compiler::{nef::NefFile, script::Script};
-
-// Create a NEF file from a script
-let script = Script::new();
-let mut nef = NefFile::with_script(script.to_bytes().unwrap());
-
-// Set compiler information
-let nef = nef.with_compiler("my-compiler");
-
-// Finalize the NEF file (calculate checksum)
-nef.finalize().unwrap();
-
-// Save to file
-nef.save_to("./output/contract.nef").unwrap();
-```
+Contributions to improve the Neo N3 Contract Compiler are welcome! Please see our [Contributing Guide](../CONTRIBUTING.md) for details.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.

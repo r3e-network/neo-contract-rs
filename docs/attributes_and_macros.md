@@ -92,9 +92,9 @@ Defines a smart contract event. Events are recorded on the blockchain and can be
 ```rust
 #[event]
 pub struct Transfer {
-    #[indexed]
+    #[index]
     from: Option<Address>,
-    #[indexed]
+    #[index]
     to: Option<Address>,
     amount: u64,
 }
@@ -107,9 +107,9 @@ Marks a field in an event struct as indexed. Indexed fields can be used to filte
 ```rust
 #[event]
 pub struct ItemListed {
-    #[indexed]
+    #[index]
     item_id: ByteArray,
-    #[indexed]
+    #[index]
     seller: Address,
     price: u64,
 }
@@ -290,9 +290,9 @@ use neo_contract::prelude::*;
 
 #[event]
 pub struct Transfer {
-    #[indexed]
+    #[index]
     from: Option<Address>,
-    #[indexed]
+    #[index]
     to: Option<Address>,
     amount: u64,
 }

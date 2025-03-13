@@ -6,21 +6,21 @@
 
 pub mod context;
 pub mod item;
-pub mod map;
 pub mod iter;
-pub mod versioned;
+pub mod map;
 pub mod pagination;
+pub mod versioned;
 
-use alloc::vec::Vec;
 use alloc::string::String;
+use alloc::vec::Vec;
 
 use crate::find_options::FindOptions;
 use crate::static_values::Hash160;
 
 // Re-export important types for convenience
 pub use crate::storage::context::Context;
-pub use crate::storage::context::StorageIterator;
 pub use crate::storage::context::StorageError;
+pub use crate::storage::context::StorageIterator;
 
 #[cfg(test)]
 mod test_utils;
@@ -186,9 +186,7 @@ pub fn context_for(contract_hash: &[u8]) -> context::Context {
 /// let hash = Hash160::from_hex("0x1234567890abcdef1234567890abcdef12345678");
 /// let ctx = storage::context_for_hash160(&hash);
 /// ```
-pub fn context_for_hash160(hash: &Hash160) -> context::Context {
-    context::Context::from_hash160(hash)
-}
+pub fn context_for_hash160(hash: &Hash160) -> context::Context { context::Context::from_hash160(hash) }
 
 /// Creates a read-only storage context for a contract
 ///
@@ -311,76 +309,76 @@ mod tests {
     fn test_storage_operations() {
         // Clear any existing mock data
         MockStorage::clear();
-        
+
         // Test basic operations
         assert!(!has(b"key1"));
         put(b"key1", b"value1");
         assert!(has(b"key1"));
         assert_eq!(get(b"key1"), Some(b"value1".to_vec()));
-        
+
         // Test delete
         delete(b"key1");
         assert!(!has(b"key1"));
-        
+
         // Test helper methods
         put_int(b"counter", 42);
         assert_eq!(get_int(b"counter"), Some(42));
-        
+
         put_string(b"greeting", "Hello, Neo!");
         assert_eq!(get_string(b"greeting"), Some("Hello, Neo!".to_string()));
     }
-    
+
     #[test]
     fn test_find_and_iterator() {
         // Clear any existing mock data
         MockStorage::clear();
-        
+
         // Add test data
         put(b"user:1:name", b"Alice");
         put(b"user:1:age", &[30]);
         put(b"user:2:name", b"Bob");
         put(b"user:2:age", &[25]);
-        
+
         // Test find
         let results = find(b"user:1:", FindOptions::default());
         assert_eq!(results.len(), 2);
-        
+
         // Test iterator
         let mut iter = create_iterator(b"user:1:", FindOptions::default());
         let mut count = 0;
-        
+
         while iter.has_next() {
             let (key, value) = iter.next().unwrap();
             count += 1;
             assert!(key.starts_with(b"user:1:"));
         }
-        
+
         assert_eq!(count, 2);
     }
-    
+
     #[test]
     fn test_create_key() {
         let key = create_key(&[b"user:", b"123", b":name"]);
         assert_eq!(key, b"user:123:name");
     }
-    
+
     #[test]
     fn test_context_operations() {
         // Clear any existing mock data
         MockStorage::clear();
-        
+
         // Get the current context
         let ctx = context();
-        
+
         // Test basic operations with the context
         ctx.put(b"key1", b"value1");
         assert!(ctx.has(b"key1"));
         assert_eq!(ctx.get(b"key1"), Some(b"value1".to_vec()));
-        
+
         // Test read-only context
         let ro_ctx = ctx.as_read_only();
         assert_eq!(ro_ctx.get(b"key1"), Some(b"value1".to_vec()));
-        
+
         // The following should not modify storage (since ro_ctx is read-only)
         ro_ctx.put(b"key2", b"value2");
         assert!(!has(b"key2"));

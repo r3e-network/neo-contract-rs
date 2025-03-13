@@ -6,8 +6,8 @@
 //! 3. Generate NEF and manifest files
 
 use neo_compiler::{Compiler, CompilerOptions, WasmModule};
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse command line arguments
@@ -18,11 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let wasm_path = PathBuf::from(&args[1]);
-    let output_dir = if args.len() > 2 {
-        PathBuf::from(&args[2])
-    } else {
-        PathBuf::from(".")
-    };
+    let output_dir = if args.len() > 2 { PathBuf::from(&args[2]) } else { PathBuf::from(".") };
 
     // Ensure the output directory exists
     fs::create_dir_all(&output_dir)?;
@@ -46,13 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = CompilerOptions {
         debug: true,
         optimize: true,
-        contract_name: Some(
-            wasm_path
-                .file_stem()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string(),
-        ),
+        contract_name: Some(wasm_path.file_stem().unwrap_or_default().to_string_lossy().to_string()),
         manifest_template: None,
         manifest_overrides: Some(Vec::new()),
         output_dir: Some(std::env::current_dir()?),
@@ -61,11 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Compile the module
     println!("\nStep 3: Compiling module...");
     let compiler = Compiler::with_options(options);
-    let contract_name = wasm_path
-        .file_stem()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .to_string();
+    let contract_name = wasm_path.file_stem().unwrap_or_default().to_string_lossy().to_string();
 
     compiler.compile(&wasm_path, &output_dir, &contract_name)?;
 
@@ -88,4 +74,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\nCompilation completed successfully!");
     Ok(())
-} 
+}

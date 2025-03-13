@@ -13,20 +13,17 @@ use alloc::string::String;
 //! - Method visibility controls
 //! - Storage management
 
-#[neo_contract::contract]
+#[contract]
+#[contract_author("R3E Network")]
+#[contract_description("Ink-Style Token with Attributes for Neo N3")]
+#[contract_version("0.1.0")]
+#[supported_standards("NEP-17")]
 mod ink_token {
     use neo_contract::prelude::*;
     use alloc::string::String;
     
     /// Token transfer event with Neo N3 indexing
-    #[event]
-    struct Transfer {
-        #[index]
-        from: Option<Address>,
-        #[index]
-        to: Option<Address>,
-        amount: u64
-    }
+    struct Transfer {}
     
     /// Implementation for properly emitting the Transfer event using Neo N3 standards
     impl Transfer {
@@ -51,19 +48,13 @@ mod ink_token {
             
             event_data.push(Any::from(amount));
             
-            // Emit the event using Runtime::notify (required for Neo N3)
+            // Emit the event using Neo N3 Runtime notify
             Runtime::notify(&event_name, &event_data);
         }
     }
     
     /// Event emitted when ownership is transferred
-    #[event]
-    struct OwnershipTransferred {
-        #[index]
-        previous_owner: Address,
-        #[index]
-        new_owner: Address,
-    }
+    struct OwnershipTransferred {}
     
     /// Implementation for properly emitting the OwnershipTransferred event using Neo N3 standards
     impl OwnershipTransferred {
@@ -79,7 +70,7 @@ mod ink_token {
             event_data.push(Any::from(previous_owner));
             event_data.push(Any::from(new_owner));
             
-            // Emit the event using Runtime::notify (required for Neo N3)
+            // Emit the event using Neo N3 Runtime notify
             Runtime::notify(&event_name, &event_data);
         }
     }
@@ -143,35 +134,30 @@ mod ink_token {
         }
         
         /// Get the token name
-        #[method]
         #[safe]
         fn name(&self) -> String {
             self.name.get().unwrap_or_default()
         }
         
         /// Get the token symbol
-        #[method]
         #[safe]
         fn symbol(&self) -> String {
             self.symbol.get().unwrap_or_default()
         }
         
         /// Get the number of decimal places
-        #[method]
         #[safe]
         fn decimals(&self) -> u8 {
             self.decimals.get().unwrap_or_default()
         }
         
         /// Get the total token supply
-        #[method]
         #[safe]
         fn total_supply(&self) -> u64 {
             self.total_supply.get().unwrap_or_default()
         }
         
         /// Get the token balance for a specific account
-        #[method]
         #[safe]
         fn balance_of(&self, account: Address) -> u64 {
             self.balances.get(&account).unwrap_or_default()
@@ -328,7 +314,6 @@ mod ink_token {
         }
         
         /// Get the current owner of the contract
-        #[method]
         #[safe]
         fn get_owner(&self) -> Address {
             self.owner.get().unwrap_or_default()

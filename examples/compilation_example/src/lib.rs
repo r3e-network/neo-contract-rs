@@ -5,20 +5,19 @@
 
 use neo_contract::prelude::*;
 
-#[contract]
+#[neo_contract::contract]
 pub struct Counter {
     // Storage for the counter value
-    count: StorageItem<u64>,
+    count: StorageMap<String, u64>,
     // Storage for the owner of the contract
-    owner: StorageItem<Address>,
+    owner: StorageMap<String, H160>,
 }
 
-#[contractimpl]
 impl Counter {
     /// Constructor that initializes the counter and sets the owner
     #[constructor]
     pub fn new(initial_value: u64) -> Self {
-        let sender = Runtime::current_sender();
+        let sender = Runtime::calling_script_hash();
         
         emit!(Initialized {
             owner: sender,
@@ -26,9 +25,9 @@ impl Counter {
         });
         
         Self {
-            count: StorageItem::new(initial_value),
-            owner: StorageItem::new(sender),
-        }
+            count: StorageMap::new(b"count"),
+            owner: StorageMap::new(b"owner"),
+        }.setup(initial_value, sender)
     }
     
     /// Alternative constructor that starts from zero
@@ -38,17 +37,17 @@ impl Counter {
     }
     
     /// Get the current counter value
-    #[method(safe)]
+    #[safe]
     pub fn get_count(&self) -> u64 {
-        self.count.get()
+        self.count.get("value").unwrap_or_default()
     }
     
     /// Increment the counter by one
     #[method]
     pub fn increment(&mut self) -> u64 {
-        let current = self.count.get();
+        let current = self.get_count();
         let new_value = current + 1;
-        self.count.set(new_value);
+        self.count.put("value", new_value);
         
         emit!(CountIncremented {
             from: current,
@@ -61,10 +60,10 @@ impl Counter {
     /// Decrement the counter by one
     #[method]
     pub fn decrement(&mut self) -> u64 {
-        let current = self.count.get();
+        let current = self.get_count();
         if current > 0 {
             let new_value = current - 1;
-            self.count.set(new_value);
+            self.count.put("value", new_value);
             
             emit!(CountDecremented {
                 from: current,
@@ -81,13 +80,13 @@ impl Counter {
     /// Reset the counter to a specific value (owner only)
     #[method]
     pub fn reset(&mut self, new_value: u64) -> bool {
-        let sender = Runtime::current_sender();
-        if sender != self.owner.get() {
+        let sender = Runtime::calling_script_hash();
+        if sender != self.owner.get("owner").unwrap_or_default() {
             return false;
         }
         
-        let old_value = self.count.get();
-        self.count.set(new_value);
+        let old_value = self.get_count();
+        self.count.put("value", new_value);
         
         emit!(CountReset {
             from: old_value,
@@ -100,13 +99,13 @@ impl Counter {
     
     /// Transfer ownership of the contract (owner only)
     #[method]
-    pub fn transfer_ownership(&mut self, new_owner: Address) -> bool {
-        let sender = Runtime::current_sender();
-        if sender != self.owner.get() {
+    pub fn transfer_ownership(&mut self, new_owner: H160) -> bool {
+        let sender = Runtime::calling_script_hash();
+        if sender != self.owner.get("owner").unwrap_or_default() {
             return false;
         }
         
-        self.owner.set(new_owner);
+        self.owner.put("owner", new_owner);
         
         emit!(OwnershipTransferred {
             from: sender,
@@ -117,22 +116,22 @@ impl Counter {
     }
     
     /// Get the current owner
-    #[method(safe)]
-    pub fn get_owner(&self) -> Address {
-        self.owner.get()
+    #[safe]
+    pub fn get_owner(&self) -> H160 {
+        self.owner.get("owner").unwrap_or_default()
     }
     
     /// Check if the caller is the owner
-    #[method(safe)]
+    #[safe]
     pub fn is_owner(&self) -> bool {
-        Runtime::current_sender() == self.owner.get()
+        Runtime::calling_script_hash() == self.owner.get("owner").unwrap_or_default()
     }
 
     /// Event emitted when the contract is initialized
     #[event]
     pub struct Initialized {
-        #[indexed]
-        owner: Address,
+        #[index]
+        owner: H160,
         initial_value: u64,
     }
     
@@ -155,16 +154,22 @@ impl Counter {
     pub struct CountReset {
         from: u64,
         to: u64,
-        #[indexed]
-        reset_by: Address,
+        #[index]
+        reset_by: H160,
     }
     
     /// Event emitted when ownership is transferred
     #[event]
     pub struct OwnershipTransferred {
-        #[indexed]
-        from: Address,
-        #[indexed]
-        to: Address,
+        #[index]
+        from: H160,
+        #[index]
+        to: H160,
+    }
+
+    fn setup(&mut self, initial_value: u64, owner: H160) -> Self {
+        self.count.put("value", initial_value);
+        self.owner.put("owner", owner);
+        self
     }
 }

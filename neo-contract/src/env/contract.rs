@@ -19,9 +19,7 @@ pub fn native_executing_script_hash() -> H160 {
 
 // For non-wasm targets
 #[cfg(not(target_arch = "wasm32"))]
-pub fn calling_script_hash() -> H160 {
-    unsafe { crate::env::syscall_non_wasm::system_runtime_calling_script_hash() }
-}
+pub fn calling_script_hash() -> H160 { unsafe { crate::env::syscall_non_wasm::system_runtime_calling_script_hash() } }
 
 // For wasm32 target
 #[cfg(target_arch = "wasm32")]
@@ -31,9 +29,7 @@ pub fn native_calling_script_hash() -> H160 {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn entry_script_hash() -> H160 {
-    unsafe { crate::env::syscall_non_wasm::system_runtime_entry_script_hash() }
-}
+pub fn entry_script_hash() -> H160 { unsafe { crate::env::syscall_non_wasm::system_runtime_entry_script_hash() } }
 
 #[cfg(target_arch = "wasm32")]
 pub fn native_entry_script_hash() -> H160 {
@@ -57,9 +53,7 @@ pub fn native_contract_call(hash: H160, method: ByteString, flags: CallFlags, ar
 
 // For non-wasm targets
 #[cfg(not(target_arch = "wasm32"))]
-pub fn check_witness(hash: H160) -> bool {
-    unsafe { crate::env::syscall_non_wasm::system_runtime_check_witness(hash) }
-}
+pub fn check_witness(hash: H160) -> bool { unsafe { crate::env::syscall_non_wasm::system_runtime_check_witness(hash) } }
 
 // For wasm32 target
 #[cfg(target_arch = "wasm32")]
@@ -70,9 +64,7 @@ pub fn native_platform() -> ByteString {
 
 // For non-wasm targets
 #[cfg(not(target_arch = "wasm32"))]
-pub fn platform() -> ByteString {
-    unsafe { crate::env::syscall_non_wasm::system_runtime_platform() }
-}
+pub fn platform() -> ByteString { unsafe { crate::env::syscall_non_wasm::system_runtime_platform() } }
 
 // For wasm32 target
 #[cfg(target_arch = "wasm32")]
@@ -83,9 +75,7 @@ pub fn native_gas_left() -> i64 {
 
 // For non-wasm targets
 #[cfg(not(target_arch = "wasm32"))]
-pub fn gas_left() -> i64 {
-    unsafe { crate::env::syscall_non_wasm::system_runtime_gas_left() }
-}
+pub fn gas_left() -> i64 { unsafe { crate::env::syscall_non_wasm::system_runtime_gas_left() } }
 
 // For wasm32 target
 #[cfg(target_arch = "wasm32")]
@@ -96,9 +86,7 @@ pub fn native_invocation_counter() -> i32 {
 
 // For non-wasm targets
 #[cfg(not(target_arch = "wasm32"))]
-pub fn invocation_counter() -> i32 {
-    unsafe { crate::env::syscall_non_wasm::system_runtime_invocation_counter() }
-}
+pub fn invocation_counter() -> i32 { unsafe { crate::env::syscall_non_wasm::system_runtime_invocation_counter() } }
 
 // For wasm32 target
 #[cfg(target_arch = "wasm32")]
@@ -109,9 +97,7 @@ pub fn native_time() -> u64 {
 
 // For non-wasm targets
 #[cfg(not(target_arch = "wasm32"))]
-pub fn time() -> u64 {
-    unsafe { crate::env::syscall_non_wasm::system_runtime_time() }
-}
+pub fn time() -> u64 { unsafe { crate::env::syscall_non_wasm::system_runtime_time() } }
 
 // For wasm32 target
 #[cfg(target_arch = "wasm32")]
@@ -121,9 +107,7 @@ pub fn native_log(message: &str) {
 
 // For non-wasm targets
 #[cfg(not(target_arch = "wasm32"))]
-pub fn log(message: &str) {
-    unsafe { crate::env::syscall_non_wasm::system_runtime_log(ByteString::from(message)) }
-}
+pub fn log(message: &str) { unsafe { crate::env::syscall_non_wasm::system_runtime_log(ByteString::from(message)) } }
 
 // Native contract hash functions for wasm32 target
 

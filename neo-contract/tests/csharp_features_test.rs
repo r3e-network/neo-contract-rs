@@ -5,8 +5,8 @@
 mod tests {
     // Import the proc macros for testing
     use neo_contract_proc_macros::{
-        byte_array, hash160, integer, public_key, string, contract_hash,
-        manifest_extra, contract_permission, contract_trust, supported_standards
+        byte_array, contract_hash, contract_permission, contract_trust, hash160, integer, manifest_extra, public_key,
+        string, supported_standards,
     };
 
     #[test]

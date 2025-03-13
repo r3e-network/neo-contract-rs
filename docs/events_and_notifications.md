@@ -12,44 +12,48 @@ Events serve several important purposes:
 - Enable real-time monitoring of contract activities
 - Support for decentralized applications (dApps) frontends
 
-## Events in Neo N3
+## Standardized Event Pattern
 
-In Neo N3, events are properly emitted using the `Runtime::notify` method rather than using an attribute-based struct approach. This direct approach aligns with Neo N3's architecture and provides better compatibility with the Neo VM.
+The Neo Contract Rust Framework provides a standardized approach to define and emit events in smart contracts. This approach simplifies event management and ensures consistent event formats across contracts.
 
-### Event Structure
+### Event Definition
 
-Events in Neo N3 consist of:
-
-1. An event name (as a ByteString)
-2. An array of parameters (as Array<Any>)
-
-Each parameter can be of any type that can be converted to the `Any` type.
-
-### Parameter Types
-
-Event parameters can include various types of data:
-
-- Addresses (`H160`)
-- Numbers (integers, etc.)
-- Strings (as `ByteString`)
-- Boolean values
-- Byte arrays
-- Null/None values (represented as empty `Any`)
-
-### Searchability
-
-In Neo N3, the first argument in the event data array is typically used for filtering and searching. For better searchability:
-
-- Place identifiable fields like addresses or IDs first in the event data array
-- Use consistent event names across your contract
-- Limit the number of parameters to what's essential
-
-## Emitting Events
-
-To emit an event from your contract, use the `Runtime::notify` method with a properly formatted event name and data array:
+Events are defined as structs with the `#[event]` attribute:
 
 ```rust
-// Inside a contract method
+#[event]
+struct Transfer {
+    #[index]
+    from: Option<H160>,
+    #[index]
+    to: Option<H160>,
+    amount: u64,
+}
+```
+
+Note the use of the `#[index]` attribute for fields that should be indexed for efficient filtering. This is equivalent to the `indexed` keyword in other blockchain platforms.
+
+### Event Emission
+
+Events are emitted using the `emit()` method on the event struct:
+
+```rust
+// Create and emit a Transfer event
+Transfer {
+    from: Some(sender),
+    to: Some(receiver),
+    amount: 100,
+}.emit();
+```
+
+This approach is much cleaner and more type-safe than manually constructing event data arrays.
+
+## Legacy Approach: Direct Runtime::notify
+
+While the standardized event pattern above is recommended for new contracts, you may still see the direct `Runtime::notify` approach in older contracts:
+
+```rust
+// Legacy approach to emit events
 pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: u64) {
     // Create event name as ByteString
     let event_name = ByteString::from("Transfer");
@@ -60,7 +64,7 @@ pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: u64) {
     // Add parameters as Any values
     match from {
         Some(addr) => event_data.push(Any::from(addr)),
-        None => event_data.push(Any::new()), // For null values
+        None => event_data.push(Any::new()),
     }
     
     match to {
@@ -75,19 +79,114 @@ pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: u64) {
 }
 ```
 
+## Event Patterns and Best Practices
+
+### 1. Use the #[event] Attribute
+
+Define events as structs with the `#[event]` attribute:
+
+```rust
+#[event]
+struct CustomEvent {
+    #[index]
+    user: H160,
+    action: String,
+    value: u64,
+}
+```
+
+### 2. Mark Fields for Indexing
+
+Use the `#[index]` attribute to mark fields that should be indexed for efficient filtering:
+
+```rust
+#[event]
+struct Approval {
+    #[index]
+    owner: H160,
+    #[index]
+    spender: H160,
+    amount: u64,
+}
+```
+
+### 3. Create Event Helper Methods (Optional)
+
+For frequently used events, consider creating helper methods:
+
+```rust
+#[contractimpl]
+impl MyToken {
+    // Helper method to emit Transfer events
+    fn transfer_event(&self, from: Option<H160>, to: Option<H160>, amount: u64) {
+        Transfer {
+            from,
+            to,
+            amount,
+        }.emit();
+    }
+}
+```
+
+### 4. Follow NEP Standards for Event Names
+
+For standard token contracts (NEP-17, NEP-11), use the event names specified in the standards:
+
+- **NEP-17 (Fungible Token)**: "Transfer" event
+- **NEP-11 (Non-Fungible Token)**: "Transfer" event (with token_id)
+
+### 5. Consistent Structure for Custom Events
+
+For custom events, maintain a consistent structure to simplify client-side handling:
+
+```rust
+#[event]
+struct PoolCreated {
+    #[index]
+    pool_id: u32,
+    token_a: Hash160, 
+    token_b: Hash160,
+    fee_rate: u16,
+}
+```
+
+### 6. Documentation
+
+Document the purpose of each event and its parameters in your contract code:
+
+```rust
+/// Event emitted when a user stakes tokens
+#[event]
+struct Staked {
+    #[index]
+    user: H160,
+    amount: u64,
+    timestamp: u64,
+}
+```
+
+## Emitting Events
+
+To emit an event from your contract, use the `emit()` method on the event struct:
+
+```rust
+// Create and emit a Transfer event
+Transfer {
+    from: Some(sender),
+    to: Some(receiver),
+    amount: 100,
+}.emit();
+```
+
 You can also emit events conditionally:
 
 ```rust
 if amount > 0 {
-    let event_name = ByteString::from("Transfer");
-    let mut event_data = Array::<Any>::new();
-    
-    // Add parameters
-    event_data.push(Any::from(from));
-    event_data.push(Any::from(to));
-    event_data.push(Any::from(amount));
-    
-    Runtime::notify(&event_name, &event_data);
+    Transfer {
+        from: Some(sender),
+        to: Some(receiver),
+        amount,
+    }.emit();
 }
 ```
 
@@ -100,25 +199,13 @@ Neo N3 has several standardized events that should be used for compatibility:
 For fungible token contracts following the NEP-17 standard, the `Transfer` event is essential:
 
 ```rust
-// Function to emit a NEP-17 compliant Transfer event
-pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: u64) {
-    let event_name = ByteString::from("Transfer");
-    let mut event_data = Array::<Any>::new();
-    
-    // Add parameters as Any values
-    match from {
-        Some(addr) => event_data.push(Any::from(addr)),
-        None => event_data.push(Any::new()),
-    }
-    
-    match to {
-        Some(addr) => event_data.push(Any::from(addr)),
-        None => event_data.push(Any::new()),
-    }
-    
-    event_data.push(Any::from(amount));
-    
-    Runtime::notify(&event_name, &event_data);
+#[event]
+struct Transfer {
+    #[index]
+    from: Option<H160>,
+    #[index]
+    to: Option<H160>,
+    amount: u64,
 }
 ```
 
@@ -128,12 +215,11 @@ For divisible non-fungible token contracts:
 
 ```rust
 #[event]
-pub struct Transfer {
-    #[indexed]
-    from: Option<Address>,
-    #[indexed]
-    to: Option<Address>,
-    #[indexed]
+struct Transfer {
+    #[index]
+    from: Option<H160>,
+    #[index]
+    to: Option<H160>,
     token_id: ByteArray,
     amount: u64,
 }
@@ -145,12 +231,11 @@ For non-divisible non-fungible token contracts:
 
 ```rust
 #[event]
-pub struct Transfer {
-    #[indexed]
-    from: Option<Address>,
-    #[indexed]
-    to: Option<Address>,
-    #[indexed]
+struct Transfer {
+    #[index]
+    from: Option<H160>,
+    #[index]
+    to: Option<H160>,
     token_id: ByteArray,
 }
 ```
@@ -161,19 +246,19 @@ You can define custom events for specific contract needs:
 
 ```rust
 #[event]
-pub struct UserRegistered {
-    #[indexed]
-    address: Address,
+struct UserRegistered {
+    #[index]
+    address: H160,
     username: String,
     registration_date: u64,
 }
 
 #[event]
-pub struct ItemListed {
-    #[indexed]
+struct ItemListed {
+    #[index]
     item_id: ByteArray,
-    #[indexed]
-    seller: Address,
+    #[index]
+    seller: H160,
     price: u64,
     metadata: String,
 }
@@ -250,20 +335,20 @@ For contract upgrades, consider versioning your events:
 
 ```rust
 #[event]
-pub struct TransferV1 {
-    #[indexed]
-    from: Option<Address>,
-    #[indexed]
-    to: Option<Address>,
+struct TransferV1 {
+    #[index]
+    from: Option<H160>,
+    #[index]
+    to: Option<H160>,
     amount: u64,
 }
 
 #[event]
-pub struct TransferV2 {
-    #[indexed]
-    from: Option<Address>,
-    #[indexed]
-    to: Option<Address>,
+struct TransferV2 {
+    #[index]
+    from: Option<H160>,
+    #[index]
+    to: Option<H160>,
     amount: u64,
     memo: String,
 }
@@ -275,9 +360,9 @@ Aggregate related events for efficiency:
 
 ```rust
 #[event]
-pub struct BatchTransfer {
-    #[indexed]
-    operator: Address,
+struct BatchTransfer {
+    #[index]
+    operator: H160,
     transfers: Vec<TransferData>,
     timestamp: u64,
 }

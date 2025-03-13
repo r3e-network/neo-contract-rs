@@ -46,9 +46,6 @@ mod token_contract {
     
     // Helper function to emit a Transfer event using the Neo N3 pattern
     pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: Int256) {
-        // Log the transfer for debugging
-        Runtime::log(&format!("Transfer from {:?} to {:?}: {}", from, to, amount));
-        
         // Create event name as ByteString per Neo N3 standard
         let event_name = ByteString::from("Transfer");
         
@@ -57,36 +54,19 @@ mod token_contract {
         
         // Add the parameters as Any values (new() for None, H160 for Some)
         match from {
-            Some(addr) => {
-                Runtime::log("Converting 'from' address to Neo N3 Any type");
-                event_data.push(Any::from(addr))
-            },
-            None => {
-                Runtime::log("Using empty value for 'from' address in Neo N3 event");
-                event_data.push(Any::new())
-            },
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
         }
         
         match to {
-            Some(addr) => {
-                Runtime::log("Converting 'to' address to Neo N3 Any type");
-                event_data.push(Any::from(addr))
-            },
-            None => {
-                Runtime::log("Using empty value for 'to' address in Neo N3 event");
-                event_data.push(Any::new())
-            },
+            Some(addr) => event_data.push(Any::from(addr)),
+            None => event_data.push(Any::new()),
         }
         
-        Runtime::log("Converting amount to Neo N3 Any type");
         event_data.push(Any::from(amount));
         
         // Emit the event using the Neo N3 pattern with Runtime::notify
-        Runtime::log("Emitting Neo N3 Transfer event");
         Runtime::notify(&event_name, &event_data);
-        
-        // Alternatively, use the generated event method
-        // Transfer::emit(from, to, amount);
     }
 
     #[storage]
@@ -101,29 +81,19 @@ mod token_contract {
     impl Token {
         #[constructor]
         pub fn new() -> Self {
-            // Log contract deployment
-            Runtime::log("Deploying Neo N3 NEP-17 token contract");
-            
             let mut balances = Map::new();
             
             // Parse the owner address (Neo N3 format)
             let owner = H160::hex_decode(OWNER_ADDRESS).unwrap_or_else(|| {
-                Runtime::log("Failed to parse owner address, using zero address");
                 H160::zero()
             });
-            Runtime::log(&format!("Neo N3 Token owner: {:?}", owner));
             
             // Mint initial supply to owner
             let token_supply = Int256::from(100_000_000_00000000i64);
-            Runtime::log(&format!("Neo N3 Token initial supply: {}", token_supply));
             balances.put(owner.clone(), token_supply.clone());
             
             // Emit transfer event for initial minting (from null address) using Neo N3 pattern
-            Runtime::log("Emitting initial Neo N3 Transfer event (mint)");
             emit_transfer(None, Some(owner), token_supply.clone());
-            
-            // Register the contract in Neo N3 manifest
-            Runtime::log("Registering Neo N3 NEP-17 token in manifest");
             
             Self {
                 token_supply,
@@ -137,39 +107,30 @@ mod token_contract {
         // ---------- NEP-17 Standard Methods ----------
         
         // Get token name
-        #[neo_method(safe = true)]
+        #[safe]
         pub fn name(&self) -> ByteString {
-            // Log method invocation for debugging
-            Runtime::log("Invoking Neo N3 safe method: name");
             self.token_name.clone()
         }
         
         // Get token symbol
-        #[neo_method(safe = true)]
+        #[safe]
         pub fn symbol(&self) -> ByteString {
-            // Log method invocation for debugging
-            Runtime::log("Invoking Neo N3 safe method: symbol");
             self.token_symbol.clone()
         }
         
         // Get token decimals
-        #[neo_method(safe = true)]
+        #[safe]
         pub fn decimals(&self) -> u8 {
-            // Log method invocation for debugging
-            Runtime::log("Invoking Neo N3 safe method: decimals");
             self.token_decimals
         }
         
         // Get total token supply
-        #[neo_method(safe = true)]
+        #[safe]
         pub fn total_supply(&self) -> Int256 {
-            // Log method invocation for debugging
-            Runtime::log("Invoking Neo N3 safe method: total_supply");
             self.token_supply.clone()
         }
         
         // Get token balance for an account
-        #[message]
         #[safe]
         pub fn balance_of(&self, account: H160) -> Int256 {
             match self.balances.get(&account) {
@@ -179,7 +140,7 @@ mod token_contract {
         }
         
         // Transfer tokens between accounts
-        #[message]
+        #[method]
         pub fn transfer(&mut self, from: H160, to: H160, amount: Int256, _data: ByteString) -> bool {
             // Check if sender has authorized the transfer
             if !Runtime::check_witness(from) {

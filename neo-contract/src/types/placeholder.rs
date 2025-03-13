@@ -12,20 +12,12 @@ pub struct Placeholder {
 
 impl Placeholder {
     /// Create a new placeholder
-    pub fn new() -> Self {
-        Self {
-            data: Vec::new(),
-        }
-    }
+    pub fn new() -> Self { Self { data: Vec::new() } }
 
     /// Get the data
-    pub fn data(&self) -> &[u8] {
-        &self.data
-    }
+    pub fn data(&self) -> &[u8] { &self.data }
 }
 
 impl fmt::Display for Placeholder {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Placeholder")
-    }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "Placeholder") }
 }

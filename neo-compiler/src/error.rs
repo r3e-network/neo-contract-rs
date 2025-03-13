@@ -10,34 +10,34 @@ use std::io;
 pub enum Error {
     /// I/O error
     Io(io::Error),
-    
+
     /// Invalid WebAssembly module
     InvalidWasm(String),
-    
+
     /// WebAssembly parsing error
     WasmParse(String),
-    
+
     /// WebAssembly unsupported feature
     UnsupportedWasmFeature(String),
-    
+
     /// Invalid NEF file
     InvalidNef(String),
-    
+
     /// Invalid manifest
     InvalidManifest(String),
-    
+
     /// Script generation error
     ScriptGeneration(String),
-    
+
     /// Conversion error
     Conversion(String),
-    
+
     /// Neo VM error
     NeoVM(String),
-    
+
     /// Serialization error
     Serialization(String),
-    
+
     /// General error
     General(String),
 }
@@ -70,66 +70,44 @@ impl std::error::Error for Error {
 }
 
 impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::Io(err)
-    }
+    fn from(err: io::Error) -> Self { Error::Io(err) }
 }
 
 impl From<serde_json::Error> for Error {
-    fn from(err: serde_json::Error) -> Self {
-        Error::Serialization(err.to_string())
-    }
+    fn from(err: serde_json::Error) -> Self { Error::Serialization(err.to_string()) }
 }
 
 impl From<wasmparser::BinaryReaderError> for Error {
-    fn from(err: wasmparser::BinaryReaderError) -> Self {
-        Error::WasmParse(err.to_string())
-    }
+    fn from(err: wasmparser::BinaryReaderError) -> Self { Error::WasmParse(err.to_string()) }
 }
 
 impl From<&str> for Error {
-    fn from(err: &str) -> Self {
-        Error::General(err.to_string())
-    }
+    fn from(err: &str) -> Self { Error::General(err.to_string()) }
 }
 
 impl From<String> for Error {
-    fn from(err: String) -> Self {
-        Error::General(err)
-    }
+    fn from(err: String) -> Self { Error::General(err) }
 }
 
 // Helper functions for creating specific errors
 impl Error {
     /// Create a new general error
-    pub fn general<S: Into<String>>(msg: S) -> Self {
-        Error::General(msg.into())
-    }
-    
+    pub fn general<S: Into<String>>(msg: S) -> Self { Error::General(msg.into()) }
+
     /// Create a new invalid WebAssembly error
-    pub fn invalid_wasm<S: Into<String>>(msg: S) -> Self {
-        Error::InvalidWasm(msg.into())
-    }
-    
+    pub fn invalid_wasm<S: Into<String>>(msg: S) -> Self { Error::InvalidWasm(msg.into()) }
+
     /// Create a new script generation error
-    pub fn script_generation<S: Into<String>>(msg: S) -> Self {
-        Error::ScriptGeneration(msg.into())
-    }
-    
+    pub fn script_generation<S: Into<String>>(msg: S) -> Self { Error::ScriptGeneration(msg.into()) }
+
     /// Create a new conversion error
-    pub fn conversion<S: Into<String>>(msg: S) -> Self {
-        Error::Conversion(msg.into())
-    }
-    
+    pub fn conversion<S: Into<String>>(msg: S) -> Self { Error::Conversion(msg.into()) }
+
     /// Create a new invalid NEF error
-    pub fn invalid_nef<S: Into<String>>(msg: S) -> Self {
-        Error::InvalidNef(msg.into())
-    }
-    
+    pub fn invalid_nef<S: Into<String>>(msg: S) -> Self { Error::InvalidNef(msg.into()) }
+
     /// Create a new invalid manifest error
-    pub fn invalid_manifest<S: Into<String>>(msg: S) -> Self {
-        Error::InvalidManifest(msg.into())
-    }
+    pub fn invalid_manifest<S: Into<String>>(msg: S) -> Self { Error::InvalidManifest(msg.into()) }
 }
 
 /// Result type alias for neo-compiler operations.

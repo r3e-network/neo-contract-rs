@@ -104,7 +104,7 @@ pub fn emit_vote(from: H160, to: H160, value: Int256) {
     Runtime::notify(&event_name, &event_data);
 }
 
-#[neo_contract::contract]
+#[contract]
 #[contract_author("R3E Network")]
 #[contract_email("dev@r3e.network")]
 #[contract_description("BurgerNEO contract example")]
@@ -172,31 +172,27 @@ mod burger_contract {
             }
         }
 
-        #[message]
         #[safe]
         pub fn name(&self) -> ByteString {
             self.token_name.clone()
         }
 
-        #[message]
         #[safe]
         pub fn symbol(&self) -> ByteString {
             self.token_symbol.clone()
         }
 
-        #[message]
         #[safe]
         pub fn decimals(&self) -> Int256 {
             self.token_decimals.clone()
         }
 
-        #[message]
         #[safe]
         pub fn total_supply(&self) -> Int256 {
             self.total.clone()
         }
 
-        #[message]
+        #[method]
         pub fn transfer(&mut self, from: H160, to: H160, amount: Int256, _data: ByteString) -> bool {
             if !Runtime::check_witness(from) {
                 return false;
@@ -236,7 +232,7 @@ mod burger_contract {
             true
         }
 
-        #[message]
+        #[method]
         pub fn vote(&mut self, addr: H160, candidate: H160, amount: Int256) -> bool {
             if !Runtime::check_witness(addr) {
                 return false;
@@ -269,10 +265,17 @@ mod burger_contract {
             
             // Update total staked by voter
             let total_staked = match self.total_staked_by_voter.get(&addr) {
-                Some(total) => *total + amount,
+                Some(total) => {
+                    let new_total = *total + amount;
+                    if new_total.is_zero() {
+                        self.total_staked_by_voter.delete(&addr);
+                    } else {
+                        self.total_staked_by_voter.put(addr.clone(), new_total);
+                    }
+                    new_total
+                },
                 None => amount,
             };
-            self.total_staked_by_voter.put(addr.clone(), total_staked);
             
             // Update candidate vote balance
             let candidate_vote_balance = match self.candidate_votes.get(&candidate) {
@@ -299,7 +302,7 @@ mod burger_contract {
             true
         }
 
-        #[message]
+        #[method]
         pub fn cancel_vote(&mut self, addr: H160, candidate: H160, amount: Int256) -> bool {
             if !Runtime::check_witness(addr) {
                 return false;
@@ -380,7 +383,7 @@ mod burger_contract {
             true
         }
 
-        #[message]
+        #[method]
         pub fn stake(&mut self, addr: H160, amount: Int256) -> bool {
             if !Runtime::check_witness(addr) {
                 return false;
@@ -422,7 +425,7 @@ mod burger_contract {
             true
         }
 
-        #[message]
+        #[method]
         pub fn cancel_stake(&mut self, addr: H160, amount: Int256) -> bool {
             if !Runtime::check_witness(addr) {
                 return false;
@@ -483,7 +486,6 @@ mod burger_contract {
             true
         }
 
-        #[message]
         #[safe]
         pub fn balance_of(&self, account: H160) -> Int256 {
             match self.balances.get(&account) {

@@ -1,9 +1,9 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
+use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-use alloc::format;
 
 /// Encode bytes to hex string
 pub fn encode(bytes: &[u8]) -> String {
@@ -27,8 +27,7 @@ pub fn decode(hex: &str) -> Result<Vec<u8>, String> {
             return Err(format!("Invalid hex string: {}", hex));
         }
         let byte_str = &hex[i..i + 2];
-        let byte = u8::from_str_radix(byte_str, 16)
-            .map_err(|_| format!("Invalid hex character: {}", byte_str))?;
+        let byte = u8::from_str_radix(byte_str, 16).map_err(|_| format!("Invalid hex character: {}", byte_str))?;
         bytes.push(byte);
     }
     Ok(bytes)

@@ -74,7 +74,6 @@ mod token_contract {
         }
         
         // Safe method that doesn't modify state
-        #[message]
         #[safe]
         pub fn total_supply(&self) -> Int256 {
             self.token_supply
@@ -145,7 +144,6 @@ mod token_contract {
         }
         
         // Call other contract
-        #[message]
         #[safe]
         pub fn call_other_contract(&self, contract_hash: H160, method: ByteString, args: Array<Any>) -> Any {
             // Call contract without flags
@@ -153,7 +151,6 @@ mod token_contract {
         }
         
         // Safe method to check balance
-        #[message]
         #[safe]
         pub fn balance_of(&self, account: H160) -> Int256 {
             match self.balances.get(&account) {

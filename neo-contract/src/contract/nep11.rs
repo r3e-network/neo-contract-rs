@@ -1,7 +1,7 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use crate::prelude::{H160, Int256, ByteString};
+use crate::prelude::{ByteString, Int256, H160};
 use alloc::vec::Vec;
 
 /// NEP-11 represents a non-fungible token in Neo N3

@@ -1,10 +1,10 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use alloc::vec::Vec;
 use crate::types::builtin::h160::H160;
 use crate::types::builtin::h256::H256;
 use crate::types::tx::Tx;
+use alloc::vec::Vec;
 
 /// Block represents a block in the blockchain
 #[derive(Debug, Clone)]

@@ -172,31 +172,27 @@ mod burger_contract {
             }
         }
 
-        #[message]
         #[safe]
         pub fn name(&self) -> ByteString {
             self.token_name.clone()
         }
 
-        #[message]
         #[safe]
         pub fn symbol(&self) -> ByteString {
             self.token_symbol.clone()
         }
 
-        #[message]
         #[safe]
         pub fn decimals(&self) -> Int256 {
             self.token_decimals.clone()
         }
 
-        #[message]
         #[safe]
         pub fn total_supply(&self) -> Int256 {
             self.total.clone()
         }
 
-        #[message]
+        #[method]
         pub fn transfer(&mut self, from: H160, to: H160, amount: Int256, _data: ByteString) -> bool {
             if !Runtime::check_witness(from) {
                 return false;
@@ -228,7 +224,7 @@ mod burger_contract {
             true
         }
 
-        #[message]
+        #[method]
         pub fn vote(&mut self, addr: H160, candidate: H160, amount: Int256) -> bool {
             if !Runtime::check_witness(addr) {
                 return false;
@@ -291,7 +287,7 @@ mod burger_contract {
             true
         }
 
-        #[message]
+        #[method]
         pub fn cancel_vote(&mut self, addr: H160, candidate: H160, amount: Int256) -> bool {
             if !Runtime::check_witness(addr) {
                 return false;
@@ -372,7 +368,7 @@ mod burger_contract {
             true
         }
 
-        #[message]
+        #[method]
         pub fn stake(&mut self, addr: H160, amount: Int256) -> bool {
             if !Runtime::check_witness(addr) {
                 return false;
@@ -410,7 +406,7 @@ mod burger_contract {
             true
         }
 
-        #[message]
+        #[method]
         pub fn cancel_stake(&mut self, addr: H160, amount: Int256) -> bool {
             if !Runtime::check_witness(addr) {
                 return false;
@@ -467,7 +463,6 @@ mod burger_contract {
             true
         }
 
-        #[message]
         #[safe]
         pub fn balance_of(&self, account: H160) -> Int256 {
             match self.balances.get(&account) {

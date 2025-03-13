@@ -11,25 +11,23 @@ thread_local! {
 // Mock implementation of storage functions for testing
 mod mock_storage {
     use super::*;
-    
+
     pub fn get(key: &[u8]) -> Option<Vec<u8>> {
-        MOCK_STORAGE.with(|storage| {
-            storage.borrow().get(&key.to_vec()).cloned()
-        })
+        MOCK_STORAGE.with(|storage| storage.borrow().get(&key.to_vec()).cloned())
     }
-    
+
     pub fn put(key: &[u8], value: &[u8]) {
         MOCK_STORAGE.with(|storage| {
             storage.borrow_mut().insert(key.to_vec(), value.to_vec());
         });
     }
-    
+
     pub fn delete(key: &[u8]) {
         MOCK_STORAGE.with(|storage| {
             storage.borrow_mut().remove(&key.to_vec());
         });
     }
-    
+
     pub fn clear() {
         MOCK_STORAGE.with(|storage| {
             storage.borrow_mut().clear();
@@ -51,29 +49,29 @@ impl TestFixture {
 #[test]
 fn test_storage_item() {
     let _fixture = TestFixture::new();
-    
-    // Create a storage item 
+
+    // Create a storage item
     let mut counter = Item::new(b"counter");
-    
+
     // Test with our mock implementation
     counter.set(&42u32);
-    
+
     // Verify it's stored correctly
     let stored_bytes = mock_storage::get(b"counter").unwrap();
-    
+
     // In real implementation, the bytes would be serialized properly
     // Here we're just doing a basic check that something was stored
     assert!(!stored_bytes.is_empty());
-    
-    // Get the value 
+
+    // Get the value
     let retrieved: u32 = counter.get().unwrap_or(0);
     assert_eq!(retrieved, 42);
-    
+
     // Update the value
     counter.set(&84u32);
     let updated: u32 = counter.get().unwrap_or(0);
     assert_eq!(updated, 84);
-    
+
     // Delete the value
     counter.delete();
     let deleted: Option<u32> = counter.get();
@@ -84,35 +82,35 @@ fn test_storage_item() {
 #[test]
 fn test_storage_map() {
     let _fixture = TestFixture::new();
-    
+
     // Create a storage map
     let mut balances = Map::new(b"balances");
-    
+
     // Create some keys
     let alice = H160::from_hex("0102030405060708090a0b0c0d0e0f1011121314").unwrap();
     let bob = H160::from_hex("1516171819202122232425262728293031323334").unwrap();
-    
+
     // Store some values
     balances.insert(&alice, &100u32);
     balances.insert(&bob, &200u32);
-    
+
     // Retrieve the values
     let alice_balance: u32 = balances.get(&alice).unwrap_or(0);
     let bob_balance: u32 = balances.get(&bob).unwrap_or(0);
-    
+
     assert_eq!(alice_balance, 100);
     assert_eq!(bob_balance, 200);
-    
+
     // Update a value
     balances.insert(&alice, &150u32);
     let alice_balance: u32 = balances.get(&alice).unwrap_or(0);
     assert_eq!(alice_balance, 150);
-    
+
     // Remove a value
     balances.remove(&bob);
     let bob_balance: Option<u32> = balances.get(&bob);
     assert!(bob_balance.is_none());
-    
+
     // Check contains_key
     assert!(balances.contains_key(&alice));
     assert!(!balances.contains_key(&bob));
@@ -122,28 +120,28 @@ fn test_storage_map() {
 #[test]
 fn test_versioned_storage() {
     let _fixture = TestFixture::new();
-    
+
     // Create a versioned item
     let mut versioned_item = storage::versioned::VersionedItem::<u32>::new(b"versioned");
-    
+
     // Initially empty
     let initial: Option<u32> = versioned_item.get();
     assert!(initial.is_none());
-    
+
     // Set with version 1
     versioned_item.set(&42, 1);
-    
+
     // Get the value
     let value: u32 = versioned_item.get().unwrap_or(0);
     assert_eq!(value, 42);
-    
+
     // Get the current version
     let version = versioned_item.version();
     assert_eq!(version, 1);
-    
+
     // Update with a new version
     versioned_item.set(&84, 2);
-    
+
     // Verify new value and version
     let updated: u32 = versioned_item.get().unwrap_or(0);
     assert_eq!(updated, 84);
@@ -157,25 +155,16 @@ trait StorageKey {
 }
 
 impl StorageKey for H160 {
-    fn storage_key(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
-    }
+    fn storage_key(&self) -> Vec<u8> { self.as_bytes().to_vec() }
 }
 
-// Mock implementations for Item and Map 
+// Mock implementations for Item and Map
 // These are simplified versions for testing
 impl<T> Item<T> {
-    pub fn new(prefix: &[u8]) -> Self {
-        Item {
-            prefix: prefix.to_vec(),
-            _phantom: std::marker::PhantomData,
-        }
-    }
-    
-    pub fn get(&self) -> Option<T> 
-    where 
-        T: for<'a> serde::Deserialize<'a>,
-    {
+    pub fn new(prefix: &[u8]) -> Self { Item { prefix: prefix.to_vec(), _phantom: std::marker::PhantomData } }
+
+    pub fn get(&self) -> Option<T>
+    where T: for<'a> serde::Deserialize<'a> {
         match mock_storage::get(&self.prefix) {
             Some(bytes) => {
                 // In real implementation, this would deserialize properly
@@ -185,31 +174,22 @@ impl<T> Item<T> {
             None => None,
         }
     }
-    
-    pub fn set(&mut self, value: &T) 
-    where 
-        T: serde::Serialize,
-    {
+
+    pub fn set(&mut self, value: &T)
+    where T: serde::Serialize {
         // In real implementation, this would serialize properly
         // For testing, we just store some dummy bytes
         mock_storage::put(&self.prefix, &[1, 2, 3, 4]);
     }
-    
-    pub fn delete(&mut self) {
-        mock_storage::delete(&self.prefix);
-    }
+
+    pub fn delete(&mut self) { mock_storage::delete(&self.prefix); }
 }
 
 impl<K, V> Map<K, V> {
-    pub fn new(prefix: &[u8]) -> Self {
-        Map {
-            prefix: prefix.to_vec(),
-            _phantom: std::marker::PhantomData,
-        }
-    }
-    
-    pub fn get(&self, key: &K) -> Option<V> 
-    where 
+    pub fn new(prefix: &[u8]) -> Self { Map { prefix: prefix.to_vec(), _phantom: std::marker::PhantomData } }
+
+    pub fn get(&self, key: &K) -> Option<V>
+    where
         K: StorageKey,
         V: for<'a> serde::Deserialize<'a>,
     {
@@ -222,9 +202,9 @@ impl<K, V> Map<K, V> {
             None => None,
         }
     }
-    
-    pub fn insert(&mut self, key: &K, value: &V) 
-    where 
+
+    pub fn insert(&mut self, key: &K, value: &V)
+    where
         K: StorageKey,
         V: serde::Serialize,
     {
@@ -232,27 +212,21 @@ impl<K, V> Map<K, V> {
         // Dummy implementation for tests
         mock_storage::put(&storage_key, &[1, 2, 3, 4]);
     }
-    
-    pub fn remove(&mut self, key: &K) 
-    where 
-        K: StorageKey,
-    {
+
+    pub fn remove(&mut self, key: &K)
+    where K: StorageKey {
         let storage_key = self.make_key(key);
         mock_storage::delete(&storage_key);
     }
-    
-    pub fn contains_key(&self, key: &K) -> bool 
-    where 
-        K: StorageKey,
-    {
+
+    pub fn contains_key(&self, key: &K) -> bool
+    where K: StorageKey {
         let storage_key = self.make_key(key);
         mock_storage::get(&storage_key).is_some()
     }
-    
-    fn make_key(&self, key: &K) -> Vec<u8> 
-    where 
-        K: StorageKey,
-    {
+
+    fn make_key(&self, key: &K) -> Vec<u8>
+    where K: StorageKey {
         let mut result = self.prefix.clone();
         result.extend_from_slice(&key.storage_key());
         result
@@ -265,41 +239,32 @@ impl H160 {
         if hex.len() != 40 {
             return None;
         }
-        
+
         // Simple implementation for tests
         let mut bytes = [0u8; 20];
         for i in 0..20 {
-            let byte = u8::from_str_radix(&hex[i*2..i*2+2], 16).ok()?;
+            let byte = u8::from_str_radix(&hex[i * 2..i * 2 + 2], 16).ok()?;
             bytes[i] = byte;
         }
-        
+
         Some(H160::from_slice(&bytes))
     }
-    
+
     pub fn from_slice(slice: &[u8]) -> Self {
         let mut bytes = [0u8; 20];
         bytes.copy_from_slice(slice);
         H160(bytes)
     }
-    
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.0
-    }
+
+    pub fn as_bytes(&self) -> &[u8] { &self.0 }
 }
 
 // Add a dummy implementation for versioned storage
 impl<T> storage::versioned::VersionedItem<T> {
-    pub fn new(prefix: &[u8]) -> Self {
-        Self {
-            prefix: prefix.to_vec(),
-            _phantom: std::marker::PhantomData,
-        }
-    }
-    
-    pub fn get(&self) -> Option<T> 
-    where 
-        T: for<'a> serde::Deserialize<'a>,
-    {
+    pub fn new(prefix: &[u8]) -> Self { Self { prefix: prefix.to_vec(), _phantom: std::marker::PhantomData } }
+
+    pub fn get(&self) -> Option<T>
+    where T: for<'a> serde::Deserialize<'a> {
         let value_key = self.value_key();
         match mock_storage::get(&value_key) {
             Some(bytes) => {
@@ -309,19 +274,17 @@ impl<T> storage::versioned::VersionedItem<T> {
             None => None,
         }
     }
-    
-    pub fn set(&mut self, value: &T, version: u32) 
-    where 
-        T: serde::Serialize,
-    {
+
+    pub fn set(&mut self, value: &T, version: u32)
+    where T: serde::Serialize {
         let value_key = self.value_key();
         let version_key = self.version_key();
-        
+
         // Store dummy data for testing
         mock_storage::put(&value_key, &[1, 2, 3, 4]);
         mock_storage::put(&version_key, &version.to_le_bytes());
     }
-    
+
     pub fn version(&self) -> u32 {
         let version_key = self.version_key();
         match mock_storage::get(&version_key) {
@@ -333,13 +296,13 @@ impl<T> storage::versioned::VersionedItem<T> {
             _ => 0,
         }
     }
-    
+
     fn value_key(&self) -> Vec<u8> {
         let mut key = self.prefix.clone();
         key.extend_from_slice(b"_value");
         key
     }
-    
+
     fn version_key(&self) -> Vec<u8> {
         let mut key = self.prefix.clone();
         key.extend_from_slice(b"_version");

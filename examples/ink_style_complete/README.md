@@ -5,7 +5,7 @@ This example demonstrates how to implement a NEP-17 compatible token using the i
 ## Features
 
 - NEP-17 compatibility (transfer, balanceOf, totalSupply, etc.)
-- Ink!-style contract definition using macros (`#[contract]`, `#[message]`, etc.)
+- Ink!-style contract definition using macros (`#[contract]`, `#[method]`, etc.)
 - Use of `#[safe]` attribute to mark read-only methods
 - Event emitting through custom event functions
 - Storage handling with the Storage trait
@@ -21,14 +21,14 @@ In this example, all methods that only read from storage are marked with the `#[
 
 ```rust
 // Example of a safe (read-only) method
-#[message]
+#[method]
 #[safe]
 pub fn balance_of(&self, account: H160) -> Int256 {
     // Read-only implementation
 }
 
 // Example of a non-safe (state-modifying) method
-#[message]
+#[method]
 pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
     // State-modifying implementation
 }

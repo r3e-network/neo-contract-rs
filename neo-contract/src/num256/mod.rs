@@ -9,18 +9,12 @@ pub struct Int256(pub i128);
 
 impl Int256 {
     /// Create a new Int256 from an i128
-    pub fn new(value: i128) -> Self {
-        Int256(value)
-    }
+    pub fn new(value: i128) -> Self { Int256(value) }
 
     /// Get the underlying i128 value
-    pub fn value(&self) -> i128 {
-        self.0
-    }
+    pub fn value(&self) -> i128 { self.0 }
 }
 
 impl fmt::Display for Int256 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.0) }
 }

@@ -19,7 +19,7 @@ Non-storage variables are regular Rust variables that exist only during the exec
 Define non-storage variables within your methods like regular Rust variables:
 
 ```rust
-#[message]
+#[method]
 pub fn calculate_reward(&self, stake_amount: Int256) -> Int256 {
     // Non-storage variables
     let rate = Int256::from(5); // 5% rate
@@ -63,12 +63,12 @@ mod token_contract {
     }
     
     impl Token {
-        #[message]
+        #[method]
         pub fn name(&self) -> ByteString {
             ByteString::from(TOKEN_NAME)
         }
         
-        #[message]
+        #[method]
         pub fn decimals(&self) -> u8 {
             DECIMALS
         }
@@ -105,13 +105,11 @@ mod my_contract {
     }
     
     impl MyContract {
-        #[message]
         #[safe]
         pub fn get_name(&self) -> ByteString {
             TOKEN_NAME.to_string()
         }
         
-        #[message]
         #[safe]
         pub fn get_max_transfer(&self) -> Int256 {
             MAX_TRANSFER.into()
@@ -147,13 +145,13 @@ mod my_contract {
     }
     
     impl MyContract {
-        #[message]
+        #[method]
         pub fn send_to_treasury(&mut self, amount: Int256) -> bool {
             // Use the static TREASURY_ACCOUNT
             self.transfer_to(TREASURY_ACCOUNT.into(), amount)
         }
         
-        #[message]
+        #[method]
         pub fn call_token_contract(&self, method: ByteString, args: Array<Any>) -> Any {
             // Use the static TOKEN_CONTRACT
             contract::call(
@@ -238,25 +236,22 @@ mod token_contract {
             }
         }
         
-        #[message]
         #[safe]
         pub fn name(&self) -> ByteString {
             TOKEN_NAME.to_string()
         }
         
-        #[message]
         #[safe]
         pub fn symbol(&self) -> ByteString {
             TOKEN_SYMBOL.to_string()
         }
         
-        #[message]
         #[safe]
         pub fn decimals(&self) -> u8 {
             DECIMALS.into()
         }
         
-        #[message]
+        #[method]
         pub fn transfer(&mut self, to: H160, amount: Int256) -> bool {
             // Check if contract is paused (storage variable)
             if self.is_paused {
@@ -294,7 +289,7 @@ mod token_contract {
             true
         }
         
-        #[message]
+        #[method]
         pub fn pause(&mut self) -> bool {
             // Use static OWNER for authorization
             let caller = runtime::calling_script_hash();
@@ -383,7 +378,6 @@ mod whitelist_contract {
     ];
     
     impl WhitelistContract {
-        #[message]
         #[safe]
         pub fn is_admin(&self, address: H160) -> bool {
             // Check if address is in the static ADMINS array

@@ -51,7 +51,7 @@ mod burger_agent {
         }
 
         /// Set the BurgerNEO contract hash
-        #[message]
+        #[method]
         pub fn set_burger_neo(&mut self, contract_hash: H160) -> bool {
             if !runtime::check_witness(self.owner.clone()) {
                 return false;
@@ -62,7 +62,7 @@ mod burger_agent {
         }
 
         /// Set the fee percentage
-        #[message]
+        #[method]
         pub fn set_fee_percentage(&mut self, percentage: u8) -> bool {
             if !runtime::check_witness(self.owner.clone()) {
                 return false;
@@ -77,7 +77,7 @@ mod burger_agent {
         }
 
         /// Set the fee collector
-        #[message]
+        #[method]
         pub fn set_fee_collector(&mut self, collector: H160) -> bool {
             if !runtime::check_witness(self.owner.clone()) {
                 return false;
@@ -88,7 +88,7 @@ mod burger_agent {
         }
 
         /// Collect fees
-        #[message]
+        #[method]
         pub fn collect_fees(&mut self) -> bool {
             if !runtime::check_witness(self.owner.clone()) {
                 return false;

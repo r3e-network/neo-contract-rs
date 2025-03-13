@@ -1,10 +1,10 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use core::fmt;
 use crate::types::builtin::array::Array;
 use crate::types::builtin::h160::H160;
 use crate::types::builtin::string::ByteString;
+use core::fmt;
 
 /// Notification represents a notification from a contract.
 /// It includes the script hash of the contract, the name of the event, and the state (arguments) of the event.
@@ -21,11 +21,7 @@ pub struct Notification {
 impl Notification {
     /// Create a new notification.
     pub fn new(script_hash: H160, event_name: ByteString, state: Array) -> Self {
-        Self {
-            script_hash,
-            event_name,
-            state,
-        }
+        Self { script_hash, event_name, state }
     }
 }
 

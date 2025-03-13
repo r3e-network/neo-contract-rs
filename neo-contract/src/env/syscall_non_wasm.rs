@@ -5,17 +5,16 @@
 //! This module provides access to the Neo N3 VM system calls from native code.
 //! These functions are only available in non-WASM environments.
 
-
 use crate::call_flags::CallFlags;
 use crate::types::builtin::array::Array;
 use crate::types::builtin::h160::H160;
 use crate::types::builtin::h256::H256;
 
-use crate::types::builtin::string::ByteString;
 use crate::types::builtin::any::Any;
+use crate::types::builtin::string::ByteString;
 
-use crate::types::context::StorageContext;
 use crate::prelude::FindOptions;
+use crate::types::context::StorageContext;
 
 /// Get the executing script hash
 pub unsafe fn system_runtime_executing_script_hash() -> H160 {
@@ -76,30 +75,19 @@ pub unsafe fn system_runtime_log(_message: ByteString) {
 }
 
 /// Call a contract
-pub unsafe fn system_contract_call(
-    _hash: H160,
-    _method: ByteString,
-    _flags: CallFlags,
-    _args: Array,
-) -> Any {
+pub unsafe fn system_contract_call(_hash: H160, _method: ByteString, _flags: CallFlags, _args: Array) -> Any {
     // Stub implementation
     Any::default()
 }
 
 /// Create a contract
-pub unsafe fn system_contract_create(
-    _nef: ByteString,
-    _manifest: ByteString,
-    _call_flags: CallFlags,
-) -> Any {
+pub unsafe fn system_contract_create(_nef: ByteString, _manifest: ByteString, _call_flags: CallFlags) -> Any {
     // In a real implementation, this would call the contract create syscall
     Any::default()
 }
 
 /// Get the call flags
-pub unsafe fn system_contract_get_call_flags() -> CallFlags {
-    CallFlags::ALL
-}
+pub unsafe fn system_contract_get_call_flags() -> CallFlags { CallFlags::ALL }
 
 /// Get candidates
 pub unsafe fn system_neo_get_candidates() -> Array {
@@ -240,7 +228,12 @@ pub unsafe fn system_contract_destroy() {
 }
 
 /// Verify signature with ECDSA
-pub unsafe fn system_crypto_verify_with_ecdsa(_message: ByteString, _pubkey: ByteString, _signature: ByteString, _curve: u32) -> bool {
+pub unsafe fn system_crypto_verify_with_ecdsa(
+    _message: ByteString,
+    _pubkey: ByteString,
+    _signature: ByteString,
+    _curve: u32,
+) -> bool {
     // Stub implementation
     false
 }

@@ -5,12 +5,11 @@
 //! Helps measure execution time and gas costs for contract operations
 //! Only available in debug mode or with PROFILING feature enabled
 
-
-use alloc::string::String;
 use alloc::format;
+use alloc::string::String;
 
 // Update imports to use prelude
-use crate::prelude::{ByteString, Array, Any, Int256, StorageMap};
+use crate::prelude::{Any, Array, ByteString, Int256, StorageMap};
 // use crate::contract::Contract;
 use crate::runtime::Runtime;
 
@@ -43,56 +42,56 @@ impl Profiler {
             enabled: PROFILING_ENABLED,
         }
     }
-    
+
     /// Start the profiler
     pub fn start(&mut self) {
         if !self.enabled {
             return;
         }
-        
+
         self.start_time = Some(Runtime::time());
         self.start_gas = Some(Runtime::gas_left());
     }
-    
+
     /// Stop the profiler and return the elapsed time and gas
     pub fn stop(&mut self) -> Option<(u64, Int256)> {
         if !self.enabled || self.start_time.is_none() || self.start_gas.is_none() {
             return None;
         }
-        
+
         let end_time = Runtime::time();
         let end_gas = Runtime::gas_left();
-        
+
         let elapsed_time = end_time - self.start_time.unwrap();
         let gas_used = self.start_gas.clone().unwrap() - end_gas;
-        
+
         // Emit profiling event if enabled
         self.emit_profiling_event(elapsed_time, gas_used.clone());
-        
+
         // Reset profiler
         self.start_time = None;
         self.start_gas = None;
-        
+
         Some((elapsed_time, gas_used))
     }
-    
+
     /// Emit profiling event
     fn emit_profiling_event(&self, elapsed_time: u64, gas_used: Int256) {
         if !self.enabled {
             return;
         }
-        
+
         let event_name = ByteString::from("Profiling");
         let mut event_data = Array::new();
-        
+
         event_data.push(Any::from(ByteString::from(self.name.as_str())));
-        
+
         // Convert u64 to ByteString for compatibility with Any
         let elapsed_time_str = ByteString::from(alloc::format!("{}", elapsed_time));
         event_data.push(Any::from(elapsed_time_str));
-        
+
         event_data.push(Any::from(gas_used));
-        
+
         Runtime::notify(&event_name, &event_data);
     }
 }
@@ -100,15 +99,13 @@ impl Profiler {
 /// Profile a function and return its result
 #[macro_export]
 macro_rules! profile {
-    ($name:expr, $body:expr) => {
-        {
-            let mut profiler = $crate::profiling::Profiler::new($name);
-            profiler.start();
-            let result = $body;
-            profiler.stop();
-            result
-        }
-    };
+    ($name:expr, $body:expr) => {{
+        let mut profiler = $crate::profiling::Profiler::new($name);
+        profiler.start();
+        let result = $body;
+        profiler.stop();
+        result
+    }};
 }
 
 /// Profile scope for measuring execution time and gas costs
@@ -128,9 +125,7 @@ impl ProfileScope {
 }
 
 impl Drop for ProfileScope {
-    fn drop(&mut self) {
-        self.profiler.stop();
-    }
+    fn drop(&mut self) { self.profiler.stop(); }
 }
 
 /// Profile a method execution and return the result
@@ -167,73 +162,71 @@ impl Benchmark {
             enabled: PROFILING_ENABLED,
         }
     }
-    
+
     /// Run the benchmark with the given function
     pub fn run<F, R>(&mut self, func: F) -> R
-    where
-        F: Fn() -> R,
-    {
+    where F: Fn() -> R {
         let mut result = None;
-        
+
         if !self.enabled {
             return func();
         }
-        
+
         for i in 0..self.iterations {
             let mut profiler = Profiler::new(&format!("{}_{}", self.name, i));
             profiler.start();
-            
+
             let func_result = func();
-            
+
             if i == 0 {
                 result = Some(func_result);
             }
-            
+
             if let Some((elapsed_time, gas_used)) = profiler.stop() {
                 self.total_time += elapsed_time;
                 self.total_gas = self.total_gas + gas_used;
             }
         }
-        
+
         // Emit benchmark event
         self.emit_benchmark_event();
-        
+
         result.unwrap()
     }
-    
+
     /// Emit benchmark event
     fn emit_benchmark_event(&self) {
         if !self.enabled {
             return;
         }
-        
+
         let event_name = ByteString::from("Benchmark");
         let mut event_data = Array::new();
-        
+
         event_data.push(Any::from(ByteString::from(self.name.as_str())));
-        
+
         // Convert numeric values to ByteString for compatibility with Any
         let iterations_str = ByteString::from(alloc::format!("{}", self.iterations));
         event_data.push(Any::from(iterations_str));
-        
+
         let total_time_str = ByteString::from(alloc::format!("{}", self.total_time));
         event_data.push(Any::from(total_time_str));
-        
+
         event_data.push(Any::from(self.total_gas));
-        
+
         if self.iterations > 0 {
             let avg_time = self.total_time / (self.iterations as u64);
             let avg_gas = self.total_gas / Int256::from_i64(self.iterations as i64);
-            
+
             let avg_time_str = ByteString::from(alloc::format!("{}", avg_time));
             event_data.push(Any::from(avg_time_str));
-            
+
             event_data.push(Any::from(avg_gas));
         } else {
             event_data.push(Any::from(ByteString::from("0")));
             event_data.push(Any::from(Int256::zero()));
         }
-        
+
         Runtime::notify(&event_name, &event_data);
     }
 }
@@ -241,12 +234,10 @@ impl Benchmark {
 /// Benchmark a function execution and return the result
 #[macro_export]
 macro_rules! benchmark {
-    ($name:expr, $iterations:expr, $body:expr) => {
-        {
-            let mut benchmark = $crate::profiling::Benchmark::new($name, $iterations);
-            benchmark.run(|| $body)
-        }
-    };
+    ($name:expr, $iterations:expr, $body:expr) => {{
+        let mut benchmark = $crate::profiling::Benchmark::new($name, $iterations);
+        benchmark.run(|| $body)
+    }};
 }
 
 /// Gas statistics for different operations
@@ -258,28 +249,28 @@ impl GasStats {
         if !PROFILING_ENABLED {
             return None;
         }
-        
+
         // Measure put operation
         let mut put_benchmark = Benchmark::new("storage_put", 10);
         put_benchmark.run(|| {
             let storage_map = StorageMap::<ByteString, Int256>::new(b"benchmark");
             let _ = storage_map.put(&ByteString::from("test_key"), &Int256::from_i64(100));
         });
-        
+
         // Measure get operation
         let mut get_benchmark = Benchmark::new("storage_get", 10);
         get_benchmark.run(|| {
             let storage_map = StorageMap::<ByteString, Int256>::new(b"benchmark");
             let _ = storage_map.get(&ByteString::from("test_key"));
         });
-        
+
         // Measure delete operation
         let mut delete_benchmark = Benchmark::new("storage_delete", 10);
         delete_benchmark.run(|| {
             let storage_map = StorageMap::<ByteString, Int256>::new(b"benchmark");
             let _ = storage_map.delete(&ByteString::from("test_key"));
         });
-        
+
         // Return dummy values for now since we can't cast () to i64
         Some((Int256::from_i64(0), Int256::from_i64(0), Int256::from_i64(0)))
     }

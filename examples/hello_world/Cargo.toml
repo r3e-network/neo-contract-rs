@@ -9,8 +9,7 @@ description = "A simple hello world example using Neo Contract Rust"
 crate-type = ["cdylib"]
 
 [dependencies]
-neo-contract = { path = "../../neo-contract" }
-neo-macros = { path = "../../neo-macros" }
+neo-contract = { path = "../../neo-contract", default-features = false }
 
 [features]
 std = ["neo-contract/std"]
@@ -20,6 +19,4 @@ default = ["std"]
 opt-level = "z"
 debug = 0
 strip = "symbols"
-lto = true
-codegen-units = 1
-panic = "abort"
+overflow-checks = true
