@@ -4,41 +4,65 @@
 
 use std::fmt;
 use std::io;
+use thiserror::Error;
 
 /// Error type for the Neo compiler.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
     /// I/O error
-    Io(io::Error),
+    #[error("I/O error: {0}")]
+    Io(String),
 
     /// Invalid WebAssembly module
+    #[error("Invalid WebAssembly module: {0}")]
     InvalidWasm(String),
 
     /// WebAssembly parsing error
+    #[error("WebAssembly parse error: {0}")]
     WasmParse(String),
 
     /// WebAssembly unsupported feature
+    #[error("Unsupported WebAssembly feature: {0}")]
     UnsupportedWasmFeature(String),
 
     /// Invalid NEF file
+    #[error("Invalid NEF file: {0}")]
     InvalidNef(String),
 
     /// Invalid manifest
+    #[error("Invalid manifest: {0}")]
     InvalidManifest(String),
 
+    /// Manifest validation error
+    #[error("Manifest validation error: {0}")]
+    ManifestValidation(String),
+
     /// Script generation error
+    #[error("Script generation error: {0}")]
     ScriptGeneration(String),
 
     /// Conversion error
+    #[error("Conversion error: {0}")]
     Conversion(String),
 
     /// Neo VM error
+    #[error("Neo VM error: {0}")]
     NeoVM(String),
 
     /// Serialization error
+    #[error("Serialization error: {0}")]
     Serialization(String),
 
+    /// Invalid event definition
+    #[error("Invalid event definition: {0}")]
+    InvalidEventDefinition(String),
+
+    /// Invalid method definition
+    #[error("Invalid method definition: {0}")]
+    InvalidMethodDefinition(String),
+
     /// General error
+    #[error("Error: {0}")]
     General(String),
 }
 
@@ -51,10 +75,13 @@ impl fmt::Display for Error {
             Error::UnsupportedWasmFeature(msg) => write!(f, "Unsupported WebAssembly feature: {}", msg),
             Error::InvalidNef(msg) => write!(f, "Invalid NEF file: {}", msg),
             Error::InvalidManifest(msg) => write!(f, "Invalid manifest: {}", msg),
+            Error::ManifestValidation(msg) => write!(f, "Manifest validation error: {}", msg),
             Error::ScriptGeneration(msg) => write!(f, "Script generation error: {}", msg),
             Error::Conversion(msg) => write!(f, "Conversion error: {}", msg),
             Error::NeoVM(msg) => write!(f, "Neo VM error: {}", msg),
             Error::Serialization(msg) => write!(f, "Serialization error: {}", msg),
+            Error::InvalidEventDefinition(msg) => write!(f, "Invalid event definition: {}", msg),
+            Error::InvalidMethodDefinition(msg) => write!(f, "Invalid method definition: {}", msg),
             Error::General(msg) => write!(f, "Error: {}", msg),
         }
     }
@@ -70,7 +97,7 @@ impl std::error::Error for Error {
 }
 
 impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self { Error::Io(err) }
+    fn from(err: io::Error) -> Self { Error::Io(err.to_string()) }
 }
 
 impl From<serde_json::Error> for Error {
@@ -108,6 +135,15 @@ impl Error {
 
     /// Create a new invalid manifest error
     pub fn invalid_manifest<S: Into<String>>(msg: S) -> Self { Error::InvalidManifest(msg.into()) }
+
+    /// Create a new manifest validation error
+    pub fn manifest_validation<S: Into<String>>(msg: S) -> Self { Error::ManifestValidation(msg.into()) }
+
+    /// Create a new invalid event definition error
+    pub fn invalid_event_definition<S: Into<String>>(msg: S) -> Self { Error::InvalidEventDefinition(msg.into()) }
+
+    /// Create a new invalid method definition error
+    pub fn invalid_method_definition<S: Into<String>>(msg: S) -> Self { Error::InvalidMethodDefinition(msg.into()) }
 }
 
 /// Result type alias for neo-compiler operations.
@@ -120,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_error_display() {
-        let io_err = Error::Io(IoError::new(ErrorKind::NotFound, "file not found"));
+        let io_err = Error::Io(IoError::new(ErrorKind::NotFound, "file not found").to_string());
         assert_eq!(format!("{}", io_err), "I/O error: file not found");
 
         let wasm_err = Error::WasmParse("invalid magic number".to_string());
@@ -132,7 +168,7 @@ mod tests {
         let io_err = IoError::new(ErrorKind::PermissionDenied, "permission denied");
         let err: Error = io_err.into();
         match err {
-            Error::Io(e) => assert_eq!(e.kind(), ErrorKind::PermissionDenied),
+            Error::Io(e) => assert_eq!(e, "permission denied"),
             _ => panic!("Expected IoError variant"),
         }
     }

@@ -167,13 +167,157 @@ impl Compiler {
             // Create a new manifest from scratch
             let mut manifest = Manifest::new(name);
 
+            // Use registered contract information if available
+            if let Some(contract_info) = neo_contract::manifest::get_contract_descriptor() {
+                manifest.set_author(&contract_info.author)?;
+                manifest.set_email(&contract_info.email)?;
+                manifest.set_description(&contract_info.description)?;
+                manifest.set_version(&contract_info.version)?;
+                
+                // Set dynamic invoke feature if needed
+                if contract_info.dynamic_invoke {
+                    manifest.set_feature("dynamicInvoke", true)?;
+                }
+            }
+
+            // Get registered methods and events
+            let registered_methods = neo_contract::manifest::get_registered_methods();
+            let registered_events = neo_contract::manifest::get_registered_events();
+            let registered_standards = neo_contract::manifest::get_registered_standards();
+            
             // Add the ABI methods and events
-            let abi = self.generate_abi(module)?;
+            let mut abi = self.generate_abi(module)?;
+            
+            // Enhance ABI with explicitly registered methods
+            for registered_method in registered_methods {
+                // Check if this method already exists in the ABI
+                if !abi.methods.iter().any(|m| m.name == registered_method.name) {
+                    // Validate method parameters
+                    // Check for parameter name uniqueness
+                    let mut param_names = std::collections::HashSet::new();
+                    for name in &registered_method.param_names {
+                        if !param_names.insert(name) {
+                            return Err(Error::InvalidMethodDefinition(format!("Method '{}' has duplicate parameter name: '{}'", registered_method.name, name)));
+                        }
+                    }
+                    
+                    // Validate method parameters - convert and check types
+                    let mut parameters = Vec::new();
+                    for (name, type_str) in registered_method.param_names.iter()
+                        .zip(registered_method.param_types.iter()) {
+                        
+                        // Verify the Rust type can be mapped to a valid Neo type
+                        let neo_type = neo_contract::types::rust_type_to_neo_type(type_str);
+                        
+                        // Validate that the Neo type is valid for a method parameter
+                        if !Self::is_valid_neo_method_parameter_type(&neo_type) {
+                            return Err(Error::InvalidMethodDefinition(format!("Method '{}' parameter '{}' has invalid Neo N3 type: '{}'", registered_method.name, name, neo_type)));
+                        }
+                        
+                        parameters.push(ContractParameterDefinition::new(
+                            name.clone().to_string(), 
+                            neo_type.to_string()
+                        ));
+                    }
+                    
+                    // Validate return type
+                    let return_type = neo_contract::types::rust_type_to_neo_type(&registered_method.return_type);
+                    if !Self::is_valid_neo_method_parameter_type(&return_type) {
+                        return Err(Error::InvalidMethodDefinition(format!("Method '{}' has invalid Neo N3 return type: '{}'", registered_method.name, return_type)));
+                    }
+                    
+                    // Add method to ABI
+                    abi.methods.push(ContractMethodDefinition::new(
+                        registered_method.name.clone(),
+                        parameters,
+                        return_type.to_string(),
+                        registered_method.safe,
+                    ));
+                    
+                    log::info!("Added method to manifest: {} (safe: {})", registered_method.name, registered_method.safe);
+                } else {
+                    // Update existing method, particularly its "safe" status
+                    for method in &mut abi.methods {
+                        if method.name == registered_method.name {
+                            method.safe = registered_method.safe;
+                            log::info!("Updated method '{}' safe status to: {}", method.name, method.safe);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Enhance ABI with explicitly registered events
+            for registered_event in registered_events {
+                // Check if this event already exists in the ABI
+                if !abi.events.iter().any(|e| e.name == registered_event.name) {
+                    // Validate the event parameters
+                    // Neo N3 has a limit of 16 parameters per event, with no more than 16 indexed parameters
+                    if registered_event.param_names.len() > 16 {
+                        return Err(Error::InvalidEventDefinition(format!("Event '{}' has too many parameters ({}). Neo N3 events are limited to 16 parameters.", registered_event.name, registered_event.param_names.len())));
+                    }
+                    
+                    // Count indexed parameters
+                    let indexed_count = registered_event.indexed_params.iter().filter(|&indexed| *indexed).count();
+                    if indexed_count > 16 {
+                        return Err(Error::InvalidEventDefinition(format!("Event '{}' has too many indexed parameters ({}). Neo N3 events are limited to 16 indexed parameters.", registered_event.name, indexed_count)));
+                    }
+
+                    // Check for parameter name uniqueness
+                    let mut param_names = std::collections::HashSet::new();
+                    for name in &registered_event.param_names {
+                        if !param_names.insert(name) {
+                            return Err(Error::InvalidEventDefinition(format!("Event '{}' has duplicate parameter name: '{}'", registered_event.name, name)));
+                        }
+                    }
+
+                    // Convert parameter types to Neo types
+                    let mut parameters = Vec::new();
+                    for ((name, type_str), indexed) in registered_event.param_names.iter()
+                        .zip(registered_event.param_types.iter())
+                        .zip(registered_event.indexed_params.iter()) {
+                        
+                        // Verify the Rust type can be mapped to a valid Neo type
+                        let neo_type = neo_contract::types::rust_type_to_neo_type(type_str);
+                        
+                        // Validate that the Neo type is valid for an event parameter
+                        // Neo N3 supports these parameter types: Signature, Boolean, Integer, Hash160, 
+                        // Hash256, ByteArray, PublicKey, String, Array, Map, InteropInterface, Void
+                        if !Self::is_valid_neo_event_parameter_type(&neo_type) {
+                            return Err(Error::InvalidEventDefinition(format!("Event '{}' parameter '{}' has invalid Neo N3 type: '{}'", registered_event.name, name, neo_type)));
+                        }
+                        
+                        let mut param = ContractParameterDefinition::new(
+                            name.clone().to_string(), 
+                            neo_type.to_string()
+                        );
+                        param.indexed = *indexed;
+                        parameters.push(param);
+                    }
+                    
+                    // Add event to ABI
+                    abi.events.push(ContractEventDefinition::new(
+                        registered_event.name.clone(),
+                        parameters,
+                    ));
+
+                    log::info!("Added event to manifest: {}", registered_event.name);
+                }
+            }
+            
             manifest = manifest.with_abi(abi);
+            
+            // Add supported standards
+            for standard in registered_standards {
+                manifest.add_supported_standard(&standard.standard)?;
+            }
 
             // Set features
             let uses_storage = self.detect_storage_usage(module)?;
             manifest.set_feature("storage", uses_storage)?;
+            
+            // Add custom permissions as needed for Neo N3
+            manifest.add_permission("*", "Default")?;
 
             manifest
         };
@@ -327,34 +471,37 @@ impl Compiler {
             }
         }
 
-        Ok(ContractAbi::new(methods, events))
+        // Before returning, create and return the ContractAbi
+        let mut abi = ContractAbi::new();
+        
+        // Add all methods to the ABI
+        for method in methods {
+            abi.add_method(method);
+        }
+        
+        // Add all events to the ABI
+        for event in events {
+            abi.add_event(event);
+        }
+        
+        Ok(abi)
     }
 
     /// Converts a WebAssembly type to a Neo type.
     fn wasm_type_to_neo_type(&self, wasm_type: &str) -> Result<String, Error> {
-        match wasm_type {
-            "i32" | "i64" => Ok("Integer".to_string()),
-            "f32" | "f64" => Ok("Integer".to_string()), // Neo VM doesn't have native floating point, so we map to Integer
-            "v128" => Ok("ByteArray".to_string()),      // 128-bit vector maps to ByteArray
-            "externref" | "anyref" => Ok("Any".to_string()),
-            "funcref" => Ok("InteropInterface".to_string()),
-            _ if wasm_type.starts_with("string") => Ok("String".to_string()),
-            _ if wasm_type.starts_with("array") => Ok("Array".to_string()),
-            _ if wasm_type.starts_with("map") => Ok("Map".to_string()),
-            _ if wasm_type.starts_with("h160") || wasm_type.contains("address") => Ok("Hash160".to_string()),
-            _ if wasm_type.starts_with("h256") || wasm_type.contains("hash") => Ok("Hash256".to_string()),
-            _ if wasm_type.contains("public_key") => Ok("PublicKey".to_string()),
-            _ if wasm_type.contains("signature") => Ok("Signature".to_string()),
-            _ if wasm_type.contains("bool") => Ok("Boolean".to_string()),
-            _ if wasm_type.contains("byte") || wasm_type.contains("buffer") => Ok("ByteArray".to_string()),
-            _ => {
-                // If this is a debug build, warn about unrecognized type but default to Any
-                if self.options.debug {
-                    println!("Warning: Unrecognized WASM type: {}. Defaulting to Any.", wasm_type);
-                }
-                Ok("Any".to_string()) // Default to Any for unknown types in production
-            }
-        }
+        // Map WebAssembly types to Neo types
+        let neo_type = match wasm_type {
+            "i32" | "i64" => "Integer",
+            "f32" | "f64" => "Integer", // Neo VM doesn't have native floating point, so we map to Integer
+            "v128" => "ByteArray",      // 128-bit vector maps to ByteArray
+            "externref" => "Any",       // External references map to Any
+            "funcref" => "Any",         // Function references map to Any
+            t if t.starts_with("i") => "Integer", // Any other integer type
+            t if t.contains("*") => "ByteArray",  // Pointer types map to ByteArray
+            _ => "Any",                 // Default fallback type
+        };
+        
+        Ok(neo_type.to_string())
     }
 
     /// Determines if a method is safe (read-only).
@@ -362,33 +509,29 @@ impl Compiler {
     /// In Neo N3, safe methods are read-only and don't modify blockchain state.
     /// They are marked with #[safe] attribute in the contract and represented
     /// with "safe": true in the manifest.
-    fn is_safe_method(&self, name: &str) -> bool {
-        // Check for explicit safe marker in function metadata (would be added during parsing)
-        // This would require additional WASM parsing to detect #[safe] attribute
+    pub fn is_safe_method(&self, name: &str) -> bool {
+        // First check if method was explicitly registered with #[safe] attribute
+        let registered_methods = neo_contract::manifest::get_registered_methods();
+        for method in registered_methods {
+            if method.name == name {
+                return method.safe;
+            }
+        }
 
-        // For now, use heuristic based on naming conventions
-        // Methods that start with "get", "is", "has", "check", "find", "query", "calculate" are typically read-only
-        name.starts_with("get") || 
-        name.starts_with("is") || 
-        name.starts_with("has") || 
-        name.starts_with("check") || 
-        name.starts_with("find") || 
-        name.starts_with("query") || 
-        name.starts_with("calculate") || 
-        name.starts_with("compute") || 
-        name.starts_with("view") || 
-        name.starts_with("balance") || 
-        name.starts_with("total") || 
-        name.starts_with("symbol") || 
-        name.starts_with("decimals") || 
-        name.starts_with("name") ||
-        // Main contract interface methods that are known to be safe
-        name == "balanceOf" || 
-        name == "totalSupply" || 
-        name == "symbol" || 
-        name == "decimals" ||
-        name == "name" ||
-        name == "supportedStandards"
+        // If not explicitly registered, apply heuristics for common safe methods
+        let safe_prefixes = ["get", "is", "has", "find", "total", "balance", "symbol", "name", "decimals", "version", "count"];
+        for prefix in safe_prefixes.iter() {
+            if name.starts_with(prefix) && !name.contains("update") && !name.contains("set") && !name.contains("delete") {
+                return true;
+            }
+        }
+
+        // Special case for common NEP-17 and NEP-11 read methods
+        match name {
+            "totalSupply" | "balanceOf" | "decimals" | "symbol" | "tokensOf" |
+            "ownerOf" | "properties" | "tokens" | "tokenURI" => true,
+            _ => false,
+        }
     }
 
     /// Detects if the contract uses storage.
@@ -466,6 +609,26 @@ impl Compiler {
         // If this is a debug build, default to requiring storage permission for safety
         // In production, default to false unless explicitly detected
         Ok(self.options.debug)
+    }
+
+    /// Validates if a Neo type is valid for event parameters
+    fn is_valid_neo_event_parameter_type(&self, neo_type: &str) -> bool {
+        matches!(
+            neo_type,
+            "Signature" | "Boolean" | "Integer" | "Hash160" | "Hash256" | 
+            "ByteArray" | "PublicKey" | "String" | "Array" | "Map" | 
+            "InteropInterface" | "Void" | "Any"
+        )
+    }
+
+    /// Validates if a Neo type is valid for method parameters and return types
+    fn is_valid_neo_method_parameter_type(&self, neo_type: &str) -> bool {
+        matches!(
+            neo_type,
+            "Signature" | "Boolean" | "Integer" | "Hash160" | "Hash256" | 
+            "ByteArray" | "PublicKey" | "String" | "Array" | "Map" | 
+            "InteropInterface" | "Void" | "Any"
+        )
     }
 }
 

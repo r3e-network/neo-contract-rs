@@ -68,14 +68,34 @@ impl Runtime {
     }
 
     /// Notify an event
-    pub fn notify(event_name: &ByteString, _args: &Array) {
+    /// 
+    /// Emits an event for Neo N3 smart contracts
+    /// 
+    /// This function is used to emit events from Neo N3 smart contracts.
+    /// The event_name is the name of the event, which will be used to filter events.
+    /// The args parameter contains the event arguments, which will be serialized to the event payload.
+    /// 
+    /// In Neo N3, events are properly emitted using this method rather than any event macro approach.
+    /// Each parameter of the event will be converted to the appropriate Neo type.
+    pub fn notify(event_name: &ByteString, args: &Array<Any>) {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
             // Convert from builtin::ByteString to types::builtin::ByteString
             let event_name_converted = crate::types::builtin::string::ByteString(event_name.to_vec());
+            
             // Convert from builtin::Array to types::builtin::Array
-            let args_converted = crate::types::builtin::array::Array::new();
-            // TODO: Convert args properly
+            let mut args_converted = crate::types::builtin::array::Array::new();
+            
+            // Properly convert each argument
+            for i in 0..args.len() {
+                if let Some(arg) = args.get(i) {
+                    // Convert the Any value to the internal type
+                    // This is a simplified conversion - in a real implementation
+                    // we would need to check the type of the Any value and convert accordingly
+                    args_converted.push(convert_any_to_internal(arg));
+                }
+            }
+            
             crate::env::syscall_non_wasm::system_runtime_notify(event_name_converted, args_converted)
         }
 
@@ -86,10 +106,60 @@ impl Runtime {
 
             // Convert from builtin::Array to types::builtin::Array
             let mut args_converted = crate::types::builtin::array::Array::new();
-            // TODO: Implement proper conversion between Array types
+            
+            // Properly convert each argument
+            for i in 0..args.len() {
+                if let Some(arg) = args.get(i) {
+                    args_converted.push(convert_any_to_internal(arg));
+                }
+            }
 
             crate::env::syscall::system_runtime_notify(event_name_converted, args_converted)
         }
+    }
+
+    // Helper function to convert Any to internal Any type
+    #[inline]
+    fn convert_any_to_internal(value: Any) -> crate::types::builtin::any::Any {
+        let mut result = crate::types::builtin::any::Any::new();
+        
+        // Examine the Any value and convert based on type
+        if value.is_null() {
+            // Keep as null
+        } else if value.is_integer() {
+            if let Some(v) = value.as_i64() {
+                result = crate::types::builtin::any::Any::from(v);
+            }
+        } else if value.is_bool() {
+            if let Some(v) = value.as_bool() {
+                result = crate::types::builtin::any::Any::from(v);
+            }
+        } else if value.is_bytestring() {
+            if let Some(v) = value.as_bytestring() {
+                result = crate::types::builtin::any::Any::from(
+                    crate::types::builtin::string::ByteString(v.to_vec())
+                );
+            }
+        } else if value.is_array() {
+            if let Some(v) = value.as_array() {
+                let mut internal_array = crate::types::builtin::array::Array::new();
+                for i in 0..v.len() {
+                    if let Some(item) = v.get(i) {
+                        internal_array.push(convert_any_to_internal(item));
+                    }
+                }
+                result = crate::types::builtin::any::Any::from(internal_array);
+            }
+        } else if value.is_h160() {
+            if let Some(v) = value.as_h160() {
+                result = crate::types::builtin::any::Any::from(
+                    crate::types::builtin::h160::H160::from_slice(v.as_bytes())
+                );
+            }
+        }
+        // Add more type conversions as needed
+        
+        result
     }
 
     /// Call a contract

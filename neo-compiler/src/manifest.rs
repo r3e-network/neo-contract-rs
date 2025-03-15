@@ -6,300 +6,381 @@
 
 use crate::error::Error;
 use serde::{Deserialize, Serialize};
+use serde_json::{self, Value as JsonValue};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-/// Contract parameter definition.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// Represents a Neo N3 Contract Parameter
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractParameterDefinition {
-    /// The name of the parameter.
+    /// The name of the parameter
     pub name: String,
-    /// The type of the parameter.
+    
+    /// The Neo VM type of the parameter
     #[serde(rename = "type")]
     pub param_type: String,
+    
+    /// Whether the parameter is indexed (for events)
+    #[serde(skip_serializing_if = "is_default")]
+    pub indexed: bool,
+}
+
+/// Helper function to skip serialization of default values
+fn is_default<T: Default + PartialEq>(value: &T) -> bool {
+    *value == T::default()
 }
 
 impl ContractParameterDefinition {
-    /// Creates a new contract parameter definition.
-    pub fn new(name: impl Into<String>, param_type: impl Into<String>) -> Self {
-        Self { name: name.into(), param_type: param_type.into() }
+    /// Creates a new parameter definition
+    pub fn new(name: String, param_type: String) -> Self {
+        Self {
+            name,
+            param_type,
+            indexed: false,
+        }
     }
 }
 
-/// Contract method definition.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// Represents a Neo N3 Contract Method
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractMethodDefinition {
-    /// The name of the method.
+    /// The name of the method
     pub name: String,
-    /// The parameters of the method.
+    
+    /// The parameters of the method
     pub parameters: Vec<ContractParameterDefinition>,
-    /// The return type of the method.
+    
+    /// The Neo VM return type of the method
     #[serde(rename = "returntype")]
     pub return_type: String,
-    /// Indicates if the method is safe (does not modify state).
+    
+    /// Whether the method is safe (read-only)
+    #[serde(skip_serializing_if = "is_default")]
     pub safe: bool,
-    /// The offset of the method in the script.
+    
+    /// The offset of the method in the script
     #[serde(skip_serializing_if = "Option::is_none")]
     pub offset: Option<u32>,
 }
 
 impl ContractMethodDefinition {
-    /// Creates a new contract method definition.
+    /// Creates a new method definition
     pub fn new(
-        name: impl Into<String>,
+        name: String,
         parameters: Vec<ContractParameterDefinition>,
-        return_type: impl Into<String>,
+        return_type: String,
         safe: bool,
     ) -> Self {
         Self {
-            name: name.into(),
+            name,
             parameters,
-            return_type: return_type.into(),
+            return_type,
             safe,
             offset: None,
         }
     }
 
-    /// Sets the offset of the method.
+    /// Sets the offset of the method in the script
     pub fn with_offset(mut self, offset: u32) -> Self {
         self.offset = Some(offset);
         self
     }
 }
 
-/// Contract event definition.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// Represents a Neo N3 Contract Event
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractEventDefinition {
-    /// The name of the event.
+    /// The name of the event
     pub name: String,
-    /// The parameters of the event.
+    
+    /// The parameters of the event
     pub parameters: Vec<ContractParameterDefinition>,
 }
 
 impl ContractEventDefinition {
-    /// Creates a new contract event definition.
-    pub fn new(name: impl Into<String>, parameters: Vec<ContractParameterDefinition>) -> Self {
-        Self { name: name.into(), parameters }
+    /// Creates a new event definition
+    pub fn new(name: String, parameters: Vec<ContractParameterDefinition>) -> Self {
+        Self { name, parameters }
     }
 }
 
-/// Contract ABI (Application Binary Interface).
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+/// Represents a Neo N3 Contract ABI
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractAbi {
-    /// The methods of the contract.
+    /// The methods in the contract
     pub methods: Vec<ContractMethodDefinition>,
-    /// The events of the contract.
+    
+    /// The events in the contract
     pub events: Vec<ContractEventDefinition>,
 }
 
 impl ContractAbi {
-    /// Creates a new contract ABI.
-    pub fn new(methods: Vec<ContractMethodDefinition>, events: Vec<ContractEventDefinition>) -> Self {
-        Self { methods, events }
+    /// Creates a new empty ABI
+    pub fn new() -> Self {
+        Self {
+            methods: Vec::new(),
+            events: Vec::new(),
+        }
     }
 
-    /// Creates an empty contract ABI.
-    pub fn empty() -> Self { Self { methods: Vec::new(), events: Vec::new() } }
+    /// Adds a method to the ABI
+    pub fn add_method(&mut self, method: ContractMethodDefinition) {
+        self.methods.push(method);
+    }
+
+    /// Adds an event to the ABI
+    pub fn add_event(&mut self, event: ContractEventDefinition) {
+        self.events.push(event);
+    }
 }
 
-/// Contract features.
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
-pub struct ContractFeatures {
-    /// Whether the contract uses storage.
-    #[serde(default)]
-    pub storage: bool,
-    /// Whether the contract uses the payable feature.
-    #[serde(default)]
-    pub payable: bool,
-}
-
-/// Contract permission.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ContractPermission {
-    /// The contract hash or wildcard.
+/// Represents a Neo N3 Contract Group Permission
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionDescriptor {
+    /// The contract hash of the permission, or "*" for wildcard
     pub contract: String,
-    /// The methods allowed, or wildcard.
+    
+    /// The methods allowed, "Default" for default permissions
     pub methods: Vec<String>,
 }
 
-impl ContractPermission {
-    /// Creates a new contract permission.
-    pub fn new(contract: impl Into<String>, methods: Vec<String>) -> Self {
-        Self { contract: contract.into(), methods }
-    }
-
-    /// Creates a wildcard permission (allows access to all contracts and methods).
-    pub fn wildcard() -> Self { Self { contract: "*".to_string(), methods: vec!["*".to_string()] } }
-}
-
-/// Contract group.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ContractGroup {
-    /// The public key of the group.
-    pub pubkey: String,
-    /// The signature of the contract hash.
-    pub signature: String,
-}
-
-impl ContractGroup {
-    /// Creates a new contract group.
-    pub fn new(pubkey: impl Into<String>, signature: impl Into<String>) -> Self {
-        Self { pubkey: pubkey.into(), signature: signature.into() }
-    }
-}
-
-/// Neo contract manifest.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Manifest {
-    /// The name of the contract.
-    pub name: String,
-    /// The groups the contract belongs to.
-    pub groups: Vec<ContractGroup>,
-    /// The contracts this contract trusts.
-    pub trusts: Vec<String>,
-    /// The permissions requested by the contract.
-    pub permissions: Vec<ContractPermission>,
-    /// The ABI of the contract.
-    pub abi: ContractAbi,
-    /// The features used by the contract.
-    #[serde(default)]
-    pub features: ContractFeatures,
-    /// Additional custom metadata.
-    #[serde(default)]
-    pub extra: HashMap<String, serde_json::Value>,
-    /// The supported standards (e.g., NEP-17, NEP-11).
-    #[serde(default)]
-    pub supportedstandards: Vec<String>,
-}
-
-impl Default for Manifest {
-    fn default() -> Self {
+impl PermissionDescriptor {
+    /// Creates a new permission descriptor
+    pub fn new(contract: &str, methods: &[&str]) -> Self {
         Self {
-            name: String::new(),
-            groups: Vec::new(),
-            trusts: Vec::new(),
-            permissions: vec![ContractPermission::wildcard()],
-            abi: ContractAbi::default(),
-            features: ContractFeatures::default(),
-            extra: HashMap::new(),
-            supportedstandards: Vec::new(),
+            contract: contract.to_string(),
+            methods: methods.iter().map(|s| s.to_string()).collect(),
         }
     }
 }
 
-impl Manifest {
-    /// Creates a new manifest with the given name.
-    pub fn new(name: impl Into<String>) -> Self { Self { name: name.into(), ..Self::default() } }
+/// Represents a Neo N3 Contract Manifest
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Manifest {
+    /// The name of the contract
+    pub name: String,
+    
+    /// The ABI of the contract
+    pub abi: ContractAbi,
+    
+    /// Features of the contract (storage, payable, etc.)
+    pub features: HashMap<String, bool>,
+    
+    /// Groups of the contract
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub groups: Vec<String>,
+    
+    /// Supported standards (NEP-17, etc.)
+    #[serde(rename = "supportedstandards")]
+    pub supported_standards: Vec<String>,
+    
+    /// Permission descriptors
+    pub permissions: Vec<PermissionDescriptor>,
+    
+    /// Trusted contracts
+    #[serde(rename = "trusts")]
+    pub trusts: Vec<String>,
+    
+    /// Extra fields not covered by the standard fields
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub extra: HashMap<String, JsonValue>,
+}
 
-    /// Sets the ABI of the manifest.
+impl Manifest {
+    /// Creates a new manifest with the given name
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            abi: ContractAbi::new(),
+            features: {
+                let mut features = HashMap::new();
+                features.insert("storage".to_string(), false);
+                features.insert("payable".to_string(), false);
+                features
+            },
+            groups: Vec::new(),
+            supported_standards: Vec::new(),
+            permissions: Vec::new(),
+            trusts: Vec::new(),
+            extra: HashMap::new(),
+        }
+    }
+
+    /// Load a manifest from a JSON file template
+    pub fn from_template(
+        template_path: &Path,
+        contract_name: &str,
+        abi: ContractAbi,
+    ) -> Result<Self, Error> {
+        let template_content = fs::read_to_string(template_path)
+            .map_err(|e| Error::IO(format!("Failed to read manifest template: {}", e)))?;
+
+        let mut manifest: Manifest = serde_json::from_str(&template_content)
+            .map_err(|e| Error::Parse(format!("Failed to parse manifest template: {}", e)))?;
+
+        manifest.name = contract_name.to_string();
+        manifest.abi = abi;
+
+        Ok(manifest)
+    }
+
+    /// Sets the ABI of the contract
     pub fn with_abi(mut self, abi: ContractAbi) -> Self {
         self.abi = abi;
         self
     }
 
-    /// Adds a supported standard to the manifest.
-    pub fn add_supported_standard(&mut self, standard: impl Into<String>) {
-        self.supportedstandards.push(standard.into());
-    }
-
-    /// Adds a permission to the manifest.
-    pub fn add_permission(&mut self, permission: ContractPermission) { self.permissions.push(permission); }
-
-    /// Adds a trusted contract to the manifest.
-    pub fn add_trusted_contract(&mut self, contract_hash: impl Into<String>) { self.trusts.push(contract_hash.into()); }
-
-    /// Adds a group to the manifest.
-    pub fn add_group(&mut self, group: ContractGroup) { self.groups.push(group); }
-
-    /// Adds a method to the ABI.
-    pub fn add_method(&mut self, method: ContractMethodDefinition) { self.abi.methods.push(method); }
-
-    /// Adds an event to the ABI.
-    pub fn add_event(&mut self, event: ContractEventDefinition) { self.abi.events.push(event); }
-
-    /// Sets a feature value.
-    pub fn set_feature(&mut self, name: &str, value: bool) -> Result<(), Error> {
-        match name {
-            "storage" => self.features.storage = value,
-            "payable" => self.features.payable = value,
-            _ => return Err(Error::invalid_manifest(format!("Unknown feature: {}", name))),
-        }
+    /// Sets the author of the contract
+    pub fn set_author(&mut self, author: &str) -> Result<(), Error> {
+        self.extra.insert(
+            "author".to_string(),
+            JsonValue::String(author.to_string()),
+        );
         Ok(())
     }
 
-    /// Sets an extra field in the manifest.
-    pub fn set_extra<T: Serialize>(&mut self, key: &str, value: T) -> Result<(), Error> {
+    /// Sets the email of the contract author
+    pub fn set_email(&mut self, email: &str) -> Result<(), Error> {
         self.extra
-            .insert(key.to_string(), serde_json::to_value(value).map_err(|e| Error::Serialization(e.to_string()))?);
+            .insert("email".to_string(), JsonValue::String(email.to_string()));
         Ok(())
     }
 
-    /// Serializes the manifest to JSON.
-    pub fn to_json(&self) -> Result<String, Error> {
-        serde_json::to_string_pretty(self).map_err(|e| Error::Serialization(e.to_string()))
-    }
-
-    /// Deserializes a manifest from JSON.
-    pub fn from_json(json: &str) -> Result<Self, Error> {
-        serde_json::from_str(json).map_err(|e| Error::invalid_manifest(e.to_string()))
-    }
-
-    /// Saves the manifest to a file.
-    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
-        let json = self.to_json()?;
-        fs::write(path, json)?;
+    /// Sets the description of the contract
+    pub fn set_description(&mut self, description: &str) -> Result<(), Error> {
+        self.extra.insert(
+            "description".to_string(),
+            JsonValue::String(description.to_string()),
+        );
         Ok(())
     }
 
-    /// Loads a manifest from a file.
-    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        let json = fs::read_to_string(path)?;
-        Self::from_json(&json)
+    /// Sets the version of the contract
+    pub fn set_version(&mut self, version: &str) -> Result<(), Error> {
+        self.extra
+            .insert("version".to_string(), JsonValue::String(version.to_string()));
+        Ok(())
     }
 
-    /// Validates the manifest.
-    pub fn validate(&self) -> Result<(), Error> {
-        // Check required fields
-        if self.name.is_empty() {
-            return Err(Error::invalid_manifest("Contract name cannot be empty"));
+    /// Sets a feature of the contract
+    pub fn set_feature(&mut self, feature: &str, enabled: bool) -> Result<(), Error> {
+        self.features.insert(feature.to_string(), enabled);
+        Ok(())
+    }
+
+    /// Adds a supported standard to the contract
+    pub fn add_supported_standard(&mut self, standard: &str) -> Result<(), Error> {
+        self.supported_standards.push(standard.to_string());
+        Ok(())
+    }
+
+    /// Adds a permission to the contract
+    pub fn add_permission(&mut self, contract: &str, method: &str) -> Result<(), Error> {
+        // Check if we already have a permission for this contract
+        for permission in &mut self.permissions {
+            if permission.contract == contract {
+                permission.methods.push(method.to_string());
+                return Ok(());
+            }
         }
 
-        // Check method names are unique
-        let mut method_names = std::collections::HashSet::new();
+        // If not, create a new permission
+        self.permissions.push(PermissionDescriptor::new(
+            contract,
+            &[method],
+        ));
+        Ok(())
+    }
+
+    /// Adds a trusted contract to the manifest
+    pub fn add_trust(&mut self, contract: &str) -> Result<(), Error> {
+        self.trusts.push(contract.to_string());
+        Ok(())
+    }
+
+    /// Sets whether the contract is payable
+    pub fn set_payable(&mut self, payable: bool) -> Result<(), Error> {
+        self.set_feature("payable", payable)
+    }
+
+    /// Validates the manifest
+    pub fn validate(&self) -> Result<(), Error> {
+        // Validate that required fields are set
+        if self.name.is_empty() {
+            return Err(Error::InvalidManifest("Contract name is required".to_string()));
+        }
+
+        // Check ABI methods
         for method in &self.abi.methods {
             if method.name.is_empty() {
-                return Err(Error::invalid_manifest("Method name cannot be empty"));
+                return Err(Error::InvalidManifest("Method name is required".to_string()));
             }
-            if !method_names.insert(&method.name) {
-                return Err(Error::invalid_manifest(format!("Duplicate method name: {}", method.name)));
+            
+            // Check parameter types are valid Neo N3 types
+            for param in &method.parameters {
+                if !is_valid_neo_type(&param.param_type) {
+                    return Err(Error::InvalidManifest(
+                        format!("Invalid parameter type '{}' for method '{}'", param.param_type, method.name)
+                    ));
+                }
+            }
+            
+            // Check return type is a valid Neo N3 type
+            if !is_valid_neo_type(&method.return_type) {
+                return Err(Error::InvalidManifest(
+                    format!("Invalid return type '{}' for method '{}'", method.return_type, method.name)
+                ));
             }
         }
-
-        // Check event names are unique
-        let mut event_names = std::collections::HashSet::new();
+        
+        // Check ABI events
         for event in &self.abi.events {
             if event.name.is_empty() {
-                return Err(Error::invalid_manifest("Event name cannot be empty"));
+                return Err(Error::InvalidManifest("Event name is required".to_string()));
             }
-            if !event_names.insert(&event.name) {
-                return Err(Error::invalid_manifest(format!("Duplicate event name: {}", event.name)));
+            
+            // Check parameter types are valid Neo N3 types
+            for param in &event.parameters {
+                if !is_valid_neo_type(&param.param_type) {
+                    return Err(Error::InvalidManifest(
+                        format!("Invalid parameter type '{}' for event '{}'", param.param_type, event.name)
+                    ));
+                }
+            }
+            
+            // Neo N3 limits the number of indexed parameters
+            let indexed_count = event.parameters.iter().filter(|p| p.indexed).count();
+            if indexed_count > 16 {
+                return Err(Error::InvalidManifest(
+                    format!("Event '{}' has {} indexed parameters, but Neo N3 only supports up to 16", 
+                            event.name, indexed_count)
+                ));
             }
         }
 
-        // Successful validation
+        // At least one permission must be defined
+        if self.permissions.is_empty() {
+            return Err(Error::InvalidManifest("At least one permission must be defined".to_string()));
+        }
+
         Ok(())
     }
 
-    /// Creates a manifest from a template file, filling in the specified fields.
-    pub fn from_template<P: AsRef<Path>>(template_path: P, name: &str, abi: ContractAbi) -> Result<Self, Error> {
-        let template_json = fs::read_to_string(template_path)?;
-        let mut manifest: Self = Self::from_json(&template_json)?;
+    /// Converts the manifest to JSON
+    pub fn to_json(&self) -> Result<String, Error> {
+        serde_json::to_string_pretty(self)
+            .map_err(|e| Error::Serialization(format!("Failed to serialize manifest: {}", e)))
+    }
+}
 
-        manifest.name = name.to_string();
-        manifest.abi = abi;
-
-        Ok(manifest)
+/// Checks if a type is a valid Neo N3 VM type
+fn is_valid_neo_type(neo_type: &str) -> bool {
+    match neo_type {
+        "Signature" | "Boolean" | "Integer" | "Hash160" | "Hash256" | 
+        "ByteArray" | "PublicKey" | "String" | "Array" | "Map" | 
+        "InteropInterface" | "Void" | "Any" => true,
+        _ => false,
     }
 }
 
@@ -313,47 +394,52 @@ mod tests {
 
         // Add parameters for a method
         let params = vec![
-            ContractParameterDefinition::new("owner", "Hash160"),
-            ContractParameterDefinition::new("amount", "Integer"),
+            ContractParameterDefinition::new("owner".to_string(), "Hash160".to_string()),
+            ContractParameterDefinition::new("amount".to_string(), "Integer".to_string()),
         ];
 
         // Add a method to the ABI
-        let method = ContractMethodDefinition::new("transfer", params, "Boolean", false);
-        manifest.add_method(method);
+        let method = ContractMethodDefinition::new(
+            "transfer".to_string(),
+            params,
+            "Boolean".to_string(),
+            false,
+        );
+        manifest.abi.add_method(method);
 
         // Add an event to the ABI
         let event_params = vec![
-            ContractParameterDefinition::new("from", "Hash160"),
-            ContractParameterDefinition::new("to", "Hash160"),
-            ContractParameterDefinition::new("amount", "Integer"),
+            ContractParameterDefinition::new("from".to_string(), "Hash160".to_string()),
+            ContractParameterDefinition::new("to".to_string(), "Hash160".to_string()),
+            ContractParameterDefinition::new("amount".to_string(), "Integer".to_string()),
         ];
-        let event = ContractEventDefinition::new("Transfer", event_params);
-        manifest.add_event(event);
+        let event = ContractEventDefinition::new("Transfer".to_string(), event_params);
+        manifest.abi.add_event(event);
 
         // Set features
         manifest.set_feature("storage", true).unwrap();
         manifest.set_feature("payable", true).unwrap();
 
         // Add a supported standard
-        manifest.add_supported_standard("NEP-17");
+        manifest.add_supported_standard("NEP-17").unwrap();
 
         // Add an extra field
-        manifest.set_extra("description", "My first Neo contract").unwrap();
+        manifest.set_description("My first Neo contract").unwrap();
 
         // Serialize to JSON
         let json = manifest.to_json().unwrap();
 
         // Deserialize from JSON
-        let deserialized = Manifest::from_json(&json).unwrap();
+        let deserialized = serde_json::from_str(&json).unwrap();
 
         // Check if the deserialized manifest is equal to the original
         assert_eq!(manifest, deserialized);
         assert_eq!(deserialized.name, "MyContract");
         assert_eq!(deserialized.abi.methods.len(), 1);
         assert_eq!(deserialized.abi.events.len(), 1);
-        assert_eq!(deserialized.features.storage, true);
-        assert_eq!(deserialized.features.payable, true);
-        assert_eq!(deserialized.supportedstandards, vec!["NEP-17"]);
+        assert_eq!(deserialized.features["storage"], true);
+        assert_eq!(deserialized.features["payable"], true);
+        assert_eq!(deserialized.supported_standards, vec!["NEP-17"]);
     }
 
     #[test]
@@ -361,12 +447,12 @@ mod tests {
         // Valid manifest
         let mut manifest = Manifest::new("MyContract");
         let method = ContractMethodDefinition::new(
-            "transfer",
-            vec![ContractParameterDefinition::new("amount", "Integer")],
-            "Boolean",
-            false,
+            "transfer".to_string(),
+            vec![],
+            "Void".to_string(),
+            true,
         );
-        manifest.add_method(method);
+        manifest.abi.add_method(method);
         assert!(manifest.validate().is_ok());
 
         // Invalid: empty name
@@ -377,12 +463,12 @@ mod tests {
         // Invalid: duplicate method names
         let mut invalid = manifest.clone();
         let duplicate_method = ContractMethodDefinition::new(
-            "transfer", // Same name as before
+            "transfer".to_string(), // Same name as before
             vec![],
-            "Void",
+            "Void".to_string(),
             true,
         );
-        invalid.add_method(duplicate_method);
+        invalid.abi.add_method(duplicate_method);
         assert!(invalid.validate().is_err());
     }
 }

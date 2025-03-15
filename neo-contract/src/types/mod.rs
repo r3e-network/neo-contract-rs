@@ -3,13 +3,13 @@
 //! This module defines the common types used throughout the framework.
 
 // Re-export core types
-pub use self::builtin::any::Any;
-pub use self::builtin::array::Array;
-pub use self::builtin::h160::H160;
-pub use self::builtin::h256::H256;
-pub use self::builtin::int256::Int256;
-pub use self::builtin::map::Map;
-pub use self::builtin::string::ByteString;
+pub use crate::builtin::any::Any;
+pub use crate::builtin::array::Array;
+pub use crate::builtin::h160::H160;
+pub use crate::builtin::h256::H256;
+pub use crate::builtin::int256::Int256;
+pub use crate::builtin::map::Map;
+pub use crate::builtin::string::ByteString;
 
 pub mod block;
 pub mod bytes;
@@ -32,4 +32,107 @@ pub mod builtin {
     pub mod int256;
     pub mod map;
     pub mod string;
+}
+
+/// Trait for converting Rust types to Neo N3 parameter types
+/// 
+/// This trait is used to convert Rust types to Neo N3 parameter types
+/// for the contract manifest generation.
+pub trait ToNeoParameter {
+    /// Converts the type to a Neo N3 parameter type string
+    fn to_neo_parameter_type() -> &'static str;
+}
+
+// Implement ToNeoParameter for common types
+impl ToNeoParameter for bool {
+    fn to_neo_parameter_type() -> &'static str { "Boolean" }
+}
+
+impl ToNeoParameter for i8 {
+    fn to_neo_parameter_type() -> &'static str { "Integer" }
+}
+
+impl ToNeoParameter for i16 {
+    fn to_neo_parameter_type() -> &'static str { "Integer" }
+}
+
+impl ToNeoParameter for i32 {
+    fn to_neo_parameter_type() -> &'static str { "Integer" }
+}
+
+impl ToNeoParameter for i64 {
+    fn to_neo_parameter_type() -> &'static str { "Integer" }
+}
+
+impl ToNeoParameter for u8 {
+    fn to_neo_parameter_type() -> &'static str { "Integer" }
+}
+
+impl ToNeoParameter for u16 {
+    fn to_neo_parameter_type() -> &'static str { "Integer" }
+}
+
+impl ToNeoParameter for u32 {
+    fn to_neo_parameter_type() -> &'static str { "Integer" }
+}
+
+impl ToNeoParameter for u64 {
+    fn to_neo_parameter_type() -> &'static str { "Integer" }
+}
+
+impl ToNeoParameter for Int256 {
+    fn to_neo_parameter_type() -> &'static str { "Integer" }
+}
+
+impl ToNeoParameter for ByteString {
+    fn to_neo_parameter_type() -> &'static str { "String" }
+}
+
+impl ToNeoParameter for Vec<u8> {
+    fn to_neo_parameter_type() -> &'static str { "ByteArray" }
+}
+
+impl ToNeoParameter for H160 {
+    fn to_neo_parameter_type() -> &'static str { "Hash160" }
+}
+
+impl ToNeoParameter for H256 {
+    fn to_neo_parameter_type() -> &'static str { "Hash256" }
+}
+
+impl<T> ToNeoParameter for Array<T> {
+    fn to_neo_parameter_type() -> &'static str { "Array" }
+}
+
+impl<K, V> ToNeoParameter for Map<K, V> {
+    fn to_neo_parameter_type() -> &'static str { "Map" }
+}
+
+impl<T> ToNeoParameter for Option<T> where T: ToNeoParameter {
+    fn to_neo_parameter_type() -> &'static str { 
+        // In Neo N3, Option<T> is represented as the same type as T
+        // with null values allowed
+        T::to_neo_parameter_type() 
+    }
+}
+
+/// Helper function to get Neo N3 type string from a Rust type string
+/// 
+/// This is used in the manifest generation process to convert Rust type
+/// descriptions to Neo N3 type descriptions.
+pub fn rust_type_to_neo_type(rust_type: &str) -> &'static str {
+    match rust_type.trim() {
+        "bool" => "Boolean",
+        "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64" => "Integer",
+        "Int256" => "Integer",
+        "String" | "str" | "&str" | "ByteString" => "String",
+        "Vec<u8>" | "&[u8]" => "ByteArray",
+        "H160" => "Hash160",
+        "H256" => "Hash256",
+        t if t.starts_with("Vec<") || t.starts_with("Array<") => "Array",
+        t if t.starts_with("Map<") || t.starts_with("HashMap<") => "Map",
+        "Any" => "Any",
+        "()" | "Void" => "Void",
+        _ => "Any",
+    }
 }

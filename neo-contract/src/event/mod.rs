@@ -100,8 +100,32 @@ pub fn emit_transfer(from: Option<H160>, to: Option<H160>, amount: impl Into<Any
 
 /// Register a Transfer event in the contract manifest
 pub fn register_transfer_event() {
-    // This is a placeholder - actual implementation depends on manifest module
-    // which should be implemented according to Neo N3 standards
+    #[cfg(feature = "manifest-validation")]
+    {
+        extern "C" {
+            // This function is provided by the Neo N3 VM during manifest generation
+            fn _neo_register_event(
+                name: *const u8, name_len: i32,
+                params: *const u8, params_len: i32,
+                return_type: *const u8, return_type_len: i32
+            ) -> i32;
+        }
+
+        // Transfer event name
+        let name = "Transfer";
+        // Transfer event parameters: [from, to, amount] (NEP-17 standard)
+        let params = r#"[{"name":"from","type":"Hash160"},{"name":"to","type":"Hash160"},{"name":"amount","type":"Integer"}]"#;
+        // No return type for events
+        let return_type = "";
+
+        unsafe {
+            _neo_register_event(
+                name.as_ptr(), name.len() as i32,
+                params.as_ptr(), params.len() as i32,
+                return_type.as_ptr(), return_type.len() as i32
+            );
+        }
+    }
 }
 
 /// Helper function to emit an event with a single value parameter

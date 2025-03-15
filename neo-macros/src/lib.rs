@@ -12,11 +12,11 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::__private::TokenStream2;
-use syn::{parse_macro_input, Attribute, AttributeArgs, Data, DeriveInput, Fields, ItemFn, ItemMod, Lit, NestedMeta};
-
-// Helper module for Neo type conversion and utility functions
-mod helpers {
-    // Helper function to check if a field has the #[index] attribute
+use syn::{
+    parse_macro_input, Attribute, AttributeArgs, Data, DeriveInput, 
+    Fields, FnArg, ItemFn, ItemMod, ItemStruct, Lit, Meta, 
+    NestedMeta, Pat, ReturnType
+};
     #[allow(dead_code)]
     pub fn has_index_attribute(attrs: &[syn::Attribute]) -> bool {
         attrs.iter().any(|attr| attr.path.is_ident("index"))
@@ -178,336 +178,1444 @@ pub fn index(_attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// Use these for declaring constant data with specific types
 #[proc_macro_attribute]
-pub fn byte_array(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn byte_array(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the length from the attribute arguments
+    let length = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Int(lit)) => lit.base10_parse::<usize>().unwrap_or(32),
+            _ => 32, // Default to 32 bytes if not specified correctly
+        }
+    } else {
+        32 // Default length is 32 bytes
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new byte array initialized with zeros
+            pub fn new() -> Self {
+                Self::default()
+            }
+            
+            /// Creates a byte array from a slice
+            pub fn from_slice(slice: &[u8]) -> Self {
+                let mut result = Self::new();
+                let copy_len = core::cmp::min(slice.len(), #length);
+                result.0[..copy_len].copy_from_slice(&slice[..copy_len]);
+                result
+            }
+            
+            /// Returns the length of the byte array
+            pub fn len(&self) -> usize {
+                #length
+            }
+            
+            /// Returns whether the byte array is empty (always false for fixed arrays)
+            pub fn is_empty(&self) -> bool {
+                false
+            }
+            
+            /// Returns a slice of the byte array
+            pub fn as_slice(&self) -> &[u8] {
+                &self.0[..]
+            }
+        }
+        
+        impl From<[u8; #length]> for #struct_name {
+            fn from(bytes: [u8; #length]) -> Self {
+                Self(bytes)
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl AsMut<[u8]> for #struct_name {
+            fn as_mut(&mut self) -> &mut [u8] {
+                &mut self.0
+            }
+        }
+    };
+    
+    TokenStream::from(expanded)
 }
 
 /// Defines a fixed byte array constant.
 #[proc_macro_attribute]
-pub fn byte_array_fixed(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn byte_array_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the byte array from the attribute arguments
+    let byte_string = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name and expected length
+    let struct_name = &input.ident;
+    let byte_length = byte_string.len() / 2; // Hex string to bytes length
+    
+    // Generate implementation for the fixed byte array
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new byte array from hexadecimal string
+            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
+                if hex.len() % 2 != 0 {
+                    return Err("Hex string must have an even number of characters");
+                }
+                
+                let expected_len = #byte_length;
+                let actual_len = hex.len() / 2;
+                
+                if actual_len != expected_len {
+                    return Err("Incorrect byte array length");
+                }
+                
+                let mut bytes = [0u8; #byte_length];
+                for i in 0..expected_len {
+                    let byte_str = &hex[i*2..i*2+2];
+                    bytes[i] = u8::from_str_radix(byte_str, 16).map_err(|_| "Invalid hex character")?;
+                }
+                
+                Ok(Self(bytes))
+            }
+            
+            /// Creates a byte array from a slice
+            pub fn from_slice(slice: &[u8]) -> Self {
+                let mut result = Self::new();
+                let copy_len = core::cmp::min(slice.len(), #byte_length);
+                result.0[..copy_len].copy_from_slice(&slice[..copy_len]);
+                result
+            }
+            
+            /// Returns the length of the byte array
+            pub fn len(&self) -> usize {
+                #byte_length
+            }
+            
+            /// Returns whether the byte array is empty (always false for fixed arrays)
+            pub fn is_empty(&self) -> bool {
+                false
+            }
+            
+            /// Returns a slice of the byte array
+            pub fn as_slice(&self) -> &[u8] {
+                &self.0[..]
+            }
+            
+            /// Returns the fixed constant based on the attribute parameters
+            pub fn constant() -> Self {
+                #[allow(unused_mut)]
+                let mut result = Self::default();
+                
+                #[cfg(not(feature = "mock"))]
+                {
+                    if !#byte_string.is_empty() {
+                        if let Ok(bytes) = hex::decode(&#byte_string) {
+                            if bytes.len() == #byte_length {
+                                result = Self(bytes.try_into().unwrap());
+                            }
+                        }
+                    }
+                }
+                
+                result
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; #byte_length])
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<#struct_name> for [u8; #byte_length] {
+            fn from(bytes: #struct_name) -> Self {
+                bytes.0
+            }
+        }
+        
+        impl From<[u8; #byte_length]> for #struct_name {
+            fn from(bytes: [u8; #byte_length]) -> Self {
+                Self(bytes)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
 }
 
 /// Defines a contract hash constant.
 #[proc_macro_attribute]
-pub fn contract_hash(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn contract_hash(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the contract script hash from the attribute arguments
+    let script_hash = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 contract hash
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new contract hash from a hex string
+            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
+                use core::str::FromStr;
+                match neo_contract::prelude::H160::from_str(hex) {
+                    Ok(hash) => Ok(Self(hash.0)),
+                    Err(_) => Err("Invalid contract hash format"),
+                }
+            }
+            
+            /// Returns the contract hash as a H160 type
+            pub fn as_h160(&self) -> neo_contract::prelude::H160 {
+                neo_contract::prelude::H160(self.0)
+            }
+            
+            /// Get the default contract hash for this contract
+            pub fn script_hash() -> Self {
+                #[allow(unused_mut)]
+                let mut result = Self::default();
+                
+                #[cfg(not(feature = "mock"))]
+                {
+                    if !#script_hash.is_empty() {
+                        if let Ok(hash) = neo_contract::prelude::H160::from_str(&#script_hash) {
+                            result = Self(hash.0);
+                        }
+                    }
+                }
+                
+                result
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<neo_contract::prelude::H160> for #struct_name {
+            fn from(hash: neo_contract::prelude::H160) -> Self {
+                Self(hash.0)
+            }
+        }
+        
+        impl From<#struct_name> for neo_contract::prelude::H160 {
+            fn from(hash: #struct_name) -> Self {
+                Self(hash.0)
+            }
+        }
+    };
+    
+    TokenStream::from(expanded)
 }
 
 /// Defines a fixed contract hash constant.
 #[proc_macro_attribute]
-pub fn contract_hash_fixed(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn contract_hash_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the contract script hash from the attribute arguments
+    let script_hash = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 fixed contract hash
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new contract hash from a hex string
+            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
+                use core::str::FromStr;
+                if hex.len() != 40 {
+                    return Err("Contract hash must be exactly 40 hex characters (20 bytes)");
+                }
+                
+                let hash = neo_contract::prelude::H160::from_str(hex)
+                    .map_err(|_| "Invalid contract hash format")?;
+                Ok(Self(hash.0))
+            }
+            
+            /// Returns the contract hash as a H160 type
+            pub fn as_h160(&self) -> neo_contract::prelude::H160 {
+                neo_contract::prelude::H160(self.0)
+            }
+            
+            /// Returns the fixed constant contract hash value
+            pub fn constant() -> Self {
+                let hex = #script_hash;
+                if hex.is_empty() {
+                    return Self([0; 20]);
+                }
+                
+                let mut bytes = [0u8; 20];
+                
+                // Handle fixed hash from hex string
+                if hex.len() == 40 {
+                    for i in 0..20 {
+                        let byte_str = &hex[i*2..i*2+2];
+                        if let Ok(byte) = u8::from_str_radix(byte_str, 16) {
+                            bytes[i] = byte;
+                        }
+                    }
+                }
+                
+                Self(bytes)
+            }
+            
+            /// Call a method on the contract
+            pub fn call<T: neo_contract::prelude::FromNeoValue>(&self, method: &str, args: &[neo_contract::prelude::Any]) -> Option<T> {
+                neo_contract::prelude::ContractExtension::call_contract(&neo_contract::prelude::H160(self.0), method, args)
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; 20])
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<neo_contract::prelude::H160> for #struct_name {
+            fn from(hash: neo_contract::prelude::H160) -> Self {
+                Self(hash.0)
+            }
+        }
+        
+        impl From<#struct_name> for neo_contract::prelude::H160 {
+            fn from(hash: #struct_name) -> Self {
+                Self(hash.0)
+            }
+        }
+        
+        impl From<[u8; 20]> for #struct_name {
+            fn from(bytes: [u8; 20]) -> Self {
+                Self(bytes)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
+}
+
+/// Registers a method in the Neo N3 contract manifest
+/// 
+/// This is used to expose methods to be callable from outside the contract
+/// and to specify their properties in the contract manifest.
+///
+/// # Example
+///
+/// ```
+/// #[manifest_method(method_name = "transfer", safe = true)]
+/// fn transfer_tokens(from: H160, to: H160, amount: u64) -> bool {
+///     // Implementation
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn manifest_method(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as ItemFn);
+    
+    // Extract method parameters
+    let method_name = extract_method_name(&args).unwrap_or_else(|| input.sig.ident.to_string());
+    let is_safe = extract_safe_parameter(&args).unwrap_or(false);
+    
+    // Get function signature details
+    let fn_vis = &input.vis;
+    let fn_sig = &input.sig;
+    let fn_name = &input.sig.ident;
+    let fn_body = &input.block;
+    let fn_attrs = &input.attrs;
+    
+    // Process parameters for Neo N3 manifest
+    let parameters: Vec<_> = fn_sig.inputs.iter().collect();
+    
+    // Generate parameter type information for manifest
+    let param_types: Vec<_> = parameters.iter()
+        .filter_map(|arg| {
+            if let syn::FnArg::Typed(pat_type) = arg {
+                let ty = &pat_type.ty;
+                Some(helpers::convert_type(ty))
+            } else {
+                None
+            }
+        })
+        .collect();
+    
+    // Generate return type information for manifest
+    let return_type = match &fn_sig.output {
+        syn::ReturnType::Default => "Void".to_string(),
+        syn::ReturnType::Type(_, ty) => helpers::convert_type(ty),
+    };
+    
+    // Generate the implementation
+    let expanded = quote! {
+        #(#fn_attrs)*
+        #fn_vis #fn_sig {
+            // Register the method in the manifest at compile time
+            #[cfg(feature = "manifest-validation")]
+            {
+                extern "C" {
+                    // This function is provided by the Neo N3 VM during manifest generation
+                    fn _neo_register_method(
+                        name: *const u8, name_len: i32,
+                        params: *const u8, params_len: i32,
+                        return_type: *const u8, return_type_len: i32,
+                        safe: i32
+                    ) -> i32;
+                }
+                
+                // Method name from attribute or function name
+                let name = #method_name;
+                
+                // Convert parameter types to JSON format
+                let params = format!(
+                    "[{}]",
+                    vec![#(#param_types),*].iter()
+                        .map(|ty| format!(r#"{{"type":"{}"}}"#, ty))
+                        .collect::<Vec<_>>()
+                        .join(",")
+                );
+                
+                // Return type in Neo N3 format
+                let return_type = #return_type;
+                
+                // Set safe flag based on attribute
+                let safe_flag = if #is_safe { 1 } else { 0 };
+                
+                unsafe {
+                    _neo_register_method(
+                        name.as_ptr(), name.len() as i32,
+                        params.as_ptr(), params.len() as i32,
+                        return_type.as_ptr(), return_type.len() as i32,
+                        safe_flag
+                    );
+                }
+            }
+            
+            // Execute the original function body
+            #fn_body
+        }
+    };
+    
+    TokenStream::from(expanded)
+}
+
+// Helper function to extract method name from attributes
+fn extract_method_name(args: &[NestedMeta]) -> Option<String> {
+    for arg in args {
+        if let NestedMeta::Meta(syn::Meta::NameValue(name_value)) = arg {
+            if name_value.path.is_ident("method_name") {
+                if let Lit::Str(lit_str) = &name_value.lit {
+                    return Some(lit_str.value());
+                }
+            }
+        }
+    }
+    None
+}
+
+// Helper function to extract safe parameter from attributes
+fn extract_safe_parameter(args: &[NestedMeta]) -> Option<bool> {
+    for arg in args {
+        if let NestedMeta::Meta(syn::Meta::NameValue(name_value)) = arg {
+            if name_value.path.is_ident("safe") {
+                if let Lit::Bool(lit_bool) = &name_value.lit {
+                    return Some(lit_bool.value);
+                }
+            }
+        }
+    }
+    
+    for arg in args {
+        if let NestedMeta::Meta(syn::Meta::Path(path)) = arg {
+            if path.is_ident("safe") {
+                return Some(true);
+            }
+        }
+    }
+    
+    None
 }
 
 /// Defines a Hash160 constant.
 #[proc_macro_attribute]
-pub fn hash160(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn hash160(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the hash value from the attribute arguments (if any)
+    let hash_string = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 Hash160 type
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new Hash160 from a hexadecimal string
+            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
+                use core::str::FromStr;
+                let hash = neo_contract::prelude::H160::from_str(hex)
+                    .map_err(|_| "Invalid Hash160 format")?;
+                Ok(Self(hash.0))
+            }
+            
+            /// Creates a Hash160 from a NEO address string
+            pub fn from_address(address: &str) -> Result<Self, &'static str> {
+                use neo_contract::prelude::AddressExtension;
+                let hash = neo_contract::prelude::H160::from_address(address)
+                    .map_err(|_| "Invalid NEO address format")?;
+                Ok(Self(hash.0))
+            }
+            
+            /// Converts the Hash160 to a NEO address string
+            pub fn to_address(&self) -> String {
+                use neo_contract::prelude::AddressExtension;
+                let h160 = neo_contract::prelude::H160(self.0);
+                h160.to_address()
+            }
+            
+            /// Returns the Hash160
+            pub fn as_h160(&self) -> neo_contract::prelude::H160 {
+                neo_contract::prelude::H160(self.0)
+            }
+            
+            /// Returns whether this is the zero hash
+            pub fn is_zero(&self) -> bool {
+                self.0.iter().all(|&b| b == 0)
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; 20])
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<neo_contract::prelude::H160> for #struct_name {
+            fn from(hash: neo_contract::prelude::H160) -> Self {
+                Self(hash.0)
+            }
+        }
+        
+        impl From<#struct_name> for neo_contract::prelude::H160 {
+            fn from(hash: #struct_name) -> Self {
+                Self(hash.0)
+            }
+        }
+        
+        impl From<[u8; 20]> for #struct_name {
+            fn from(bytes: [u8; 20]) -> Self {
+                Self(bytes)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
 }
 
 /// Defines a fixed Hash160 constant.
 #[proc_macro_attribute]
-pub fn hash160_fixed(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn hash160_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the hash160 value from the attribute arguments
+    let hash_string = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 fixed Hash160 type
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new Hash160 from a hexadecimal string
+            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
+                if hex.len() != 40 {
+                    return Err("Hash160 must be exactly 40 hex characters");
+                }
+                
+                let mut bytes = [0u8; 20];
+                for i in 0..20 {
+                    let byte_str = &hex[i*2..i*2+2];
+                    bytes[i] = u8::from_str_radix(byte_str, 16).map_err(|_| "Invalid hex character")?;
+                }
+                
+                Ok(Self(bytes))
+            }
+            
+            /// Creates a Hash160 from a NEO address string
+            pub fn from_address(address: &str) -> Result<Self, &'static str> {
+                use neo_contract::prelude::AddressExtension;
+                let hash = neo_contract::prelude::H160::from_address(address)
+                    .map_err(|_| "Invalid NEO address format")?;
+                Ok(Self(hash.0))
+            }
+            
+            /// Converts the Hash160 to a NEO address string
+            pub fn to_address(&self) -> String {
+                use neo_contract::prelude::AddressExtension;
+                let h160 = neo_contract::prelude::H160(self.0);
+                h160.to_address()
+            }
+            
+            /// Returns the Hash160
+            pub fn as_h160(&self) -> neo_contract::prelude::H160 {
+                neo_contract::prelude::H160(self.0)
+            }
+            
+            /// Returns the fixed constant value
+            pub fn constant() -> Self {
+                let hex = #hash_string;
+                if hex.is_empty() {
+                    return Self([0; 20]);
+                }
+                
+                let mut bytes = [0u8; 20];
+                
+                // Handle fixed hash from hex string
+                if hex.len() == 40 {
+                    for i in 0..20 {
+                        let byte_str = &hex[i*2..i*2+2];
+                        if let Ok(byte) = u8::from_str_radix(byte_str, 16) {
+                            bytes[i] = byte;
+                        }
+                    }
+                }
+                
+                Self(bytes)
+            }
+            
+            /// Returns whether this is the zero hash
+            pub fn is_zero(&self) -> bool {
+                self.0.iter().all(|&b| b == 0)
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; 20])
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<neo_contract::prelude::H160> for #struct_name {
+            fn from(hash: neo_contract::prelude::H160) -> Self {
+                Self(hash.0)
+            }
+        }
+        
+        impl From<[u8; 20]> for #struct_name {
+            fn from(bytes: [u8; 20]) -> Self {
+                Self(bytes)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
 }
 
 /// Defines an integer constant.
 #[proc_macro_attribute]
-pub fn integer(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn integer(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the integer value from the attribute arguments (if any)
+    let value_string = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            NestedMeta::Lit(Lit::Int(lit)) => lit.base10_digits().to_string(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 Integer type
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new Integer from a string value
+            pub fn from_str(s: &str) -> Result<Self, &'static str> {
+                use core::str::FromStr;
+                match neo_contract::prelude::Int256::from_str(s) {
+                    Ok(value) => Ok(Self(value.0)),
+                    Err(_) => Err("Invalid integer format"),
+                }
+            }
+            
+            /// Converts the integer to a Neo N3 Int256 type
+            pub fn as_int256(&self) -> neo_contract::prelude::Int256 {
+                neo_contract::prelude::Int256(self.0)
+            }
+            
+            /// Converts the integer to a u64 if possible
+            pub fn to_u64(&self) -> Option<u64> {
+                let int256 = neo_contract::prelude::Int256(self.0);
+                if int256.is_negative() {
+                    None
+                } else {
+                    int256.to_u64()
+                }
+            }
+            
+            /// Converts the integer to an i64 if possible
+            pub fn to_i64(&self) -> Option<i64> {
+                let int256 = neo_contract::prelude::Int256(self.0);
+                int256.to_i64()
+            }
+            
+            /// Returns whether this is zero
+            pub fn is_zero(&self) -> bool {
+                self.0.iter().all(|&b| b == 0)
+            }
+            
+            /// Returns whether this integer is negative
+            pub fn is_negative(&self) -> bool {
+                neo_contract::prelude::Int256(self.0).is_negative()
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; 32])
+            }
+        }
+        
+        impl From<neo_contract::prelude::Int256> for #struct_name {
+            fn from(value: neo_contract::prelude::Int256) -> Self {
+                Self(value.0)
+            }
+        }
+        
+        impl From<#struct_name> for neo_contract::prelude::Int256 {
+            fn from(value: #struct_name) -> Self {
+                Self(value.0)
+            }
+        }
+        
+        impl From<u64> for #struct_name {
+            fn from(value: u64) -> Self {
+                let int256 = neo_contract::prelude::Int256::from(value);
+                Self(int256.0)
+            }
+        }
+        
+        impl From<i64> for #struct_name {
+            fn from(value: i64) -> Self {
+                let int256 = neo_contract::prelude::Int256::from(value);
+                Self(int256.0)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
 }
 
 /// Defines a fixed integer constant.
 #[proc_macro_attribute]
-pub fn integer_fixed(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn integer_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the integer value from the attribute arguments
+    let value_string = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            NestedMeta::Lit(Lit::Int(lit)) => lit.base10_digits().to_string(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 fixed Integer type
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new Integer from a string value
+            pub fn from_str(s: &str) -> Result<Self, &'static str> {
+                use core::str::FromStr;
+                match neo_contract::prelude::Int256::from_str(s) {
+                    Ok(value) => Ok(Self(value.0)),
+                    Err(_) => Err("Invalid integer format"),
+                }
+            }
+            
+            /// Converts the integer to a Neo N3 Int256 type
+            pub fn as_int256(&self) -> neo_contract::prelude::Int256 {
+                neo_contract::prelude::Int256(self.0)
+            }
+            
+            /// Converts the integer to a u64 if possible
+            pub fn to_u64(&self) -> Option<u64> {
+                let int256 = neo_contract::prelude::Int256(self.0);
+                if int256.is_negative() {
+                    None
+                } else {
+                    int256.to_u64()
+                }
+            }
+            
+            /// Converts the integer to an i64 if possible
+            pub fn to_i64(&self) -> Option<i64> {
+                let int256 = neo_contract::prelude::Int256(self.0);
+                int256.to_i64()
+            }
+            
+            /// Returns the fixed constant value
+            pub fn constant() -> Self {
+                use core::str::FromStr;
+                let value_str = #value_string;
+                if value_str.is_empty() {
+                    return Self([0; 32]);
+                }
+                
+                if let Ok(int256) = neo_contract::prelude::Int256::from_str(value_str) {
+                    Self(int256.0)
+                } else {
+                    Self([0; 32])
+                }
+            }
+            
+            /// Returns whether this is zero
+            pub fn is_zero(&self) -> bool {
+                self.0.iter().all(|&b| b == 0)
+            }
+            
+            /// Returns whether this integer is negative
+            pub fn is_negative(&self) -> bool {
+                neo_contract::prelude::Int256(self.0).is_negative()
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; 32])
+            }
+        }
+        
+        impl From<neo_contract::prelude::Int256> for #struct_name {
+            fn from(value: neo_contract::prelude::Int256) -> Self {
+                Self(value.0)
+            }
+        }
+        
+        impl From<u64> for #struct_name {
+            fn from(value: u64) -> Self {
+                let int256 = neo_contract::prelude::Int256::from(value);
+                Self(int256.0)
+            }
+        }
+        
+        impl From<i64> for #struct_name {
+            fn from(value: i64) -> Self {
+                let int256 = neo_contract::prelude::Int256::from(value);
+                Self(int256.0)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
 }
 
 /// Defines a public key constant.
 #[proc_macro_attribute]
-pub fn public_key(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn public_key(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract public key from attributes (if any)
+    let key_string = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 public key type (33-byte secp256r1 compressed point)
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new public key from a hexadecimal string
+            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
+                if hex.len() != 66 {
+                    return Err("Public key must be exactly 66 hex characters (33 bytes)");
+                }
+                
+                let mut bytes = [0u8; 33];
+                for i in 0..33 {
+                    let byte_str = &hex[i*2..i*2+2];
+                    bytes[i] = u8::from_str_radix(byte_str, 16).map_err(|_| "Invalid hex character")?;
+                }
+                
+                // Check if it's a valid compressed public key (starts with 02 or 03)
+                if bytes[0] != 0x02 && bytes[0] != 0x03 {
+                    return Err("Invalid public key format - must be compressed (start with 02 or 03)");
+                }
+                
+                Ok(Self(bytes))
+            }
+            
+            /// Verifies a signature against a message using this public key
+            /// This is a wrapper around the Neo N3 Crypto.VerifyWithECDsaSecp256r1 syscall
+            pub fn verify_signature(&self, message: &[u8], signature: &[u8]) -> bool {
+                use neo_contract::prelude::CryptoExtension;
+                neo_contract::prelude::Crypto::verify_with_ecdsa_secp256r1(&self.0, message, signature)
+            }
+            
+            /// Returns the public key as a byte array
+            pub fn as_bytes(&self) -> &[u8; 33] {
+                &self.0
+            }
+            
+            /// Returns the public key as a byte slice
+            pub fn as_slice(&self) -> &[u8] {
+                &self.0[..]
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; 33])
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<[u8; 33]> for #struct_name {
+            fn from(bytes: [u8; 33]) -> Self {
+                Self(bytes)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
 }
 
 /// Defines a fixed public key constant.
 #[proc_macro_attribute]
-pub fn public_key_fixed(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn public_key_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the public key from the attribute arguments
+    let key_string = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 fixed public key type
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new public key from a hexadecimal string
+            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
+                if hex.len() != 66 {
+                    return Err("Public key must be exactly 66 hex characters (33 bytes)");
+                }
+                
+                let mut bytes = [0u8; 33];
+                for i in 0..33 {
+                    let byte_str = &hex[i*2..i*2+2];
+                    bytes[i] = u8::from_str_radix(byte_str, 16).map_err(|_| "Invalid hex character")?;
+                }
+                
+                // Check if it's a valid compressed public key (starts with 02 or 03)
+                if bytes[0] != 0x02 && bytes[0] != 0x03 {
+                    return Err("Invalid public key format - must be compressed (start with 02 or 03)");
+                }
+                
+                Ok(Self(bytes))
+            }
+            
+            /// Verifies a signature against a message using this public key
+            /// This is a wrapper around the Neo N3 Crypto.VerifyWithECDsaSecp256r1 syscall
+            pub fn verify_signature(&self, message: &[u8], signature: &[u8]) -> bool {
+                use neo_contract::prelude::CryptoExtension;
+                neo_contract::prelude::Crypto::verify_with_ecdsa_secp256r1(&self.0, message, signature)
+            }
+            
+            /// Returns the fixed constant public key value
+            pub fn constant() -> Self {
+                let hex = #key_string;
+                if hex.is_empty() || hex.len() != 66 {
+                    return Self([0; 33]);
+                }
+                
+                let mut bytes = [0u8; 33];
+                for i in 0..33 {
+                    let byte_str = &hex[i*2..i*2+2];
+                    if let Ok(byte) = u8::from_str_radix(byte_str, 16) {
+                        bytes[i] = byte;
+                    }
+                }
+                
+                Self(bytes)
+            }
+            
+            /// Returns the public key as a byte array
+            pub fn as_bytes(&self) -> &[u8; 33] {
+                &self.0
+            }
+            
+            /// Returns the public key as a byte slice
+            pub fn as_slice(&self) -> &[u8] {
+                &self.0[..]
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; 33])
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<[u8; 33]> for #struct_name {
+            fn from(bytes: [u8; 33]) -> Self {
+                Self(bytes)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
 }
 
 /// Defines a string constant.
 #[proc_macro_attribute]
-pub fn string(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn string(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the string value from the attribute arguments (if any)
+    let string_value = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 string type
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new string value
+            pub fn new() -> Self {
+                Self::default()
+            }
+            
+            /// Creates a string from a Rust string
+            pub fn from_str(s: &str) -> Self {
+                Self(s.as_bytes().to_vec())
+            }
+            
+            /// Returns the string as a Neo ByteString
+            pub fn as_byte_string(&self) -> neo_contract::prelude::ByteString {
+                neo_contract::prelude::ByteString::from(&self.0[..])
+            }
+            
+            /// Attempts to convert the bytes to a UTF-8 string
+            pub fn to_string(&self) -> Result<String, core::str::Utf8Error> {
+                let s = core::str::from_utf8(&self.0)?;
+                Ok(s.to_string())
+            }
+            
+            /// Returns the length of the string in bytes
+            pub fn len(&self) -> usize {
+                self.0.len()
+            }
+            
+            /// Returns whether the string is empty
+            pub fn is_empty(&self) -> bool {
+                self.0.is_empty()
+            }
+            
+            /// Returns the string data as a byte slice
+            pub fn as_slice(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self(Vec::new())
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<&str> for #struct_name {
+            fn from(s: &str) -> Self {
+                Self(s.as_bytes().to_vec())
+            }
+        }
+        
+        impl From<String> for #struct_name {
+            fn from(s: String) -> Self {
+                Self(s.into_bytes())
+            }
+        }
+        
+        impl From<neo_contract::prelude::ByteString> for #struct_name {
+            fn from(bs: neo_contract::prelude::ByteString) -> Self {
+                Self(bs.into_iter().collect())
+            }
+        }
+        
+        impl From<#struct_name> for neo_contract::prelude::ByteString {
+            fn from(s: #struct_name) -> Self {
+                Self::from(&s.0[..])
+            }
+        }
+    };
+    
+    TokenStream::from(expanded)
 }
 
 /// Defines a fixed string constant.
 #[proc_macro_attribute]
-pub fn string_fixed(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
+pub fn string_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the string value from the attribute arguments
+    let string_value = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 fixed string type
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a string from a Rust string
+            pub fn from_str(s: &str) -> Self {
+                Self(s.as_bytes().to_vec())
+            }
+            
+            /// Returns the string as a Neo ByteString
+            pub fn as_byte_string(&self) -> neo_contract::prelude::ByteString {
+                neo_contract::prelude::ByteString::from(&self.0[..])
+            }
+            
+            /// Attempts to convert the bytes to a UTF-8 string
+            pub fn to_string(&self) -> Result<String, core::str::Utf8Error> {
+                let s = core::str::from_utf8(&self.0)?;
+                Ok(s.to_string())
+            }
+            
+            /// Returns the length of the string in bytes
+            pub fn len(&self) -> usize {
+                self.0.len()
+            }
+            
+            /// Returns whether the string is empty
+            pub fn is_empty(&self) -> bool {
+                self.0.is_empty()
+            }
+            
+            /// Returns the string data as a byte slice
+            pub fn as_slice(&self) -> &[u8] {
+                &self.0
+            }
+            
+            /// Returns the fixed constant string value
+            pub fn constant() -> Self {
+                Self(#string_value.as_bytes().to_vec())
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self(Vec::new())
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<&str> for #struct_name {
+            fn from(s: &str) -> Self {
+                Self(s.as_bytes().to_vec())
+            }
+        }
+        
+        impl From<String> for #struct_name {
+            fn from(s: String) -> Self {
+                Self(s.into_bytes())
+            }
+        }
+        
+        impl From<neo_contract::prelude::ByteString> for #struct_name {
+            fn from(bs: neo_contract::prelude::ByteString) -> Self {
+                Self(bs.into_iter().collect())
+            }
+        }
+        
+        impl From<#struct_name> for neo_contract::prelude::ByteString {
+            fn from(s: #struct_name) -> Self {
+                Self::from(&s.0[..])
+            }
+        }
+    };
+    
+    TokenStream::from(expanded)
 }
 
 /// Marks a function with a specific NEO VM opcode.
 ///
-/// This attribute is used for low-level integration with the NEO VM.
-/// It specifies which opcode should be used when the function is called.
+/// This attribute is used to indicate that the function should be compiled
+/// to the specified VM opcode in the Neo N3 bytecode.
 ///
 /// # Example
-///
 /// ```rust
-/// #[op_code(SYSCALL, "Neo.Storage.Get")]
-/// fn storage_get(context: &StorageContext, key: &[u8]) -> Option<Vec<u8>> {
-///     // Implementation
+/// #[vm_opcode(0xA0)] // SHA1
+/// fn sha1_hash(data: &[u8]) -> [u8; 20] {
+///     // Implementation will be replaced with the SHA1 opcode in Neo VM
+///     unimplemented!()
 /// }
 /// ```
 #[proc_macro_attribute]
-pub fn op_code(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
-}
-
-/// Marks a function as a syscall to the NEO VM.
-///
-/// This attribute is used for low-level integration with the NEO VM.
-/// It specifies which syscall should be invoked when the function is called.
-///
-/// # Example
-///
-/// ```rust
-/// #[syscall("Neo.Storage.Get")]
-/// fn storage_get(context: &StorageContext, key: &[u8]) -> Option<Vec<u8>> {
-///     // Implementation
-/// }
-/// ```
-#[proc_macro_attribute]
-pub fn syscall(_: TokenStream, item: TokenStream) -> TokenStream {
-    // For now, just return the input as we'll implement this later
-    item
-}
-
-/// Marks a struct as contract storage
-#[proc_macro_attribute]
-pub fn storage(_: TokenStream, item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as DeriveInput);
-    let struct_name = &input.ident;
-
-    let fields = match input.data {
-        Data::Struct(ref data) => match data.fields {
-            Fields::Named(ref fields) => fields.named.clone(),
-            _ => panic!("Only named fields are supported in storage structs"),
-        },
-        _ => panic!("Only structs can be storage"),
-    };
-
-    // Generate storage methods for each field
-    let field_methods: Vec<_> = fields
-        .iter()
-        .map(|field| {
-            let field_name = field.ident.as_ref().unwrap();
-            let field_type = &field.ty;
-            let getter_name = field_name.clone();
-            let setter_name = format_ident!("set_{}", field_name);
-            let key_name = field_name.to_string();
-
-            quote! {
-                pub fn #getter_name(&self) -> Option<#field_type> {
-                    let context = neo_contract::storage::StorageContext::current();
-                    let key = neo_contract::ByteString::from(#key_name);
-
-                    // Use Neo N3 proper storage API
-                    if let Some(data) = neo_contract::prelude::Storage::get(&key) {
-                        return Some(data);
-                    }
-
-                    None
+pub fn vm_opcode(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as ItemFn);
+    
+    // Extract the opcode value from the attribute
+    let opcode = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Int(lit)) => {
+                lit.base10_parse::<u8>().unwrap_or(0)
+            },
+            NestedMeta::Lit(Lit::Str(lit)) => {
+                if let Ok(val) = u8::from_str_radix(&lit.value().trim_start_matches("0x"), 16) {
+                    val
+                } else {
+                    0
                 }
-
-                pub fn #setter_name(&self, value: #field_type) {
-                    // Use Neo N3 proper storage API
-                    let key = neo_contract::prelude::ByteString::from(#key_name);
-                    neo_contract::prelude::Storage::put(&key, &value);
-                }
-            }
-        })
-        .collect();
-
-    // Get field names for struct initialization
-    let field_idents: Vec<_> = fields.iter().map(|f| f.ident.as_ref().unwrap()).collect();
-
-    // Build the initialization part with field defaults
-    let init_struct_fields = if field_idents.is_empty() {
-        quote! {}
-    } else {
-        let init_fields: Vec<_> = field_idents
-            .iter()
-            .map(|ident| {
-                quote! { #ident: Default::default() }
-            })
-            .collect();
-
-        quote! {
-            #(#init_fields),*
+            },
+            _ => 0,
         }
+    } else {
+        0
     };
-
+    
+    // Get the function name
+    let fn_name = &input.sig.ident;
+    
+    // Generate the output
     let expanded = quote! {
+        #[cfg_attr(target_arch = "wasm32", link_section = "neo.vm.opcode")]
         #input
-
-        impl #struct_name {
-            pub fn new() -> Self {
-                Self {
-                    #init_struct_fields
-                }
-            }
-
-            // Generate all field methods individually
-            #(#field_methods)*
+        
+        inventory::submit! {
+            neo_contract::manifest::OpcodeDescriptor::new(
+                stringify!(#fn_name).to_string(),
+                #opcode
+            )
         }
     };
-
+    
     TokenStream::from(expanded)
-}
-
-/// Marks a method as a contract constructor
-///
-/// The constructor is called when the contract is deployed
-/// It should initialize the contract state
-#[proc_macro_attribute]
-pub fn constructor(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as ItemFn);
-
-    // Constructor is always _deploy in Neo N3
-    let expanded = quote! {
-        #[neo_contract_proc_macros::manifest_method(method_name = "_deploy")]
-        #input
-    };
-
-    TokenStream::from(expanded)
-}
-
-/// Marks a method as a contract method
-///
-/// Contract methods are exposed in the contract manifest and can be called
-/// This is the standard way to expose functionality in Neo N3 contracts
-#[proc_macro_attribute]
-pub fn method(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as ItemFn);
-    let name = &input.sig.ident;
-    let method_name = name.to_string();
-
-    // Check if this is a safe method based on attributes or naming convention
-    let attr_str = attr.to_string();
-    let is_safe = attr_str.contains("safe")
-        || method_name.starts_with("get_")
-        || method_name.starts_with("is_")
-        || method_name.starts_with("has_");
-
-    // Process the function to ensure it registers in the Neo N3 manifest
-    // Neo N3 distinguishes between safe (read-only) and non-safe (state-modifying) methods
-    let vis = &input.vis;
-    let attrs = &input.attrs;
-    let sig = &input.sig;
-    let block = &input.block;
-
-    let output: TokenStream2 = if is_safe {
-        // For safe methods, add the safe attribute to indicate read-only operation
-        // This is represented in the contract manifest with "safe": true
-        quote! {
-            #(#attrs)*
-            #[neo_contract::prelude::manifest_method(method_name = #method_name, safe = true)]
-            #vis #sig {
-                // Safe method implementation
-                #block
-            }
-        }
-    } else {
-        // For state-modifying methods, we use the regular method attribute
-        quote! {
-            #(#attrs)*
-            #[neo_contract::prelude::manifest_method(method_name = #method_name)]
-            #vis #sig {
-                // State-modifying method implementation
-                #block
-            }
-        }
-    };
-
-    output.into()
-}
-
-/// Marks a method as a safe (read-only) contract method
-///
-/// Safe methods are represented in the contract manifest with "safe": true
-/// These methods are optimized for contracts that don't modify state
-#[proc_macro_attribute]
-pub fn safe(_: TokenStream, item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as ItemFn);
-
-    let output = quote! {
-        #[method(safe)]
-        #input
-    };
-
-    output.into()
-}
-
-// Helper function to check if a field has the #[index] attribute
-#[allow(dead_code)]
-fn has_index_attribute(attrs: &[Attribute]) -> bool { attrs.iter().any(|attr| attr.path.is_ident("index")) }
-
-// Helper functions for Neo VM type handling are now in the helpers module
-
-/// Marks a contract module with appropriate neo N3 contract semantics
-///
-/// This is the main entry point for defining a Neo smart contract in Rust.
-/// It processes the module to extract method definitions, process storage,
-/// register events, and set up entry points for calling the contract.
-#[proc_macro_attribute]
-pub fn contract(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as ItemMod);
-    let mod_name = &input.ident;
-    let content = &input.content;
-
-    // Extract content from the module
-    if let Some((_, items)) = content {
-        // Generate the contract implementation
-        let output = quote! {
-            #[neo_contract::prelude::neo_contract_module]
-            mod #mod_name {
-                // Include the original module content
-                #(#items)*
-
-                // Generate the entry point for the Neo N3 contract
-                #[no_mangle]
-                pub extern "C" fn _deploy(data: *const u8, length: i32) -> i32 {
-                    neo_contract::prelude::runtime::__neo_deploy_entry(data, length)
-                }
-
-                #[no_mangle]
-                pub extern "C" fn _invoke(operation: *const u8, op_len: i32, args: *const u8, args_len: i32) -> i32 {
-                    neo_contract::prelude::runtime::__neo_invoke_entry(operation, op_len, args, args_len)
-                }
-            }
-        };
-
-        output.into()
-    } else {
-        // Return the original module if it doesn't have content
-        quote! { #input }.into()
-    }
 }
 
 /// Marks a function with the no_reentrant protection to prevent reentrancy attacks
@@ -727,4 +1835,821 @@ pub fn contract_trust(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     // Return the original item
     item
+}
+
+/// Registers an event in the Neo N3 contract manifest
+/// and generates code for emitting the event.
+/// 
+/// The event name will be converted to a Neo VM ByteString.
+/// The parameter names will be included in the contract manifest.
+///
+/// # Example
+///
+/// ```rust
+/// #[register_event]
+/// struct Transfer {
+///     from: Option<H160>,
+///     to: Option<H160>,
+///     amount: Int256,
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn register_event(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input_struct = parse_macro_input!(item as ItemStruct);
+    
+    // Extract the event name from the attribute arguments or struct name
+    let event_name = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => input_struct.ident.to_string(),
+        }
+    } else {
+        input_struct.ident.to_string()
+    };
+    
+    // Get the struct name
+    let struct_name = &input_struct.ident;
+    
+    // Extract fields and their attributes to determine parameter names, types, and indexed status
+    let fields = match &input_struct.fields {
+        Fields::Named(fields) => &fields.named,
+        _ => panic!("Only named fields are supported in event structs"),
+    };
+    
+    // Generate parameter names, types, and indexed status
+    let mut param_names = Vec::new();
+    let mut param_types = Vec::new();
+    let mut indexed_params = Vec::new();
+    let mut field_names = Vec::new();
+    
+    for field in fields.iter() {
+        // Get field name
+        let field_name = field.ident.as_ref().unwrap();
+        field_names.push(field_name.clone());
+        
+        // Get field type
+        let field_type = &field.ty;
+        let type_str = quote! { #field_type }.to_string();
+        
+        // Determine if indexed
+        let mut indexed = false;
+        for attr in &field.attrs {
+            if attr.path.is_ident("event_param") {
+                let meta = attr.parse_meta().unwrap();
+                if let Meta::List(list) = meta {
+                    for nested in list.nested.iter() {
+                        if let NestedMeta::Meta(Meta::NameValue(name_value)) = nested {
+                            if name_value.path.is_ident("indexed") {
+                                if let Lit::Bool(lit_bool) = &name_value.lit {
+                                    indexed = lit_bool.value;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        param_names.push(field_name.to_string());
+        param_types.push(type_str);
+        indexed_params.push(indexed);
+    }
+    
+    // Generate code for event registration
+    let register_code = quote! {
+        inventory::submit! {
+            neo_contract::manifest::EventDescriptor::new(
+                #event_name.to_string(),
+                vec![#(#param_names.to_string()),*],
+                vec![#(#param_types.to_string()),*],
+                vec![#(#indexed_params),*]
+            )
+        }
+    };
+    
+    // Generate emit_event method for Neo N3 style event emission
+    let emit_fn_name = format_ident!("emit_{}", event_name.to_lowercase());
+    let param_conversions = field_names.iter().map(|name| {
+        let name_str = name.to_string();
+        quote! {
+            // Convert parameter to Any type for Neo N3 Runtime::notify
+            match &self.#name {
+                Some(value) => event_data.push(neo_contract::prelude::Any::from(value.clone())),
+                None => event_data.push(neo_contract::prelude::Any::new()),
+            }
+        }
+    });
+    
+    // Generate implementation with event emission code following Neo N3 pattern
+    let implementation = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Emits this event following Neo N3 pattern
+            pub fn emit(&self) {
+                use neo_contract::prelude::{ByteString, Runtime, Array, Any};
+                
+                // Create event name as ByteString (Neo N3 pattern)
+                let event_name = ByteString::from(#event_name);
+                
+                // Create an Array to hold event parameters
+                let mut event_data = Array::<Any>::new();
+                
+                // Add parameters as Any values
+                #(#param_conversions)*
+                
+                // Emit the event using Neo N3 Runtime::notify
+                Runtime::notify(&event_name, &event_data);
+            }
+        }
+        
+        // Register the event in the contract manifest
+        #register_code
+    };
+    
+    TokenStream::from(implementation)
+}
+
+/// Defines a 32-byte hash (Hash256) value.
+#[proc_macro_attribute]
+pub fn hash256(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 Hash256 type
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new empty hash256 value
+            pub fn new() -> Self {
+                Self([0; 32])
+            }
+            
+            /// Creates a hash256 from a hexadecimal string
+            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
+                if hex.len() != 64 {
+                    return Err("Hash256 must be exactly 64 hex characters (32 bytes)");
+                }
+                
+                let mut bytes = [0u8; 32];
+                for i in 0..32 {
+                    let byte_str = &hex[i*2..i*2+2];
+                    bytes[i] = u8::from_str_radix(byte_str, 16).map_err(|_| "Invalid hex character")?;
+                }
+                
+                Ok(Self(bytes))
+            }
+            
+            /// Returns the hash as a byte array
+            pub fn as_bytes(&self) -> &[u8; 32] {
+                &self.0
+            }
+            
+            /// Returns the hash as a byte slice
+            pub fn as_slice(&self) -> &[u8] {
+                &self.0[..]
+            }
+            
+            /// Converts the hash to a hexadecimal string
+            pub fn to_hex(&self) -> String {
+                let mut hex = String::with_capacity(64);
+                for byte in &self.0 {
+                    hex.push_str(&format!("{:02x}", byte));
+                }
+                hex
+            }
+            
+            /// Returns the hash as a Neo H256 type
+            pub fn as_h256(&self) -> neo_contract::prelude::H256 {
+                neo_contract::prelude::H256(self.0)
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; 32])
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<neo_contract::prelude::H256> for #struct_name {
+            fn from(hash: neo_contract::prelude::H256) -> Self {
+                Self(hash.0)
+            }
+        }
+        
+        impl From<#struct_name> for neo_contract::prelude::H256 {
+            fn from(hash: #struct_name) -> Self {
+                Self(hash.0)
+            }
+        }
+        
+        impl From<[u8; 32]> for #struct_name {
+            fn from(bytes: [u8; 32]) -> Self {
+                Self(bytes)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
+}
+
+/// Defines a fixed 32-byte hash (Hash256) constant.
+#[proc_macro_attribute]
+pub fn hash256_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the hash value from the attribute arguments
+    let hash_value = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 fixed Hash256 type
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a hash256 from a hexadecimal string
+            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
+                if hex.len() != 64 {
+                    return Err("Hash256 must be exactly 64 hex characters (32 bytes)");
+                }
+                
+                let mut bytes = [0u8; 32];
+                for i in 0..32 {
+                    let byte_str = &hex[i*2..i*2+2];
+                    bytes[i] = u8::from_str_radix(byte_str, 16).map_err(|_| "Invalid hex character")?;
+                }
+                
+                Ok(Self(bytes))
+            }
+            
+            /// Returns the fixed constant hash value
+            pub fn constant() -> Self {
+                let hex = #hash_value;
+                if hex.is_empty() || hex.len() != 64 {
+                    return Self([0; 32]);
+                }
+                
+                let mut bytes = [0u8; 32];
+                for i in 0..32 {
+                    let byte_str = &hex[i*2..i*2+2];
+                    if let Ok(byte) = u8::from_str_radix(byte_str, 16) {
+                        bytes[i] = byte;
+                    }
+                }
+                
+                Self(bytes)
+            }
+            
+            /// Returns the hash as a byte array
+            pub fn as_bytes(&self) -> &[u8; 32] {
+                &self.0
+            }
+            
+            /// Returns the hash as a byte slice
+            pub fn as_slice(&self) -> &[u8] {
+                &self.0[..]
+            }
+            
+            /// Converts the hash to a hexadecimal string
+            pub fn to_hex(&self) -> String {
+                let mut hex = String::with_capacity(64);
+                for byte in &self.0 {
+                    hex.push_str(&format!("{:02x}", byte));
+                }
+                hex
+            }
+            
+            /// Returns the hash as a Neo H256 type
+            pub fn as_h256(&self) -> neo_contract::prelude::H256 {
+                neo_contract::prelude::H256(self.0)
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; 32])
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<[u8; 32]> for #struct_name {
+            fn from(bytes: [u8; 32]) -> Self {
+                Self(bytes)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
+}
+
+/// Defines a signature constant.
+#[proc_macro_attribute]
+pub fn signature(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 signature type (64-byte ECDSA secp256r1 signature)
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a new empty signature value
+            pub fn new() -> Self {
+                Self([0; 64])
+            }
+            
+            /// Creates a signature from a hexadecimal string
+            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
+                if hex.len() != 128 {
+                    return Err("Signature must be exactly 128 hex characters (64 bytes)");
+                }
+                
+                let mut bytes = [0u8; 64];
+                for i in 0..64 {
+                    let byte_str = &hex[i*2..i*2+2];
+                    bytes[i] = u8::from_str_radix(byte_str, 16).map_err(|_| "Invalid hex character")?;
+                }
+                
+                Ok(Self(bytes))
+            }
+            
+            /// Returns the signature as a byte array
+            pub fn as_bytes(&self) -> &[u8; 64] {
+                &self.0
+            }
+            
+            /// Returns the signature as a byte slice
+            pub fn as_slice(&self) -> &[u8] {
+                &self.0[..]
+            }
+            
+            /// Converts the signature to a hexadecimal string
+            pub fn to_hex(&self) -> String {
+                let mut hex = String::with_capacity(128);
+                for byte in &self.0 {
+                    hex.push_str(&format!("{:02x}", byte));
+                }
+                hex
+            }
+            
+            /// Verifies the signature against a message using a specified public key
+            pub fn verify(&self, message: &[u8], public_key: &[u8; 33]) -> bool {
+                use neo_contract::prelude::CryptoExtension;
+                neo_contract::prelude::Crypto::verify_with_ecdsa_secp256r1(public_key, message, &self.0)
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; 64])
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<[u8; 64]> for #struct_name {
+            fn from(bytes: [u8; 64]) -> Self {
+                Self(bytes)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
+}
+
+/// Defines a fixed signature constant.
+#[proc_macro_attribute]
+pub fn signature_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as DeriveInput);
+    
+    // Extract the signature value from the attribute arguments
+    let signature_value = if !args.is_empty() {
+        match &args[0] {
+            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
+            _ => String::new(),
+        }
+    } else {
+        String::new()
+    };
+    
+    // Get the struct name
+    let struct_name = &input.ident;
+    
+    // Generate implementation for Neo N3 fixed signature type
+    let expanded = quote! {
+        #input
+        
+        impl #struct_name {
+            /// Creates a signature from a hexadecimal string
+            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
+                if hex.len() != 128 {
+                    return Err("Signature must be exactly 128 hex characters (64 bytes)");
+                }
+                
+                let mut bytes = [0u8; 64];
+                for i in 0..64 {
+                    let byte_str = &hex[i*2..i*2+2];
+                    bytes[i] = u8::from_str_radix(byte_str, 16).map_err(|_| "Invalid hex character")?;
+                }
+                
+                Ok(Self(bytes))
+            }
+            
+            /// Returns the fixed constant signature value
+            pub fn constant() -> Self {
+                let hex = #signature_value;
+                if hex.is_empty() || hex.len() != 128 {
+                    return Self([0; 64]);
+                }
+                
+                let mut bytes = [0u8; 64];
+                for i in 0..64 {
+                    let byte_str = &hex[i*2..i*2+2];
+                    if let Ok(byte) = u8::from_str_radix(byte_str, 16) {
+                        bytes[i] = byte;
+                    }
+                }
+                
+                Self(bytes)
+            }
+            
+            /// Returns the signature as a byte array
+            pub fn as_bytes(&self) -> &[u8; 64] {
+                &self.0
+            }
+            
+            /// Returns the signature as a byte slice
+            pub fn as_slice(&self) -> &[u8] {
+                &self.0[..]
+            }
+            
+            /// Converts the signature to a hexadecimal string
+            pub fn to_hex(&self) -> String {
+                let mut hex = String::with_capacity(128);
+                for byte in &self.0 {
+                    hex.push_str(&format!("{:02x}", byte));
+                }
+                hex
+            }
+            
+            /// Verifies the signature against a message using a specified public key
+            pub fn verify(&self, message: &[u8], public_key: &[u8; 33]) -> bool {
+                use neo_contract::prelude::CryptoExtension;
+                neo_contract::prelude::Crypto::verify_with_ecdsa_secp256r1(public_key, message, &self.0)
+            }
+        }
+        
+        impl Default for #struct_name {
+            fn default() -> Self {
+                Self([0; 64])
+            }
+        }
+        
+        impl AsRef<[u8]> for #struct_name {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        
+        impl From<[u8; 64]> for #struct_name {
+            fn from(bytes: [u8; 64]) -> Self {
+                Self(bytes)
+            }
+        }
+        
+        impl PartialEq for #struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+        
+        impl Eq for #struct_name {}
+    };
+    
+    TokenStream::from(expanded)
+}
+
+/// Marks a struct as contract storage
+#[proc_macro_attribute]
+pub fn storage(_: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as DeriveInput);
+    let struct_name = &input.ident;
+
+    let fields = match input.data {
+        Data::Struct(ref data) => match data.fields {
+            Fields::Named(ref fields) => fields.named.clone(),
+            _ => panic!("Only named fields are supported in storage structs"),
+        },
+        _ => panic!("Only structs can be storage"),
+    };
+
+    // Generate storage methods for each field
+    let field_methods: Vec<_> = fields
+        .iter()
+        .map(|field| {
+            let field_name = field.ident.as_ref().unwrap();
+            let field_type = &field.ty;
+            let getter_name = field_name.clone();
+            let setter_name = format_ident!("set_{}", field_name);
+            let key_name = field_name.to_string();
+
+            quote! {
+                pub fn #getter_name(&self) -> Option<#field_type> {
+                    let context = neo_contract::storage::StorageContext::current();
+                    let key = neo_contract::ByteString::from(#key_name);
+
+                    // Use Neo N3 proper storage API
+                    if let Some(data) = neo_contract::prelude::Storage::get(&key) {
+                        return Some(data);
+                    }
+
+                    None
+                }
+
+                pub fn #setter_name(&self, value: #field_type) {
+                    // Use Neo N3 proper storage API
+                    let key = neo_contract::prelude::ByteString::from(#key_name);
+                    neo_contract::prelude::Storage::put(&key, &value);
+                }
+            }
+        })
+        .collect();
+
+    // Get field names for struct initialization
+    let field_idents: Vec<_> = fields.iter().map(|f| f.ident.as_ref().unwrap()).collect();
+
+    // Build the initialization part with field defaults
+    let init_struct_fields = if field_idents.is_empty() {
+        quote! {}
+    } else {
+        let init_fields: Vec<_> = field_idents
+            .iter()
+            .map(|ident| {
+                quote! { #ident: Default::default() }
+            })
+            .collect();
+
+        quote! {
+            #(#init_fields),*
+        }
+    };
+
+    let expanded = quote! {
+        #input
+
+        impl #struct_name {
+            pub fn new() -> Self {
+                Self {
+                    #init_struct_fields
+                }
+            }
+
+            // Generate all field methods individually
+            #(#field_methods)*
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
+/// Marks a method as a contract constructor
+///
+/// The constructor is called when the contract is deployed
+/// It should initialize the contract state
+#[proc_macro_attribute]
+pub fn constructor(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as ItemFn);
+
+    // Constructor is always _deploy in Neo N3
+    let expanded = quote! {
+        #[neo_contract_proc_macros::manifest_method(method_name = "_deploy")]
+        #input
+    };
+
+    TokenStream::from(expanded)
+}
+
+/// Marks a method as a contract method
+///
+/// Contract methods are exposed in the contract manifest and can be called
+/// This is the standard way to expose functionality in Neo N3 contracts
+#[proc_macro_attribute]
+pub fn method(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let attr_args = parse_macro_input!(attr as AttributeArgs);
+    let input = parse_macro_input!(item as ItemFn);
+    let name = &input.sig.ident.to_string();
+    
+    // Check if this is a safe method based on attributes
+    let is_safe = attr_args.iter().any(|arg| {
+        if let NestedMeta::Meta(Meta::NameValue(name_value)) = arg {
+            if name_value.path.is_ident("safe") {
+                if let Lit::Bool(lit_bool) = &name_value.lit {
+                    return lit_bool.value;
+                }
+            }
+        }
+        false
+    });
+    
+    // Extract parameter information
+    let mut param_names = Vec::new();
+    let mut param_types = Vec::new();
+    
+    for param in &input.sig.inputs {
+        if let FnArg::Typed(pat_type) = param {
+            if let Pat::Ident(pat_ident) = &*pat_type.pat {
+                let param_name = pat_ident.ident.to_string();
+                let param_type = quote! { #pat_type.ty }.to_string();
+                
+                param_names.push(param_name);
+                param_types.push(param_type);
+            }
+        }
+    }
+    
+    // Extract return type
+    let return_type = match &input.sig.output {
+        ReturnType::Default => "Void".to_string(),
+        ReturnType::Type(_, ty) => {
+            let type_str = quote! { #ty }.to_string();
+            type_str
+        }
+    };
+    
+    // Register method in the Neo N3 manifest
+    let register_code = quote! {
+        inventory::submit! {
+            neo_contract::manifest::MethodDescriptor::new(
+                #name.to_string(),
+                #is_safe, 
+                vec![#(#param_names.to_string()),*],
+                vec![#(#param_types.to_string()),*],
+                #return_type.to_string()
+            )
+        }
+    };
+    
+    // Generate the method with proper Neo N3 annotations
+    let vis = &input.vis;
+    let attrs = &input.attrs;
+    let sig = &input.sig;
+    let block = &input.block;
+    
+    let output = quote! {
+        #(#attrs)*
+        #vis #sig {
+            #block
+        }
+        
+        // Register the method in the manifest
+        #register_code
+    };
+    
+    TokenStream::from(output)
+}
+
+/// Marks a method as a safe (read-only) contract method
+///
+/// Safe methods are represented in the contract manifest with "safe": true
+/// These methods are optimized for contracts that don't modify state
+#[proc_macro_attribute]
+pub fn safe(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as ItemFn);
+    let name = &input.sig.ident.to_string();
+    
+    // Register this as a safe method in the manifest
+    let register_code = quote! {
+        inventory::submit! {
+            neo_contract::manifest::MethodDescriptor::new(
+                #name.to_string(),
+                true, // safe = true
+                vec![],
+                vec![],
+                "".to_string()
+            )
+        }
+    };
+    
+    // Process the function to ensure it registers in the Neo N3 manifest
+    let vis = &input.vis;
+    let attrs = &input.attrs;
+    let sig = &input.sig;
+    let block = &input.block;
+    
+    let output = quote! {
+        #(#attrs)*
+        #vis #sig {
+            // Safe method implementation
+            #block
+        }
+        
+        // Register the method as safe in the manifest
+        #register_code
+    };
+    
+    TokenStream::from(output)
+}
+
+// Helper function to check if a field has the #[index] attribute
+#[allow(dead_code)]
+fn has_index_attribute(attrs: &[Attribute]) -> bool { attrs.iter().any(|attr| attr.path.is_ident("index")) }
+
+// Helper functions for Neo VM type handling are now in the helpers module
+
+/// Marks a contract module with appropriate neo N3 contract semantics
+///
+/// This is the main entry point for defining a Neo smart contract in Rust.
+/// It processes the module to extract method definitions, process storage,
+/// register events, and set up entry points for calling the contract.
+#[proc_macro_attribute]
+pub fn contract(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as ItemMod);
+    let mod_name = &input.ident;
+    let content = &input.content;
+
+    // Extract content from the module
+    if let Some((_, items)) = content {
+        // Generate the contract implementation
+        let output = quote! {
+            #[neo_contract::prelude::neo_contract_module]
+            mod #mod_name {
+                // Include the original module content
+                #(#items)*
+
+                // Generate the entry point for the Neo N3 contract
+                #[no_mangle]
+                pub extern "C" fn _deploy(data: *const u8, length: i32) -> i32 {
+                    neo_contract::prelude::runtime::__neo_deploy_entry(data, length)
+                }
+
+                #[no_mangle]
+                pub extern "C" fn _invoke(operation: *const u8, op_len: i32, args: *const u8, args_len: i32) -> i32 {
+                    neo_contract::prelude::runtime::__neo_invoke_entry(operation, op_len, args, args_len)
+                }
+            }
+        };
+
+        output.into()
+    } else {
+        // Return the original module if it doesn't have content
+        quote! { #input }.into()
+    }
 }
