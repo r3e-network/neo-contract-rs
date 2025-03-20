@@ -270,12 +270,12 @@ pub mod blockchain {
                 // Deserialize the binary data into a Block structure
                 // For this implementation, we'll create a basic Block with just the height
                 // but in a full implementation, you would parse all block fields from buffer
+                // timestamp: read_u64_from_buffer(&buffer),
+                // transactions: read_transactions_from_buffer(&buffer),
+                // etc.
                 Some(Block {
                     height,
                     // Additional fields would be parsed from buffer
-                    // timestamp: read_u64_from_buffer(&buffer),
-                    // transactions: read_transactions_from_buffer(&buffer),
-                    // etc.
                 })
             }
         }
@@ -314,12 +314,12 @@ pub mod blockchain {
                 // Deserialize the binary data into a Transaction structure
                 // For this implementation, we'll create a basic Transaction with just the hash
                 // but in a full implementation, you would parse all transaction fields from buffer
+                // type: decode_tx_type_from_buffer(&buffer),
+                // sender: decode_address_from_buffer(&buffer),
+                // etc.
                 Some(Transaction {
                     hash: *hash,
                     // Additional fields would be parsed from buffer
-                    // type: decode_tx_type_from_buffer(&buffer),
-                    // sender: decode_address_from_buffer(&buffer),
-                    // etc.
                 })
             }
         }
@@ -569,3 +569,12 @@ pub mod into_val {
 
     // More implementations would be needed for a complete framework
 }
+
+#[cfg(target_arch = "wasm32")]
+pub mod syscall_wasm;
+
+#[cfg(target_arch = "wasm32")]
+pub use syscall_wasm as syscall_impl;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use syscall as syscall_impl;

@@ -80,7 +80,7 @@ impl std::error::Error for TestError {}
 
 /// Testing utilities for internal use
 #[cfg(test)]
-pub(crate) mod testing {
+pub mod testing {
     /// Mock implementations for testing the testing framework itself
     pub mod mock_runtime {
         use crate::mock::MockRuntime;

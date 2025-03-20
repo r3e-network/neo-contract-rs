@@ -2,6 +2,17 @@
 // All Rights Reserved
 
 use crate::prelude::{Array, ByteString, H160, H256};
+use crate::env::syscall_non_wasm::{
+    system_crypto_hash,
+    system_crypto_verify_with_ecdsa,
+    system_crypto_check_multisig,
+    system_crypto_to_address,
+    system_crypto_to_script_hash,
+    system_crypto_bls_generate,
+    system_crypto_bls_verify,
+    system_crypto_check_multi_signs,
+    system_crypto_check_sign
+};
 
 /// Named curve hash type for cryptographic functions
 #[derive(Debug, Clone, Copy)]
@@ -35,12 +46,12 @@ impl Crypto {
     pub fn hash(data: ByteString, hash_type: u32) -> ByteString {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
-            crate::env::syscall_non_wasm::system_crypto_hash(data, hash_type)
+            system_crypto_hash(data, hash_type)
         }
 
         #[cfg(target_arch = "wasm32")]
         unsafe {
-            crate::env::syscall::system_crypto_hash(data, hash_type)
+            system_crypto_hash(data, hash_type)
         }
     }
 
@@ -122,7 +133,7 @@ impl Crypto {
 
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
-            crate::env::syscall_non_wasm::system_crypto_verify_with_ecdsa(
+            system_crypto_verify_with_ecdsa(
                 message_bs,
                 signature_bs,
                 public_key_bs,
@@ -132,7 +143,7 @@ impl Crypto {
 
         #[cfg(target_arch = "wasm32")]
         unsafe {
-            crate::env::syscall::system_crypto_verify_with_ecdsa(message_bs, signature_bs, public_key_bs, curve)
+            system_crypto_verify_with_ecdsa(message_bs, signature_bs, public_key_bs, curve)
         }
     }
 
@@ -160,12 +171,12 @@ impl Crypto {
 
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
-            crate::env::syscall_non_wasm::system_crypto_check_multisig(message_bs, sigs_array, keys_array)
+            system_crypto_check_multisig(message_bs, sigs_array, keys_array)
         }
 
         #[cfg(target_arch = "wasm32")]
         unsafe {
-            crate::env::syscall::system_crypto_check_multisig(message_bs, sigs_array, keys_array)
+            system_crypto_check_multisig(message_bs, sigs_array, keys_array)
         }
     }
 
@@ -173,12 +184,12 @@ impl Crypto {
     pub fn to_address(script_hash: &H160) -> ByteString {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
-            crate::env::syscall_non_wasm::system_crypto_to_address(script_hash.clone())
+            system_crypto_to_address(script_hash.clone())
         }
 
         #[cfg(target_arch = "wasm32")]
         unsafe {
-            crate::env::syscall::system_crypto_to_address(script_hash.clone())
+            system_crypto_to_address(script_hash.clone())
         }
     }
 
@@ -186,12 +197,12 @@ impl Crypto {
     pub fn to_script_hash(address: &ByteString) -> H160 {
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
-            crate::env::syscall_non_wasm::system_crypto_to_script_hash(address.clone())
+            system_crypto_to_script_hash(address.clone())
         }
 
         #[cfg(target_arch = "wasm32")]
         unsafe {
-            crate::env::syscall::system_crypto_to_script_hash(address.clone())
+            system_crypto_to_script_hash(address.clone())
         }
     }
 
@@ -202,12 +213,12 @@ impl Crypto {
 
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
-            crate::env::syscall_non_wasm::system_crypto_bls_generate(message_bs, private_key_bs)
+            system_crypto_bls_generate(message_bs, private_key_bs)
         }
 
         #[cfg(target_arch = "wasm32")]
         unsafe {
-            crate::env::syscall::system_crypto_bls_generate(message_bs, private_key_bs)
+            system_crypto_bls_generate(message_bs, private_key_bs)
         }
     }
 
@@ -219,12 +230,12 @@ impl Crypto {
 
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
-            crate::env::syscall_non_wasm::system_crypto_bls_verify(message_bs, signature_bs, public_key_bs)
+            system_crypto_bls_verify(message_bs, signature_bs, public_key_bs)
         }
 
         #[cfg(target_arch = "wasm32")]
         unsafe {
-            crate::env::syscall::system_crypto_bls_verify(message_bs, signature_bs, public_key_bs)
+            system_crypto_bls_verify(message_bs, signature_bs, public_key_bs)
         }
     }
 }
@@ -233,7 +244,7 @@ impl Crypto {
 
 /// Check a signature
 pub fn check_sign(public_key: ByteString, sign: ByteString) -> bool {
-    unsafe { crate::env::syscall_non_wasm::system_crypto_check_sign(public_key, sign) }
+    unsafe { system_crypto_check_sign(public_key, sign) }
 }
 
 /// Check multiple signatures
@@ -248,7 +259,7 @@ pub fn check_multi_signs(_public_keys: Array, _signs: Array) -> bool {
         let signs_converted = Array::new();
         // TODO: Implement proper conversion between signs and signs_converted
 
-        crate::env::syscall_non_wasm::system_crypto_check_multi_signs(public_keys_converted, signs_converted)
+        system_crypto_check_multi_signs(public_keys_converted, signs_converted)
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -261,7 +272,7 @@ pub fn check_multi_signs(_public_keys: Array, _signs: Array) -> bool {
         let mut signs_converted = Array::new();
         // TODO: Implement proper conversion
 
-        crate::env::syscall::system_crypto_check_multi_signs(public_keys_converted, signs_converted)
+        system_crypto_check_multi_signs(public_keys_converted, signs_converted)
     }
 }
 

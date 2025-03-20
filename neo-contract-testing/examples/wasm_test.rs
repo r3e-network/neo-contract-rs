@@ -3,6 +3,7 @@
 //! This example demonstrates how to use the framework with wasm-bindgen
 //! for browser-based testing.
 
+use neo_contract_testing::mock::{MockRuntime, MockStorage, TestState};
 use neo_contract_testing::prelude::*;
 #[cfg(feature = "wasm-bindings")]
 use wasm_bindgen::prelude::*;
@@ -213,3 +214,5 @@ mod tests {
         assert_eq!(result.message(), "Transaction failed: Insufficient balance");
     }
 }
+
+fn main() {}

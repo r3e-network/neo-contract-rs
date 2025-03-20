@@ -6,9 +6,10 @@
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::cell::RefCell;
+use serde::{Deserialize, Serialize};
 
 /// Event structure
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize,Deserialize)]
 pub struct Event {
     /// Event name
     pub name: String,

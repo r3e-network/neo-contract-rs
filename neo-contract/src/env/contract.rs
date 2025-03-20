@@ -3,6 +3,9 @@
 
 use crate::types::builtin::h160::H160;
 use crate::types::builtin::string::ByteString;
+use crate::call_flags::CallFlags;
+use crate::types::builtin::array::Array;
+use crate::types::builtin::any::Any;
 
 // For non-wasm targets
 #[cfg(not(target_arch = "wasm32"))]

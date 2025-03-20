@@ -3,16 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use neo_contract::{builtin::Int256, contract_method, storage_map};
-
-    #[test]
-    fn test_contract_method_macro() {
-        contract_method!(
-            fn test_method(a: i32, b: i32) -> i32 { a + b }
-        );
-
-        assert_eq!(test_method(1, 2), 3);
-    }
+    use neo_contract::Int256;
 
     #[test]
     fn test_storage_map_macro() {

@@ -8,6 +8,7 @@ use core::fmt;
 use core::ops::Deref;
 
 use alloc::format;
+use crate::utils::hex;
 
 /// H256 represents a 256-bit hash (32 bytes) like a transaction hash
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Default)]
@@ -15,6 +16,12 @@ use alloc::format;
 /// Uses repr(transparent) to ensure FFI compatibility with Neo VM
 #[repr(transparent)]
 pub struct H256(pub [u8; 32]);
+
+impl H256 {
+    pub fn from_literal(p0: &str) -> Self{
+        H256::from_slice(&hex::decode(p0).unwrap())
+    }
+}
 
 impl H256 {
     /// Creates a new H256 with all zeros

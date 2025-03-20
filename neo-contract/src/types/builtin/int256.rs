@@ -12,6 +12,14 @@ use crate::types::builtin::any::Any;
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Default)]
 pub struct Int256(pub [u8; 32]);
 
+impl Int256 {
+    pub fn to_u32(&self) -> u32 {
+        let mut bytes = [0u8; 4];
+        bytes.copy_from_slice(&self.0[0..4]);
+        u32::from_le_bytes(bytes)
+    }
+}
+
 // Add PartialOrd implementation for Int256
 impl PartialOrd for Int256 {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {

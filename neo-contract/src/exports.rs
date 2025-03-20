@@ -18,7 +18,6 @@ pub use neo_macros::{
     supported_standards,
     contract_hash,
     contract_hash_fixed,
-    manifest_method,
     hash160,
     hash160_fixed,
     hash256,

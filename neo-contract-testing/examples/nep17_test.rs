@@ -2,6 +2,7 @@
 //!
 //! This example demonstrates how to test a NEP-17 token contract.
 
+use neo_contract_testing::mock::{MockRuntime, MockStorage};
 use neo_contract_testing::prelude::*;
 
 /// Mock NEP-17 token transfer function

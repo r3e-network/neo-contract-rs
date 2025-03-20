@@ -204,19 +204,3 @@ impl Policy for TokenThresholdPolicy {
 
     fn demands(&self) -> bool { self.allows() }
 }
-
-/// Helper macro to enforce a policy
-#[macro_export]
-macro_rules! enforce_policy {
-    ($policy:expr) => {
-        if !$policy.allows() {
-            return Err($crate::error::Error::new($crate::error::ErrorCode::Unauthorized, "Policy check failed"));
-        }
-    };
-
-    ($policy:expr, $error_message:expr) => {
-        if !$policy.allows() {
-            return Err($crate::error::Error::new($crate::error::ErrorCode::Unauthorized, $error_message));
-        }
-    };
-}

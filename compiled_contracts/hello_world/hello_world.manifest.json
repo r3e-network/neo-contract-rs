@@ -1,0 +1,30 @@
+{
+    "name": "hello_world",
+    "groups": [],
+    "features": {},
+    "supportedstandards": [],
+    "abi": {
+        "methods": [
+            {
+                "name": "main",
+                "parameters": [],
+                "returntype": "String",
+                "offset": 0,
+                "safe": true
+            }
+        ],
+        "events": []
+    },
+    "permissions": [
+        {
+            "contract": "*",
+            "methods": "*"
+        }
+    ],
+    "trusts": [],
+    "extra": {
+        "Author": "Your Name",
+        "Email": "your.email@example.com",
+        "Description": "A Neo N3 contract written in Rust"
+    }
+}

@@ -1,4 +1,0 @@
-[submodule "tools/neo-wasm"]
-	path = tools/neo-wasm
-	url = https://github.com/R3E-Network/neo-wasm.git
-	branch = jimmy

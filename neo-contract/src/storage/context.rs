@@ -41,6 +41,9 @@ pub enum StorageError {
     InvalidContext,
 }
 
+// Add this type alias at the appropriate place, before it's first used
+type StorageContext = crate::types::storage::StorageContext;
+
 impl Context {
     /// Creates a new storage context for the current contract
     ///
@@ -200,20 +203,16 @@ impl Context {
     pub fn find(&self, prefix: &[u8], options: FindOptions) -> Vec<(Vec<u8>, Vec<u8>)> {
         #[cfg(target_arch = "wasm32")]
         unsafe {
-            let context_ptr = self as *const StorageContext as usize;
+            let context_ptr = self as *const _ as usize;
             let prefix_ptr = prefix.as_ptr() as usize;
             let prefix_len = prefix.len() as i32;
             let options_value = options.0 as i32;
             
-            let result = core::mem::transmute::<_, extern "C" fn(usize, usize, i32, i32) -> usize>(neo_vm_syscall_with_i32_return::system_storage_find.0)(
-                context_ptr,
-                prefix_ptr,
-                prefix_len,
-                options_value
-            );
+            // For wasm32 target, just return an empty vector 
+            // This is a placeholder - in a real implementation, this would use the proper syscall
             
-            // Process result and convert to Vec<(Vec<u8>, Vec<u8>)>
-            Vec::new() // Placeholder for now
+            // Note: we're removing the problematic syscall call for now
+            Vec::new()
         }
 
         #[cfg(not(target_arch = "wasm32"))]

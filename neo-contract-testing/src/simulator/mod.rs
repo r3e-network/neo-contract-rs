@@ -7,7 +7,8 @@ use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-
+use derive_more::DebugCustom;
+use serde::{Deserialize, Serialize};
 use crate::debug::{DebugCapture, DebugEventType, TracingMode};
 use crate::fixture::TestContext;
 use crate::mock::{MockEvents, MockRuntime, MockStorage, MockTransaction, TestState};
@@ -33,7 +34,7 @@ pub struct InvocationResult {
 }
 
 /// Storage change made during a contract invocation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum StorageChange {
     /// A value was added or updated
     Put {

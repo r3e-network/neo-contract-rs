@@ -138,7 +138,7 @@ pub fn event(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 // Generate notification emitter extension
                 #[doc(hidden)]
                 impl #ident {
-                    #struct_vis fn emit(&self) {
+                    #struct_vis fn notify(&self) {
                         use neo_contract::runtime;
                         let mut notify_args = Vec::new();
                         
@@ -181,6 +181,8 @@ pub fn event(_attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
+/// use neo_macros::event;
+///
 /// #[event]
 /// struct Transfer {
 ///     #[index]
@@ -456,109 +458,6 @@ pub fn contract_hash_fixed(attr: TokenStream, item: TokenStream) -> TokenStream 
         }
         
         impl Eq for #struct_name {}
-    };
-    
-    TokenStream::from(expanded)
-}
-
-/// Registers a method in the Neo N3 contract manifest
-/// 
-/// This is used to expose methods to be callable from outside the contract
-/// and to specify their properties in the contract manifest.
-///
-/// # Example
-///
-/// ```
-/// #[manifest_method(method_name = "transfer", safe = true)]
-/// fn transfer_tokens(from: H160, to: H160, amount: u64) -> bool {
-///     // Implementation
-/// }
-/// ```
-#[proc_macro_attribute]
-pub fn manifest_method(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(attr as AttributeArgs);
-    let input = parse_macro_input!(item as ItemFn);
-    
-    // Extract method parameters
-    let method_name = extract_method_name(&args).unwrap_or_else(|| input.sig.ident.to_string());
-    let is_safe = extract_safe_parameter(&args).unwrap_or(false);
-    
-    // Get function signature details
-    let fn_vis = &input.vis;
-    let fn_sig = &input.sig;
-    let fn_name = &input.sig.ident;
-    let fn_body = &input.block;
-    let fn_attrs = &input.attrs;
-    
-    // Process parameters for Neo N3 manifest
-    let parameters: Vec<_> = fn_sig.inputs.iter().collect();
-    
-    // Generate parameter type information for manifest
-    let param_types: Vec<_> = parameters.iter()
-        .filter_map(|arg| {
-            if let syn::FnArg::Typed(pat_type) = arg {
-                let ty = &pat_type.ty;
-                Some(helpers::convert_type(ty))
-            } else {
-                None
-            }
-        })
-        .collect();
-    
-    // Generate return type information for manifest
-    let return_type = match &fn_sig.output {
-        syn::ReturnType::Default => "Void".to_string(),
-        syn::ReturnType::Type(_, ty) => helpers::convert_type(ty),
-    };
-    
-    // Generate the implementation
-    let expanded = quote! {
-        #(#fn_attrs)*
-        #fn_vis #fn_sig {
-            // Register the method in the manifest at compile time
-            #[cfg(feature = "manifest-validation")]
-            {
-                extern "C" {
-                    // This function is provided by the Neo N3 VM during manifest generation
-                    fn _neo_register_method(
-                        name: *const u8, name_len: i32,
-                        params: *const u8, params_len: i32,
-                        return_type: *const u8, return_type_len: i32,
-                        safe: i32
-                    ) -> i32;
-                }
-                
-                // Method name from attribute or function name
-                let name = #method_name;
-                
-                // Convert parameter types to JSON format
-                let params = format!(
-                    "[{}]",
-                    vec![#(#param_types),*].iter()
-                        .map(|ty| format!(r#"{{"type":"{}"}}"#, ty))
-                        .collect::<Vec<_>>()
-                        .join(",")
-                );
-                
-                // Return type in Neo N3 format
-                let return_type = #return_type;
-                
-                // Set safe flag based on attribute
-                let safe_flag = if #is_safe { 1 } else { 0 };
-                
-                unsafe {
-                    _neo_register_method(
-                        name.as_ptr(), name.len() as i32,
-                        params.as_ptr(), params.len() as i32,
-                        return_type.as_ptr(), return_type.len() as i32,
-                        safe_flag
-                    );
-                }
-            }
-            
-            // Execute the original function body
-            #fn_body
-        }
     };
     
     TokenStream::from(expanded)
@@ -2412,7 +2311,9 @@ pub fn constructor(_attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```no_run
+/// use neo_macros::method;
+///
 /// #[method]
 /// pub fn transfer(&mut self, from: H160, to: H160, amount: u64) -> bool {
 ///     // Transfer tokens
@@ -2464,6 +2365,8 @@ pub fn method(_attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
+/// use neo_macros::safe;
+///
 /// #[safe]
 /// pub fn balance_of(&self, address: H160) -> u64 {
 ///     // Get token balance
@@ -2493,50 +2396,6 @@ pub fn safe(_attr: TokenStream, item: TokenStream) -> TokenStream {
     TokenStream::from(output)
 }
 
-/// Marks a module as a smart contract.
-///
-/// This is the main entry point for defining a Neo smart contract in Rust.
-/// It processes the module to:
-///
-/// - Extract method definitions
-/// - Process storage struct
-/// - Register events
-/// - Generate manifest information
-/// - Set up entry points for calling the contract
-///
-/// # Example
-///
-/// ```rust
-/// #[neo_contract::contract]
-/// mod example {
-///     use neo_contract::prelude::*;
-///     
-///     #[storage]
-///     struct ExampleContract {
-///         counter: Item<u32>,
-///     }
-///     
-///     impl ExampleContract {
-///         #[constructor]
-///         fn new() -> Self {
-///             Self {
-///                 counter: Item::new(0),
-///             }
-///         }
-///         
-///         #[method]
-///         fn increment(&mut self) {
-///             let counter = self.counter.get();
-///             self.counter.set(counter + 1);
-///         }
-///         
-///         #[safe]
-///         fn get_counter(&self) -> u32 {
-///             *self.counter.get()
-///         }
-///     }
-/// }
-/// ```
 #[proc_macro_attribute]
 pub fn contract(_attr: TokenStream, item: TokenStream) -> TokenStream {
     // Keep a clone of the original item for parsing
