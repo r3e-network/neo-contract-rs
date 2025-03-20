@@ -117,8 +117,6 @@ impl AsRef<str> for ByteString {
         // Convert the bytes to a string slice, using utf8_unchecked
         // This is safe if we know the bytes are valid UTF-8.
         // For a production implementation, this would need to handle invalid UTF-8.
-        unsafe {
-            core::str::from_utf8_unchecked(self.as_bytes())
-        }
+        unsafe { core::str::from_utf8_unchecked(self.as_bytes()) }
     }
 }

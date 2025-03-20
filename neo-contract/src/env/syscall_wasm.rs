@@ -2,19 +2,19 @@
 // All Rights Reserved
 
 //! Syscall implementations for WASM targets
-//! 
+//!
 //! This module provides syscall implementations specific to WebAssembly targets.
 //! It bridges the gap between the Neo VM and the WebAssembly environment.
 
 use crate::prelude::*;
+use crate::types::builtin::any::Any;
+use crate::types::builtin::array::Array;
 use crate::types::builtin::h160::H160;
 use crate::types::builtin::string::ByteString;
-use crate::types::builtin::array::Array;
-use crate::types::builtin::any::Any;
-use alloc::string::String;
-use alloc::vec::Vec;
 use alloc::format;
+use alloc::string::String;
 use alloc::string::ToString;
+use alloc::vec::Vec;
 
 // System Runtime functions
 
@@ -125,11 +125,7 @@ pub fn system_crypto_verify_with_ecdsa(
 }
 
 /// Check multisig
-pub fn system_crypto_check_multisig(
-    _message: ByteString,
-    _signatures: Array,
-    _public_keys: Array,
-) -> bool {
+pub fn system_crypto_check_multisig(_message: ByteString, _signatures: Array, _public_keys: Array) -> bool {
     // This would call into WASM-specific crypto implementations
     true
 }
@@ -151,38 +147,25 @@ pub fn system_crypto_to_script_hash(_address: ByteString) -> H160 {
 }
 
 /// Generate BLS signature
-pub fn system_crypto_bls_generate(
-    _message: ByteString,
-    _private_key: ByteString,
-) -> ByteString {
+pub fn system_crypto_bls_generate(_message: ByteString, _private_key: ByteString) -> ByteString {
     // This would call into WASM-specific crypto implementations
     ByteString::default()
 }
 
 /// Verify BLS signature
-pub fn system_crypto_bls_verify(
-    _message: ByteString,
-    _signature: ByteString,
-    _public_key: ByteString,
-) -> bool {
+pub fn system_crypto_bls_verify(_message: ByteString, _signature: ByteString, _public_key: ByteString) -> bool {
     // This would call into WASM-specific crypto implementations
     true
 }
 
 /// Check multi signs
-pub fn system_crypto_check_multi_signs(
-    _public_keys: Array,
-    _signs: Array,
-) -> bool {
+pub fn system_crypto_check_multi_signs(_public_keys: Array, _signs: Array) -> bool {
     // This would call into WASM-specific crypto implementations
     true
 }
 
 /// Check sign
-pub fn system_crypto_check_sign(
-    _public_key: ByteString,
-    _sign: ByteString,
-) -> bool {
+pub fn system_crypto_check_sign(_public_key: ByteString, _sign: ByteString) -> bool {
     // This would call into WASM-specific crypto implementations
     true
 }
@@ -195,4 +178,4 @@ pub fn system_contract_create_native_contract(script_hash: H160) -> ByteString {
         hex.push_str(&format!("{:02x}", byte));
     }
     ByteString::from(format!("NeoWASM{}", hex))
-} 
+}

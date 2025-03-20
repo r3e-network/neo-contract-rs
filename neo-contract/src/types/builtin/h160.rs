@@ -7,8 +7,8 @@ use core::convert::TryFrom;
 use core::fmt;
 use core::ops::Deref;
 
-use alloc::format;
 use crate::utils::hex;
+use alloc::format;
 
 /// H160 represents a 160-bit hash (20 bytes) like an address or script hash
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Default)]
@@ -18,9 +18,7 @@ use crate::utils::hex;
 pub struct H160(pub [u8; 20]);
 
 impl H160 {
-    pub fn from_literal(p0: &str) -> Self {
-        H160::from_slice(&hex::decode(p0).unwrap())
-    }
+    pub fn from_literal(p0: &str) -> Self { H160::from_slice(&hex::decode(p0).unwrap()) }
 }
 
 impl H160 {

@@ -4,14 +4,14 @@
 // such as methods, events, and other metadata required by the Neo N3 blockchain.
 
 use crate::Runtime;
+use alloc::borrow::ToOwned;
 use alloc::format;
 use alloc::string::{String, ToString};
+use alloc::sync::Arc;
 use alloc::vec::Vec;
+use core::cell::RefCell;
 use core::sync::atomic::{AtomicBool, Ordering};
 use serde::{Deserialize, Serialize};
-use alloc::sync::Arc;
-use core::cell::RefCell;
-use alloc::borrow::ToOwned;
 
 // Flag to track if the contract has been registered
 static CONTRACT_REGISTERED: AtomicBool = AtomicBool::new(false);
@@ -36,14 +36,7 @@ impl ContractDescriptor {
         description: String,
         dynamic_invoke: bool,
     ) -> Self {
-        Self {
-            name,
-            version,
-            author,
-            email,
-            description,
-            dynamic_invoke,
-        }
+        Self { name, version, author, email, description, dynamic_invoke }
     }
 }
 
@@ -78,41 +71,31 @@ fn init_registries() {
 
 // Helper functions to access registries
 fn with_contract_descriptor<F, R>(f: F) -> R
-where 
-    F: FnOnce(&RefCell<Option<ContractDescriptor>>) -> R
-{
+where F: FnOnce(&RefCell<Option<ContractDescriptor>>) -> R {
     init_registries();
     unsafe { f(CONTRACT_DESCRIPTOR.as_ref().unwrap()) }
 }
 
 fn with_method_descriptors<F, R>(f: F) -> R
-where 
-    F: FnOnce(&RefCell<Vec<MethodDescriptor>>) -> R
-{
+where F: FnOnce(&RefCell<Vec<MethodDescriptor>>) -> R {
     init_registries();
     unsafe { f(METHOD_DESCRIPTORS.as_ref().unwrap()) }
 }
 
 fn with_event_descriptors<F, R>(f: F) -> R
-where 
-    F: FnOnce(&RefCell<Vec<EventDescriptor>>) -> R
-{
+where F: FnOnce(&RefCell<Vec<EventDescriptor>>) -> R {
     init_registries();
     unsafe { f(EVENT_DESCRIPTORS.as_ref().unwrap()) }
 }
 
 fn with_standard_descriptors<F, R>(f: F) -> R
-where 
-    F: FnOnce(&RefCell<Vec<StandardDescriptor>>) -> R
-{
+where F: FnOnce(&RefCell<Vec<StandardDescriptor>>) -> R {
     init_registries();
     unsafe { f(STANDARD_DESCRIPTORS.as_ref().unwrap()) }
 }
 
 fn with_opcode_descriptors<F, R>(f: F) -> R
-where 
-    F: FnOnce(&RefCell<Vec<OpcodeDescriptor>>) -> R
-{
+where F: FnOnce(&RefCell<Vec<OpcodeDescriptor>>) -> R {
     init_registries();
     unsafe { f(OPCODE_DESCRIPTORS.as_ref().unwrap()) }
 }
@@ -135,13 +118,7 @@ impl MethodDescriptor {
         param_types: Vec<String>,
         return_type: String,
     ) -> Self {
-        Self {
-            name,
-            safe,
-            param_names,
-            param_types,
-            return_type,
-        }
+        Self { name, safe, param_names, param_types, return_type }
     }
 }
 
@@ -155,18 +132,8 @@ pub struct EventDescriptor {
 }
 
 impl EventDescriptor {
-    pub fn new(
-        name: String,
-        param_names: Vec<String>,
-        param_types: Vec<String>,
-        indexed_params: Vec<bool>,
-    ) -> Self {
-        Self {
-            name,
-            param_names,
-            param_types,
-            indexed_params,
-        }
+    pub fn new(name: String, param_names: Vec<String>, param_types: Vec<String>, indexed_params: Vec<bool>) -> Self {
+        Self { name, param_names, param_types, indexed_params }
     }
 }
 
@@ -177,9 +144,7 @@ pub struct StandardDescriptor {
 }
 
 impl StandardDescriptor {
-    pub fn new(standard: String) -> Self {
-        Self { standard }
-    }
+    pub fn new(standard: String) -> Self { Self { standard } }
 }
 
 /// OpCode descriptor for inventory
@@ -190,9 +155,7 @@ pub struct OpcodeDescriptor {
 }
 
 impl OpcodeDescriptor {
-    pub fn new(name: String, opcode: u8) -> Self {
-        Self { name, opcode }
-    }
+    pub fn new(name: String, opcode: u8) -> Self { Self { name, opcode } }
 }
 
 /// Register a contract in the Neo N3 manifest
@@ -214,16 +177,16 @@ pub fn register_contract(
 
     // Log registration - useful for debugging during development
     Runtime::log_str(&format!("Registering Neo N3 contract: {}", name));
-    
+
     let descriptor = ContractDescriptor::new(
         name.to_owned(),
         version.to_owned(),
         author.to_owned(),
         email.to_owned(),
         description.to_owned(),
-        dynamic_invoke
+        dynamic_invoke,
     );
-    
+
     with_contract_descriptor(|registry| {
         *registry.borrow_mut() = Some(descriptor);
     });
@@ -245,52 +208,42 @@ pub fn register_contract(
 /// In Neo N3, methods can be marked as "safe", which means they are read-only
 /// and don't modify the blockchain state. These methods can be called without
 /// a transaction fee and are optimized for quick reads.
-pub fn register_method(
-    name: &str, 
-    safe: bool, 
-    param_names: &[&str], 
-    param_types: &[&str], 
-    return_type: &str
-) {
+pub fn register_method(name: &str, safe: bool, param_names: &[&str], param_types: &[&str], return_type: &str) {
     // Validate parameters
     if param_names.len() != param_types.len() {
-        Runtime::log_str(&format!("Error registering method {}: Parameter names and types must have the same length", name));
+        Runtime::log_str(&format!(
+            "Error registering method {}: Parameter names and types must have the same length",
+            name
+        ));
         return;
     }
-    
+
     // Neo N3 has a parameter limit (not strictly enforced but good practice)
     if param_names.len() > 16 {
-        Runtime::log_str(&format!("Warning: Method {} has {} parameters, which may be too many for optimal performance", 
-                                  name, param_names.len()));
+        Runtime::log_str(&format!(
+            "Warning: Method {} has {} parameters, which may be too many for optimal performance",
+            name,
+            param_names.len()
+        ));
     }
 
     // Convert string slices to owned Strings
     let param_names = param_names.iter().map(|&s| s.to_string()).collect();
     let param_types = param_types.iter().map(|&s| s.to_string()).collect();
-    
+
     // Create and register the method descriptor
-    let method = MethodDescriptor::new(
-        name.to_string(),
-        safe,
-        param_names,
-        param_types,
-        return_type.to_string(),
-    );
-    
+    let method = MethodDescriptor::new(name.to_string(), safe, param_names, param_types, return_type.to_string());
+
     with_method_descriptors(|registry| {
         registry.borrow_mut().push(method);
     });
-    
+
     // Log registration - useful for debugging during development
-    Runtime::log_str(&format!("Registered Neo N3 method: {}{}", 
-                              name, 
-                              if safe { " (safe)" } else { "" }));
+    Runtime::log_str(&format!("Registered Neo N3 method: {}{}", name, if safe { " (safe)" } else { "" }));
 }
 
 /// Simplified method to register a safe method (backward compatibility)
-pub fn register_safe_method(name: &str) {
-    register_method(name, true, &[], &[], "");
-}
+pub fn register_safe_method(name: &str) { register_method(name, true, &[], &[], ""); }
 
 /// Register an event in the Neo N3 manifest
 ///
@@ -307,42 +260,37 @@ pub fn register_safe_method(name: &str) {
 /// In Neo N3, events must be registered in the contract manifest, and the
 /// parameters can be marked as indexed for better filtering capabilities.
 /// Events are emitted at runtime using Runtime::notify method.
-pub fn register_event(
-    name: &str,
-    param_names: &[&str],
-    param_types: &[&str],
-    indexed_params: &[bool],
-) {
+pub fn register_event(name: &str, param_names: &[&str], param_types: &[&str], indexed_params: &[bool]) {
     // Validate parameters
     if param_names.len() != param_types.len() || param_names.len() != indexed_params.len() {
-        Runtime::log_str(&format!("Error registering event {}: Parameter names, types, and indexed flags must have the same length", name));
+        Runtime::log_str(&format!(
+            "Error registering event {}: Parameter names, types, and indexed flags must have the same length",
+            name
+        ));
         return;
     }
-    
+
     // In Neo N3, there's a limit of 16 indexed parameters
     let indexed_count = indexed_params.iter().filter(|&&indexed| indexed).count();
     if indexed_count > 16 {
-        Runtime::log_str(&format!("Warning: Event {} has {} indexed parameters, but Neo N3 only supports up to 16", 
-                                 name, indexed_count));
+        Runtime::log_str(&format!(
+            "Warning: Event {} has {} indexed parameters, but Neo N3 only supports up to 16",
+            name, indexed_count
+        ));
     }
-    
+
     // Convert string slices to owned Strings
     let param_names = param_names.iter().map(|&s| s.to_string()).collect();
     let param_types = param_types.iter().map(|&s| s.to_string()).collect();
     let indexed_params = indexed_params.to_vec();
-    
+
     // Create and register the event descriptor
-    let event = EventDescriptor::new(
-        name.to_string(),
-        param_names,
-        param_types,
-        indexed_params,
-    );
-    
+    let event = EventDescriptor::new(name.to_string(), param_names, param_types, indexed_params);
+
     with_event_descriptors(|registry| {
         registry.borrow_mut().push(event);
     });
-    
+
     // Log registration
     Runtime::log_str(&format!("Registered Neo N3 event: {}", name));
 }
@@ -359,36 +307,42 @@ fn has_method(method_name: &str) -> bool {
 }
 
 /// Register a supported standard
-/// 
+///
 /// Declaring supported standards helps wallets and applications interact with the contract.
 pub fn register_supported_standard(standard: &str) {
     // Log registration
     Runtime::log_str(&format!("Registered Neo N3 supported standard: {}", standard));
-    
+
     let std_descriptor = StandardDescriptor::new(standard.to_string());
-    
+
     // Add the standard to the global list
     with_standard_descriptors(|registry| {
         let mut standards = registry.borrow_mut();
         standards.push(std_descriptor);
     });
-    
+
     // Check for required NEP-17 methods
     if standard == "NEP-17" {
         let required_methods = ["balanceOf", "totalSupply", "transfer"];
         for method in required_methods.iter() {
             if !has_method(method) {
-                Runtime::log_str(&format!("Warning: Contract registered as NEP-17 but method '{}' is not implemented", method));
+                Runtime::log_str(&format!(
+                    "Warning: Contract registered as NEP-17 but method '{}' is not implemented",
+                    method
+                ));
             }
         }
     }
-    
+
     // Check for required NEP-11 methods
     if standard == "NEP-11" {
         let required_methods = ["ownerOf", "balanceOf", "totalSupply", "transfer"];
         for method in required_methods.iter() {
             if !has_method(method) {
-                Runtime::log_str(&format!("Warning: Contract registered as NEP-11 but method '{}' is not implemented", method));
+                Runtime::log_str(&format!(
+                    "Warning: Contract registered as NEP-11 but method '{}' is not implemented",
+                    method
+                ));
             }
         }
     }
@@ -396,37 +350,25 @@ pub fn register_supported_standard(standard: &str) {
 
 /// Retrieve all registered methods for manifest generation
 pub fn get_registered_methods() -> Vec<MethodDescriptor> {
-    with_method_descriptors(|registry| {
-        registry.borrow().clone()
-    })
+    with_method_descriptors(|registry| registry.borrow().clone())
 }
 
 /// Retrieve all registered events for manifest generation
-pub fn get_registered_events() -> Vec<EventDescriptor> {
-    with_event_descriptors(|registry| {
-        registry.borrow().clone()
-    })
-}
+pub fn get_registered_events() -> Vec<EventDescriptor> { with_event_descriptors(|registry| registry.borrow().clone()) }
 
 /// Retrieve all registered standards for manifest generation
 pub fn get_registered_standards() -> Vec<String> {
-    with_standard_descriptors(|registry| {
-        registry.borrow().iter().map(|std| std.standard.clone()).collect()
-    })
+    with_standard_descriptors(|registry| registry.borrow().iter().map(|std| std.standard.clone()).collect())
 }
 
 /// Retrieve the contract descriptor for manifest generation
 pub fn get_contract_descriptor() -> Option<ContractDescriptor> {
-    with_contract_descriptor(|registry| {
-        registry.borrow().clone()
-    })
+    with_contract_descriptor(|registry| registry.borrow().clone())
 }
 
 /// Retrieve all registered opcodes for manifest generation
 pub fn get_registered_opcodes() -> Vec<OpcodeDescriptor> {
-    with_opcode_descriptors(|registry| {
-        registry.borrow().clone()
-    })
+    with_opcode_descriptors(|registry| registry.borrow().clone())
 }
 
 /// A trait for manifest-related data structures

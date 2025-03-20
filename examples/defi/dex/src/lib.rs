@@ -210,7 +210,7 @@ mod neo_dex {
         /// # Returns
         /// The ID of the newly created pool
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn create_pool(&mut self, token_a: Hash160, token_b: Hash160, fee_rate: Option<u16>) -> u32 {
             // Ensure tokens are different
             assert!(token_a != token_b, "Tokens must be different");
@@ -270,7 +270,7 @@ mod neo_dex {
         /// # Returns
         /// A tuple of (amount_a_added, amount_b_added, liquidity_minted)
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn add_liquidity(
             &mut self,
             pool_id: u32,
@@ -385,7 +385,7 @@ mod neo_dex {
         /// # Returns
         /// A tuple of (amount_a_removed, amount_b_removed)
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn remove_liquidity(
             &mut self,
             pool_id: u32,
@@ -496,7 +496,7 @@ mod neo_dex {
         /// # Returns
         /// The amount of output tokens received
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn swap_exact_tokens_for_tokens(
             &mut self,
             pool_id: u32,
@@ -593,7 +593,7 @@ mod neo_dex {
         /// # Returns
         /// The amount of input tokens used
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn swap_tokens_for_exact_tokens(
             &mut self,
             pool_id: u32,
@@ -779,7 +779,7 @@ mod neo_dex {
         /// # Returns
         /// `true` if successful
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn set_owner(&mut self, new_owner: Address) -> bool {
             let current_owner = self.owner.get().unwrap_or_default();
             
@@ -798,7 +798,7 @@ mod neo_dex {
         /// # Returns
         /// `true` if successful
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn set_default_fee_rate(&mut self, fee_rate: u16) -> bool {
             let owner = self.owner.get().unwrap_or_default();
             
@@ -820,7 +820,7 @@ mod neo_dex {
         /// # Returns
         /// `true` if successful
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn set_max_recent_swaps(&mut self, max_swaps: u32) -> bool {
             let owner = self.owner.get().unwrap_or_default();
             
@@ -839,7 +839,7 @@ mod neo_dex {
         /// # Returns
         /// `true` if successful
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn set_min_liquidity(&mut self, min_liquidity: u64) -> bool {
             let owner = self.owner.get().unwrap_or_default();
             

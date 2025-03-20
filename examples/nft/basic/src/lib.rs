@@ -126,7 +126,7 @@ impl NeoNft {
     /// # Returns
     /// `true` if the token was successfully minted
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn mint(&mut self, to: H160, token_id: ByteString, properties_json: ByteString) -> bool {
         // Verify caller is owner
         let owner = self.owner.get("value").unwrap_or_default();
@@ -171,7 +171,7 @@ impl NeoNft {
     /// # Returns
     /// `true` if the token was successfully burned
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn burn(&mut self, token_id: ByteString) -> bool {
         // Verify token exists
         assert!(self.token_exists(&token_id), "Token does not exist");
@@ -233,7 +233,7 @@ impl NeoNft {
     /// # Returns
     /// `true` if the transfer was successful
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn transfer(&mut self, from: H160, to: H160, token_id: ByteString, data: Option<Vec<u8>>) -> bool {
         // Verify token exists
         assert!(self.token_exists(&token_id), "Token does not exist");
@@ -308,7 +308,7 @@ impl NeoNft {
     /// # Returns
     /// `true` if the approval was successful
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn approve(&mut self, approved: H160, token_id: ByteString) -> bool {
         // Get the token owner
         let owner = self.owners.get(&token_id).expect("Failed to get token owner");
@@ -333,7 +333,7 @@ impl NeoNft {
     /// # Returns
     /// `true` if the operation was successful
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn set_approval_for_all(&mut self, operator: H160, approved: bool) -> bool {
         // Get the caller
         let caller = Runtime::calling_script_hash();
@@ -480,7 +480,7 @@ impl NeoNft {
     /// # Returns
     /// `true` if the owner was changed successfully
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn set_owner(&mut self, new_owner: H160) -> bool {
         let current_owner = self.owner.get("value").unwrap_or_default();
         assert!(Runtime::check_witness(&current_owner), "Only owner can transfer ownership");

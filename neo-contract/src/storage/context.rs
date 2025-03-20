@@ -8,12 +8,12 @@
 //! Each contract has its own default context, but contracts can also
 //! access other contracts' storage contexts (with proper permissions).
 
+use crate::env::syscall;
 use crate::find_options::FindOptions;
 use crate::static_values::Hash160;
 use alloc::string::String;
-use alloc::vec::Vec;
 use alloc::string::ToString;
-use crate::env::syscall;
+use alloc::vec::Vec;
 
 /// Represents a storage context in Neo N3
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -138,14 +138,10 @@ impl Context {
     ///
     /// # Returns
     /// * `Option<Vec<u8>>` - The value if found, None otherwise
-    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        self.get_with_syscall(key)
-    }
+    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> { self.get_with_syscall(key) }
 
     #[cfg(not(test))]
-    fn put_with_syscall(&self, key: &[u8], value: &[u8]) {
-        put_storage_value(self, key, value);
-    }
+    fn put_with_syscall(&self, key: &[u8], value: &[u8]) { put_storage_value(self, key, value); }
 
     #[cfg(test)]
     fn put_with_syscall(&self, key: &[u8], value: &[u8]) {
@@ -163,9 +159,7 @@ impl Context {
     }
 
     #[cfg(not(test))]
-    fn delete_with_syscall(&self, key: &[u8]) {
-        delete_storage_value(self, key);
-    }
+    fn delete_with_syscall(&self, key: &[u8]) { delete_storage_value(self, key); }
 
     #[cfg(test)]
     fn delete_with_syscall(&self, key: &[u8]) {
@@ -207,10 +201,10 @@ impl Context {
             let prefix_ptr = prefix.as_ptr() as usize;
             let prefix_len = prefix.len() as i32;
             let options_value = options.0 as i32;
-            
-            // For wasm32 target, just return an empty vector 
+
+            // For wasm32 target, just return an empty vector
             // This is a placeholder - in a real implementation, this would use the proper syscall
-            
+
             // Note: we're removing the problematic syscall call for now
             Vec::new()
         }
@@ -218,10 +212,10 @@ impl Context {
         #[cfg(not(target_arch = "wasm32"))]
         {
             // Use mock storage for testing environment
-            
+
             // Create a filtered result based on prefix
             let mut result = Vec::new();
-            
+
             // In testing mode, we can just return an empty result
             // The actual test cases can implement their own expectations
             result
@@ -410,23 +404,23 @@ mod tests {
     use super::*;
     use alloc::collections::BTreeMap;
     use alloc::string::ToString;
-    
+
     // Simple tests that don't depend on MockStorage implementation
     #[test]
     fn test_context_creation() {
         let context = Context::current();
         assert!(context.contract_hash == [0u8; 20]);
-        
+
         let hash = [1u8; 20];
         let custom_context = Context::for_contract(&hash);
         assert_eq!(custom_context.contract_hash, hash);
     }
-    
+
     // For these tests we'll just focus on the API rather than the full implementation
     #[test]
     fn test_storage_operations_api() {
         let context = Context::current();
-        
+
         // Just checking that these methods exist and have the right signatures
         // Implementation details are tested elsewhere
         let _: Option<Vec<u8>> = context.get(b"key");
@@ -437,9 +431,9 @@ mod tests {
 
 #[cfg(not(test))]
 fn get_storage_value(context: &Context, key: &[u8]) -> Option<Vec<u8>> {
-    use crate::env::syscall;
     use crate::alloc::vec::Vec;
-    
+    use crate::env::syscall;
+
     // Neo VM syscall implementation
     // Implementation will go here in production code
     None
@@ -448,7 +442,7 @@ fn get_storage_value(context: &Context, key: &[u8]) -> Option<Vec<u8>> {
 #[cfg(not(test))]
 fn put_storage_value(context: &Context, key: &[u8], value: &[u8]) {
     use crate::env::syscall;
-    
+
     // Neo VM syscall implementation
     // Implementation will go here in production code
 }
@@ -456,7 +450,7 @@ fn put_storage_value(context: &Context, key: &[u8], value: &[u8]) {
 #[cfg(not(test))]
 fn delete_storage_value(context: &Context, key: &[u8]) {
     use crate::env::syscall;
-    
+
     // Neo VM syscall implementation
     // Implementation will go here in production code
 }

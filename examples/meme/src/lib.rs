@@ -292,7 +292,7 @@ mod moon_doge {
         
         /// Transfer tokens from one account to another
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn transfer(&mut self, from: Address, to: Address, amount: u64) -> bool {
             // Check signatures
             assert!(Runtime::check_witness(&from), "Invalid signature");
@@ -356,7 +356,7 @@ mod moon_doge {
         
         /// Set the DEX pair contract hash
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn set_dex_pair(&mut self, pair_hash: Hash160) -> bool {
             let caller = Runtime::calling_script_hash();
             assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can set DEX pair");
@@ -367,7 +367,7 @@ mod moon_doge {
         
         /// Set tax exemption for an address
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn set_tax_exempt(&mut self, address: Address, exempt: bool) -> bool {
             let caller = Runtime::calling_script_hash();
             assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can set tax exemption");
@@ -378,7 +378,7 @@ mod moon_doge {
         
         /// Update tax rates
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn update_tax_rates(
             &mut self, 
             liquidity_tax: u16, 
@@ -406,7 +406,7 @@ mod moon_doge {
         
         /// Enable trading
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn enable_trading(&mut self) -> bool {
             let caller = Runtime::calling_script_hash();
             assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can enable trading");
@@ -417,7 +417,7 @@ mod moon_doge {
         
         /// Update anti-whale settings
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn update_whale_limits(&mut self, max_tx_pct: u16, max_wallet_pct: u16) -> bool {
             let caller = Runtime::calling_script_hash();
             assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can update whale limits");
@@ -439,7 +439,7 @@ mod moon_doge {
         
         /// Exclude/include address from rewards
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn set_reward_exclusion(&mut self, address: Address, excluded: bool) -> bool {
             let caller = Runtime::calling_script_hash();
             assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can set reward exclusion");
@@ -450,7 +450,7 @@ mod moon_doge {
         
         /// Update reward cycle
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn set_reward_cycle(&mut self, blocks: u64) -> bool {
             let caller = Runtime::calling_script_hash();
             assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can set reward cycle");
@@ -462,7 +462,7 @@ mod moon_doge {
         
         /// Force reward distribution
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn distribute_rewards(&mut self) -> bool {
             let caller = Runtime::calling_script_hash();
             assert!(caller == self.owner.get().unwrap_or_default(), "Only owner can force distribution");
@@ -473,7 +473,7 @@ mod moon_doge {
         
         /// Burn tokens from own balance
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn burn(&mut self, amount: u64) -> bool {
             let caller = Runtime::calling_script_hash();
             assert!(Runtime::check_witness(&caller), "Invalid signature");

@@ -112,7 +112,7 @@ impl NEP17Token {
     
     /// Transfer tokens from one address to another
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn transfer(
         &mut self,
         from: Address, 
@@ -179,7 +179,7 @@ impl NEP17Token {
     
     /// Mint new tokens and assign to an address (only owner can call)
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn mint(&mut self, to: Address, amount: u64) -> bool {
         // Only owner can mint
         let owner = self.owner.get().unwrap_or_default();
@@ -208,7 +208,7 @@ impl NEP17Token {
     
     /// Burn tokens from an address (only owner or token holder can call)
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn burn(&mut self, from: Address, amount: u64) -> bool {
         // Caller must be either the token holder or the owner
         let owner = self.owner.get().unwrap_or_default();
@@ -249,7 +249,7 @@ impl NEP17Token {
     
     /// Transfer ownership of the contract to a new address (only owner can call)
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn transfer_ownership(&mut self, new_owner: Address) -> bool {
         // Only current owner can transfer ownership
         let current_owner = self.owner.get().unwrap_or_default();

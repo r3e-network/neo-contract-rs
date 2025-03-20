@@ -69,7 +69,7 @@ pub use core::panic;
 pub use crate::storage::{StorageContext, StorageMap, StorageKey};
 
 // Neo N3 Event utilities
-pub use crate::event::{EventEmitter, StandardEventEmitter, null_or_value};
+pub use crate::event::{EventEmitter, null_or_value};
 
 // Neo N3 specific utilities
 pub use crate::manifest::{ContractManifest, ContractABI, ContractMethod, ContractEvent};

@@ -16,10 +16,7 @@ extern crate alloc;
 pub use alloc::{boxed, collections, fmt, string, vec};
 
 // Re-export declarative macros from neo-macros-core
-pub use neo_macros_core::{
-    emit_event, implement_event, extend_event,
-    profile, profile_scope, benchmark
-};
+pub use neo_macros_core::{benchmark, emit_event, implement_event, profile, profile_scope};
 
 // Modules
 pub mod attributes;
@@ -88,9 +85,7 @@ pub use self::runtime::Runtime;
 pub use self::manifest::{register_contract, register_event, register_method, register_supported_standard};
 
 // Re-export event helpers for easier Neo N3 standard event emission
-pub use self::event::{
-    emit_transfer, EventEmitter, null_or_value
-};
+pub use self::event::{emit_transfer, null_or_value, EventEmitter};
 
 // Contract module
 pub mod contract;
@@ -110,10 +105,7 @@ pub mod prelude {
     //! This allows users to import everything they need with a single import.
 
     // Re-export declarative macros in the prelude
-    pub use neo_macros_core::{
-        emit_event, implement_event, extend_event,
-        profile, profile_scope, benchmark
-    };
+    pub use neo_macros_core::{benchmark, emit_event, implement_event, profile, profile_scope};
 
     // Import env modules
     pub use crate::env::{blockchain, contract, runtime, storage};

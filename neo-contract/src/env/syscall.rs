@@ -20,10 +20,10 @@ pub fn system_runtime_notify(name: &ByteString, args: &Array) {
         extern "C" {
             fn Neo3RuntimeNotify(name_ptr: *const u8, name_len: u32, args_ptr: *const u8, args_len: u32);
         }
-        
+
         // Implementation details omitted for brevity
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mock implementation for testing
@@ -37,7 +37,7 @@ pub fn system_runtime_get_trigger() -> ByteString {
         // WASM implementation of Neo VM syscall
         ByteString::from("main")
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mock implementation for testing
@@ -52,7 +52,7 @@ pub fn system_runtime_get_notification_args() -> Array {
         // WASM implementation of Neo VM syscall
         Array::new()
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mock implementation for testing
@@ -66,7 +66,7 @@ pub fn system_runtime_log(data: &Any) {
     unsafe {
         // WASM implementation of Neo VM syscall
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mock implementation for testing
@@ -80,7 +80,7 @@ pub fn system_runtime_get_time() -> u64 {
         // WASM implementation of Neo VM syscall
         0
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mock implementation for testing
@@ -95,7 +95,7 @@ pub fn system_runtime_get_caller() -> H160 {
         // WASM implementation of Neo VM syscall
         H160::zero()
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mock implementation for testing
@@ -110,7 +110,7 @@ pub fn system_runtime_check_witness(hash: &H160) -> bool {
         // WASM implementation of Neo VM syscall
         true
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mock implementation for testing
@@ -125,7 +125,7 @@ pub fn system_storage_get(context: &crate::types::storage::StorageContext, key: 
         // WASM implementation of Neo VM syscall
         Vec::new()
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mock implementation for testing
@@ -139,7 +139,7 @@ pub fn system_storage_put(context: &crate::types::storage::StorageContext, key: 
     unsafe {
         // WASM implementation of Neo VM syscall
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mock implementation for testing
@@ -152,7 +152,7 @@ pub fn system_storage_delete(context: &crate::types::storage::StorageContext, ke
     unsafe {
         // WASM implementation of Neo VM syscall
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mock implementation for testing

@@ -7,8 +7,8 @@ use core::convert::TryFrom;
 use core::fmt;
 use core::ops::Deref;
 
-use alloc::format;
 use crate::utils::hex;
+use alloc::format;
 
 /// H256 represents a 256-bit hash (32 bytes) like a transaction hash
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Default)]
@@ -18,9 +18,7 @@ use crate::utils::hex;
 pub struct H256(pub [u8; 32]);
 
 impl H256 {
-    pub fn from_literal(p0: &str) -> Self{
-        H256::from_slice(&hex::decode(p0).unwrap())
-    }
+    pub fn from_literal(p0: &str) -> Self { H256::from_slice(&hex::decode(p0).unwrap()) }
 }
 
 impl H256 {

@@ -333,7 +333,7 @@ mod neo_rpg {
         
         /// Create a new character
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn create_character(&mut self, name: String, class_id: u8) -> bool {
             let player = Runtime::calling_script_hash();
             
@@ -452,7 +452,7 @@ mod neo_rpg {
         
         /// Add a new item to the game (admin only)
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn add_item(
             &mut self,
             name: String,
@@ -540,7 +540,7 @@ mod neo_rpg {
         
         /// Add a new quest to the game (admin only)
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn add_quest(
             &mut self,
             name: String,
@@ -617,7 +617,7 @@ mod neo_rpg {
         
         /// Add a new monster to the game (admin only)
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn add_monster(
             &mut self,
             name: String,
@@ -669,7 +669,7 @@ mod neo_rpg {
         
         /// Start a quest
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn start_quest(&mut self, quest_id: u32) -> bool {
             let player = Runtime::calling_script_hash();
             
@@ -728,7 +728,7 @@ mod neo_rpg {
         
         /// Update quest progress
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn update_quest_progress(&mut self, quest_id: u32, objective_index: u32, progress: u32) -> bool {
             let player = Runtime::calling_script_hash();
             
@@ -771,7 +771,7 @@ mod neo_rpg {
         
         /// Start combat with a monster
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn start_combat(&mut self, monster_id: u32) -> bool {
             let player = Runtime::calling_script_hash();
             
@@ -808,7 +808,7 @@ mod neo_rpg {
         
         /// Perform attack in combat
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn attack(&mut self) -> bool {
             let player = Runtime::calling_script_hash();
             
@@ -900,7 +900,7 @@ mod neo_rpg {
         
         /// Equip an item
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn equip_item(&mut self, item_id: u32) -> bool {
             let player = Runtime::calling_script_hash();
             
@@ -991,7 +991,7 @@ mod neo_rpg {
         
         /// Use a consumable item
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn use_item(&mut self, item_id: u32) -> bool {
             let player = Runtime::calling_script_hash();
             
@@ -1048,7 +1048,7 @@ mod neo_rpg {
         
         /// Rest to restore health and mana
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn rest(&mut self) -> bool {
             let player = Runtime::calling_script_hash();
             

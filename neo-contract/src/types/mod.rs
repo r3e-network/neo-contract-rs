@@ -38,7 +38,7 @@ pub mod builtin {
 }
 
 /// Trait for converting Rust types to Neo N3 parameter types
-/// 
+///
 /// This trait is used to convert Rust types to Neo N3 parameter types
 /// for the contract manifest generation.
 pub trait ToNeoParameter {
@@ -111,16 +111,18 @@ impl<K, V> ToNeoParameter for Map<K, V> {
     fn to_neo_parameter_type() -> &'static str { "Map" }
 }
 
-impl<T> ToNeoParameter for Option<T> where T: ToNeoParameter {
-    fn to_neo_parameter_type() -> &'static str { 
+impl<T> ToNeoParameter for Option<T>
+where T: ToNeoParameter
+{
+    fn to_neo_parameter_type() -> &'static str {
         // In Neo N3, Option<T> is represented as the same type as T
         // with null values allowed
-        T::to_neo_parameter_type() 
+        T::to_neo_parameter_type()
     }
 }
 
 /// Helper function to get Neo N3 type string from a Rust type string
-/// 
+///
 /// This is used in the manifest generation process to convert Rust type
 /// descriptions to Neo N3 type descriptions.
 pub fn rust_type_to_neo_type(rust_type: &str) -> &'static str {

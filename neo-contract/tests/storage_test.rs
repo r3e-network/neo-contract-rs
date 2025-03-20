@@ -32,10 +32,8 @@ mod mock_storage {
             storage.borrow_mut().clear();
         });
     }
-    
-    pub fn has(key: &[u8]) -> bool {
-        MOCK_STORAGE.with(|storage| storage.borrow().contains_key(&key.to_vec()))
-    }
+
+    pub fn has(key: &[u8]) -> bool { MOCK_STORAGE.with(|storage| storage.borrow().contains_key(&key.to_vec())) }
 }
 
 // Test fixture to simplify test setup and teardown
@@ -52,20 +50,20 @@ impl TestFixture {
 #[test]
 fn test_basic_storage() {
     let _fixture = TestFixture::new();
-    
+
     // Put a value
     mock_storage::put(b"test_key", b"test_value");
-    
+
     // Get the value
     let value = mock_storage::get(b"test_key").unwrap();
     assert_eq!(value, b"test_value");
-    
+
     // Check exists
     assert!(mock_storage::has(b"test_key"));
-    
+
     // Delete the value
     mock_storage::delete(b"test_key");
-    
+
     // Verify it's gone
     assert!(!mock_storage::has(b"test_key"));
     assert_eq!(mock_storage::get(b"test_key"), None);
@@ -75,18 +73,18 @@ fn test_basic_storage() {
 #[test]
 fn test_integer_storage() {
     let _fixture = TestFixture::new();
-    
+
     // Store an integer
     let counter_value: u32 = 42;
     let counter_bytes = counter_value.to_le_bytes();
     mock_storage::put(b"counter", &counter_bytes);
-    
+
     // Retrieve and verify
     let stored_bytes = mock_storage::get(b"counter").unwrap();
     let mut bytes = [0u8; 4];
     bytes.copy_from_slice(&stored_bytes);
     let stored_value = u32::from_le_bytes(bytes);
-    
+
     assert_eq!(stored_value, 42);
 }
 
@@ -94,15 +92,15 @@ fn test_integer_storage() {
 #[test]
 fn test_string_storage() {
     let _fixture = TestFixture::new();
-    
+
     // Store a string
     let message = "Hello, Neo!";
     mock_storage::put(b"greeting", message.as_bytes());
-    
+
     // Retrieve and verify
     let stored_bytes = mock_storage::get(b"greeting").unwrap();
     let stored_message = std::str::from_utf8(&stored_bytes).unwrap();
-    
+
     assert_eq!(stored_message, "Hello, Neo!");
 }
 
@@ -110,15 +108,15 @@ fn test_string_storage() {
 #[test]
 fn test_storage_prefixes() {
     let _fixture = TestFixture::new();
-    
+
     // Store values with prefixes
     let prefix = b"user:";
     let user1_key = [prefix.to_vec(), b"1".to_vec()].concat();
     let user2_key = [prefix.to_vec(), b"2".to_vec()].concat();
-    
+
     mock_storage::put(&user1_key, b"Alice");
     mock_storage::put(&user2_key, b"Bob");
-    
+
     // Verify retrieval
     assert_eq!(mock_storage::get(&user1_key).unwrap(), b"Alice");
     assert_eq!(mock_storage::get(&user2_key).unwrap(), b"Bob");
@@ -128,13 +126,13 @@ fn test_storage_prefixes() {
 #[test]
 fn test_updating_storage() {
     let _fixture = TestFixture::new();
-    
+
     // Store initial value
     mock_storage::put(b"settings", b"initial");
-    
+
     // Update value
     mock_storage::put(b"settings", b"updated");
-    
+
     // Verify updated value
     assert_eq!(mock_storage::get(b"settings").unwrap(), b"updated");
 }

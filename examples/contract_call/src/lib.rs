@@ -82,7 +82,7 @@ impl ContractCaller {
     
     /// Call another contract with specified parameters
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn call_contract(
         &mut self,
         script_hash: Hash160,
@@ -187,7 +187,7 @@ impl ContractCaller {
     
     /// Transfer ownership of the contract to a new owner
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn transfer_ownership(&mut self, new_owner: Address) -> bool {
         // Get current owner
         let current_owner = self.get_owner();

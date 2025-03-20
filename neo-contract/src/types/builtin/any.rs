@@ -8,8 +8,8 @@ use super::int256::Int256;
 use super::string::ByteString;
 use alloc::string::String;
 use alloc::vec::Vec;
-use core::fmt;
 use core::cell::RefCell;
+use core::fmt;
 
 /// Enum representing the type of an Any value
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -297,21 +297,21 @@ impl Any {
 
     /// Alias for is_boolean for compatibility
     pub fn is_bool(&self) -> bool { self.is_boolean() }
-    
+
     /// Alias for is_byte_string for compatibility
     pub fn is_bytestring(&self) -> bool { self.is_byte_string() }
-    
+
     /// Alias for as_boolean for compatibility
-    pub fn as_bool(&self) -> Option<bool> { 
+    pub fn as_bool(&self) -> Option<bool> {
         match self {
             Any::Boolean(val) => Some(*val),
             _ => None,
         }
     }
-    
+
     /// Alias for as_byte_string for compatibility
     pub fn as_bytestring(&self) -> Option<&ByteString> { self.as_byte_string() }
-    
+
     /// Alias for as_integer returning i64 for compatibility
     pub fn as_i64(&self) -> Option<i64> {
         match self {
@@ -319,7 +319,7 @@ impl Any {
             _ => None,
         }
     }
-    
+
     /// Check if the value is a Hash160 type
     pub fn is_h160(&self) -> bool {
         if let Some(bs) = self.as_byte_string() {
@@ -327,7 +327,7 @@ impl Any {
         }
         false
     }
-    
+
     /// Get as H160 if possible
     pub fn as_h160(&self) -> Option<H160> {
         if let Some(bs) = self.as_byte_string() {
@@ -341,9 +341,7 @@ impl Any {
     }
 
     /// Create a new Neo Any value from a H160 hash
-    pub fn h160(val: H160) -> Self {
-        Self::from(val)
-    }
+    pub fn h160(val: H160) -> Self { Self::from(val) }
 }
 
 impl From<Int256> for Any {
@@ -375,9 +373,9 @@ impl From<String> for Any {
 }
 
 impl From<H160> for Any {
-    fn from(val: H160) -> Self { 
+    fn from(val: H160) -> Self {
         // Convert H160 to ByteString and then to Any
-        Any::byte_string(ByteString::from(val.as_bytes())) 
+        Any::byte_string(ByteString::from(val.as_bytes()))
     }
 }
 
@@ -409,10 +407,10 @@ impl From<u64> for Any {
     fn from(val: u64) -> Self { Any::Integer(Int256::from(val)) }
 }
 
-impl<T> From<super::array::Array<T>> for Any 
-where 
+impl<T> From<super::array::Array<T>> for Any
+where
     T: Clone,
-    T: Into<Any>
+    T: Into<Any>,
 {
     fn from(array: super::array::Array<T>) -> Self {
         let items: Vec<Any> = array.into_iter().map(|item| item.into()).collect();

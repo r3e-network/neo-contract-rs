@@ -44,7 +44,7 @@ impl Transfer {
     /// # Returns
     /// `true` if the transfer was successful, `false` otherwise
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn transfer(&self, from: H160, to: H160, amount: Int256) -> bool {
         // Verify that the sender is authorized
         assert!(Runtime::check_witness(&from), "No authorization");

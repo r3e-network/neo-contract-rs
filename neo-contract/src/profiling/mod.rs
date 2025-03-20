@@ -97,10 +97,10 @@ impl Profiler {
 }
 
 /// Profile a function and return its result
-/// 
+///
 /// This functionality is now provided by the profile! macro from neo-macros-core,
 /// which is re-exported by neo-contract.
-/// 
+///
 /// @see profile!
 
 /// Profile scope for measuring execution time and gas costs
@@ -125,10 +125,10 @@ impl Drop for ProfileScope {
 
 /// Profile a method execution and return the result
 /// Create a profiling scope that automatically stops when it goes out of scope
-/// 
+///
 /// This functionality is now provided by the profile_scope! macro from neo-macros-core,
 /// which is re-exported by neo-contract.
-/// 
+///
 /// @see profile_scope!
 
 /// Benchmark utility for measuring multiple executions
@@ -226,10 +226,10 @@ impl Benchmark {
 }
 
 /// Benchmark a function execution and return the result
-/// 
+///
 /// This functionality is now provided by the benchmark! macro from neo-macros-core,
 /// which is re-exported by neo-contract.
-/// 
+///
 /// @see benchmark!
 
 /// Gas statistics for different operations

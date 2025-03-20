@@ -53,7 +53,7 @@ impl TokenContract {
     }
     
     #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn transfer(&mut self, from: H160, to: H160, amount: u64) -> bool {
         // Transfer implementation with reentrancy protection
     }
@@ -74,7 +74,7 @@ The macro functionality is fully implemented in `neo-macros` and provides:
 2. Event definition with `#[neo_contract::event]` and field indexing with `#[index]`
 3. Storage field definition with `#[storage]`
 4. Method annotations for constructors, state-changing methods, and read-only methods
-5. Security features like reentrancy protection with `#[no_reentry]`
+5. Security features like reentrancy protection with `#[no_reentrant]`
 
 ### Using the Framework
 

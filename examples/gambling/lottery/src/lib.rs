@@ -168,7 +168,7 @@ mod neo_lottery {
         
         /// Create a new lottery round (owner only)
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn create_lottery(
             &mut self,
             ticket_price: u64,
@@ -231,7 +231,7 @@ mod neo_lottery {
         
         /// Purchase lottery tickets
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn buy_tickets(&mut self, round_id: u32, ticket_count: u32) -> bool {
             // Validate inputs
             assert!(ticket_count > 0, "Must purchase at least one ticket");
@@ -322,7 +322,7 @@ mod neo_lottery {
         
         /// Complete a lottery round and select winner(s)
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn complete_lottery(&mut self, round_id: u32) -> bool {
             // Verify caller is owner
             let caller = Runtime::calling_script_hash();
@@ -423,7 +423,7 @@ mod neo_lottery {
         
         /// Update commission collector address (owner only)
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn set_commission_collector(&mut self, collector: Address) -> bool {
             let caller = Runtime::calling_script_hash();
             assert!(Runtime::check_witness(&caller), "Authentication failed");
@@ -437,7 +437,7 @@ mod neo_lottery {
         
         /// Cancel a lottery round and refund participants (owner only)
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn cancel_lottery(&mut self, round_id: u32) -> bool {
             let caller = Runtime::calling_script_hash();
             assert!(Runtime::check_witness(&caller), "Authentication failed");
@@ -485,7 +485,7 @@ mod neo_lottery {
         
         /// Create a recurring lottery that starts immediately after the previous one ends
         #[method]
-        #[no_reentry]
+        #[no_reentrant]
         fn create_recurring_lottery(
             &mut self,
             ticket_price: u64,

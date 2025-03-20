@@ -1,18 +1,12 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved
 
-use crate::prelude::{Array, ByteString, H160, H256};
 use crate::env::syscall_non_wasm::{
-    system_crypto_hash,
-    system_crypto_verify_with_ecdsa,
-    system_crypto_check_multisig,
-    system_crypto_to_address,
-    system_crypto_to_script_hash,
-    system_crypto_bls_generate,
-    system_crypto_bls_verify,
-    system_crypto_check_multi_signs,
-    system_crypto_check_sign
+    system_crypto_bls_generate, system_crypto_bls_verify, system_crypto_check_multi_signs,
+    system_crypto_check_multisig, system_crypto_check_sign, system_crypto_hash, system_crypto_to_address,
+    system_crypto_to_script_hash, system_crypto_verify_with_ecdsa,
 };
+use crate::prelude::{Array, ByteString, H160, H256};
 
 /// Named curve hash type for cryptographic functions
 #[derive(Debug, Clone, Copy)]
@@ -133,12 +127,7 @@ impl Crypto {
 
         #[cfg(not(target_arch = "wasm32"))]
         unsafe {
-            system_crypto_verify_with_ecdsa(
-                message_bs,
-                signature_bs,
-                public_key_bs,
-                curve,
-            )
+            system_crypto_verify_with_ecdsa(message_bs, signature_bs, public_key_bs, curve)
         }
 
         #[cfg(target_arch = "wasm32")]

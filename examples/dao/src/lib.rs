@@ -8,15 +8,12 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use neo_contract::prelude::*;
-
+use neo_contract::Runtime;
 // Import the specific functions needed by the contract macro
 use neo_contract::runtime::{__neo_deploy_entry, __neo_invoke_entry};
-
+use neo_contract::types::storage::StorageItem;
 // Import the macros directly from neo_macros
-use neo_macros::{
-    contract, contract_author, contract_description, contract_version,
-    supported_standards, event, index, storage, constructor, method, safe
-};
+use neo_macros::{contract, contract_author, contract_description, contract_version, supported_standards, event, index, storage, constructor, method, safe, no_reentrant};
 
 /// Event emitted when a member is added to the DAO
 #[event]
@@ -223,7 +220,7 @@ impl DAOContract {
 
         /// Add a new member to the DAO
         #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn add_member(&mut self, address: H160) -> bool {
         // Only owner can add members
         let sender = Runtime::calling_script_hash();
@@ -249,7 +246,7 @@ impl DAOContract {
 
         /// Create a new proposal
         #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn create_proposal(&mut self, title: String, description: String) -> u32 {
         let sender = Runtime::calling_script_hash();
         
@@ -290,7 +287,7 @@ impl DAOContract {
 
         /// Vote on a proposal
         #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn vote(&mut self, proposal_id: u32, vote_for: bool) -> bool {
         let voter = Runtime::calling_script_hash();
         
@@ -346,7 +343,7 @@ impl DAOContract {
 
         /// Execute a passed proposal
         #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn execute_proposal(&mut self, proposal_id: u32) -> bool {
         let executor = Runtime::calling_script_hash();
         
@@ -384,7 +381,7 @@ impl DAOContract {
 
         /// Remove a member from the DAO
         #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn remove_member(&mut self, address: H160) -> bool {
         // Only owner can remove members
         let sender = Runtime::calling_script_hash();
@@ -415,7 +412,7 @@ impl DAOContract {
 
         /// Transfer ownership of the DAO
         #[method]
-    #[no_reentry]
+    #[no_reentrant]
     pub fn transfer_ownership(&mut self, new_owner: H160) -> bool {
         // Only current owner can transfer ownership
         let sender = Runtime::calling_script_hash();

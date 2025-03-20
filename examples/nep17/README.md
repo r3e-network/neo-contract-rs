@@ -124,7 +124,7 @@ fn balance_of(&self, address: Address) -> u64 {
 The contract includes important security features:
 
 1. **Authorization Checks**: Using `Runtime::check_witness` to verify transaction signers
-2. **Reentrancy Protection**: Using `#[no_reentry]` attribute on state-modifying methods
+2. **Reentrancy Protection**: Using `#[no_reentrant]` attribute on state-modifying methods
 3. **Ownership Controls**: Limiting sensitive operations to the contract owner
 
 ## Building and Deploying

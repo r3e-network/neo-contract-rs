@@ -87,36 +87,6 @@ macro_rules! implement_event {
     };
 }
 
-/// Extend an event type with the StandardEventEmitter trait
-/// 
-/// This macro adds implementation of StandardEventEmitter for a struct,
-/// providing a standardized event emission interface.
-/// 
-/// # Examples
-/// 
-/// ```
-/// struct TransferEvent { from: H160, to: H160, amount: Int256 }
-/// 
-/// extend_event!(TransferEvent);
-/// ```
-#[macro_export]
-macro_rules! extend_event {
-    ($event_type:ty) => {
-        impl ::neo_contract::event::StandardEventEmitter for $event_type {
-            fn notify(&self) {
-                let name = stringify!($event_type);
-                let mut args = ::neo_contract::types::builtin::array::Array::new();
-                
-                // Convert each struct field to a stack item
-                let event_args = ::neo_contract::runtime::to_event_args(self);
-                
-                // Emit the notification
-                ::neo_contract::runtime::notify(name, &event_args);
-            }
-        }
-    };
-}
-
 /// Profile a function and return its result
 /// 
 /// This macro creates a profiler, starts it, executes the code,
