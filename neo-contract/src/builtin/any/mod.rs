@@ -24,6 +24,25 @@ impl Any {
     pub fn as_bytes(&self) -> &[u8] {
         &self.value
     }
+
+    /// Serialize the Any value to bytes
+    pub fn serialize(&self) -> Vec<u8> {
+        // Simple implementation - just return the internal bytes
+        // In a full implementation, this would serialize according to Neo VM format
+        self.value.clone()
+    }
+
+    /// Deserialize bytes into an Any value
+    pub fn deserialize(data: &[u8]) -> Self {
+        // Simple implementation - just store the bytes
+        // In a full implementation, this would deserialize according to Neo VM format
+        Self { value: data.to_vec() }
+    }
+
+    /// Create a null value
+    pub fn null() -> Self {
+        Self { value: Vec::new() }
+    }
 }
 
 impl Default for Any {

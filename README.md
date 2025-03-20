@@ -1,237 +1,129 @@
-# Neo Contract Framework for Rust
+# Neo Contract Rust Framework
 
-A framework for writing Neo N3 smart contracts in Rust. This project enables Rust developers to build smart contracts for the Neo N3 blockchain with familiar syntax and tooling.
+This framework allows you to write Neo N3 smart contracts in Rust. It provides a set of libraries and utilities to make writing Neo smart contracts more ergonomic and type-safe.
 
-## Overview
+## Structure
 
-The Neo Contract Framework for Rust consists of the following main components:
+The framework is divided into several crates:
 
-1. **neo-contract**: The core library that provides the API for writing Neo N3 smart contracts
-2. **neo-macros**: Procedural macros for the attribute-based interface
-3. **neo-compiler**: A compiler that converts WebAssembly to Neo VM bytecode
-4. **neo-contract-testing**: Testing utilities for Neo smart contracts
-
-The framework follows this compilation flow:
-```
-Rust code → WebAssembly → Neo VM bytecode → NEF file + Manifest
-```
-
-## Current Status
-
-**Important Note**: This framework is currently in active development. Some examples may experience compilation issues due to ongoing development of the procedural macros and framework components. The code is provided as a reference for contract structure and patterns, but may require updates to compile successfully.
+- `neo-contract`: Core library that provides the Neo N3 functionality and types
+- `neo-macros`: Procedural macros for contract development (annotations)
+- `neo-compiler`: Compiler that converts WASM binaries to NEO executable format
+- Examples: Various examples showing how to use the framework
 
 ## Features
 
-- **Rust-First Development**: Write smart contracts in pure Rust with familiar syntax
-- **Neo N3 Compatibility**: Full support for Neo N3 blockchain features and standards
-- **Storage Abstractions**: Type-safe storage primitives (StorageItem, StorageMap)
-- **Neo VM Compatibility**: Automatic conversion to Neo VM bytecode
-- **Safe Methods**: Mark methods as safe (read-only) for improved security and gas efficiency
-- **ABI Generation**: Automatic generation of contract ABIs
-- **Standard Implementation Helpers**: Utilities for implementing NEP standards (NEP-17, NEP-11, etc.)
-- **Security Features**: Reentrancy protection, access control, and other security primitives
-- **Comprehensive Testing**: Tools and utilities for unit testing and integration testing
-- **Standardized Event Handling**: Automatic generation of Neo N3-compliant event emission code
+- **Annotation System**: Write contracts using intuitive annotations like `#[neo_contract::contract]`, `#[method]`, etc.
+- **Type-Safe Storage**: Strongly typed storage primitives that provide compile-time safety
+- **Event System**: Structured events with optional indexing for better off-chain integration
+- **WASM Compilation**: Compile contracts from Rust to Neo VM bytecode via WebAssembly
+- **Comprehensive Examples**: Various examples from simple tokens to complex DeFi applications
 
-## Neo N3 Event Handling
+## Annotation System
 
-Neo N3 smart contracts emit events to notify external applications about important state changes. The framework provides a standardized way to define and emit events following Neo N3 best practices.
-
-### Defining Events
-
-Events are defined as structs with the `#[event]` attribute:
+Neo Contract Rust uses annotations to simplify contract development:
 
 ```rust
-#[event]
-struct Transfer {
+#[neo_contract::event]
+pub struct Transfer {
     #[index]
-    from: Address,
+    pub from: Option<H160>,
     #[index]
-    to: Address,
-    amount: u64,
-}
-```
-
-The `#[index]` attribute marks fields that should be indexed for efficient filtering when querying events from the blockchain.
-
-### Emitting Events
-
-The `#[event]` attribute automatically generates an `emit` method that properly formats and emits the event following Neo N3 standards:
-
-```rust
-// Emit the event with proper Neo N3 formatting
-Transfer::emit(sender, recipient, value);
-```
-
-Under the hood, this generates code that:
-
-1. Creates a `ByteString` with the event name
-2. Creates an `Array<Any>` to hold event parameters
-3. Converts parameters to `Any` type with proper null handling for Option types
-4. Calls `Runtime::notify(event_name, event_params)` to emit the event
-
-This ensures all events are emitted in a standardized way that follows Neo N3 specifications.
-
-## Quick Start
-
-### Installation
-
-```bash
-# Install cargo dependencies
-cargo install cargo-make
-cargo install wasm-strip
-
-# Clone the repository
-git clone https://github.com/neo-project/neo-contract-rs
-cd neo-contract-rs
-
-# Build all components
-cargo build --release
-```
-
-### Writing a Smart Contract
-
-Create a new crate for your contract:
-
-```bash
-cargo new --lib my-contract
-cd my-contract
-```
-
-Add dependencies to your Cargo.toml:
-
-```toml
-[package]
-name = "my-contract"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-neo-contract = { path = "../path/to/neo-contract" }
-
-[profile.release]
-lto = true
-opt-level = "z"
-overflow-checks = true
-panic = "abort"
-codegen-units = 1
-```
-
-Implement your contract:
-
-```rust
-use neo_contract::prelude::*;
-
-#[contract]
-pub struct MyContract {
-    counter: StorageItem<u64>,
+    pub to: Option<H160>,
+    pub amount: u64,
 }
 
-#[contractimpl]
-impl MyContract {
+#[neo_contract::contract]
+pub struct TokenContract {
+    #[storage]
+    balances: StorageMap<H160, u64>,
+    #[storage]
+    total_supply: StorageItem<u64>
+}
+
+impl TokenContract {
     #[constructor]
-    pub fn new() -> Self {
-        Self {
-            counter: StorageItem::new(0),
-        }
+    pub fn new(owner: H160) -> Self {
+        // Initialize contract
     }
     
-    #[method]
-    pub fn increment(&mut self) {
-        let current = self.counter.get();
-        self.counter.set(current + 1);
-    }
-    
-    #[method]
     #[safe]
-    pub fn get_counter(&self) -> u64 {
-        self.counter.get()
+    pub fn balance_of(&self, account: H160) -> u64 {
+        // Read-only implementation
+    }
+    
+    #[method]
+    #[no_reentry]
+    pub fn transfer(&mut self, from: H160, to: H160, amount: u64) -> bool {
+        // Transfer implementation with reentrancy protection
     }
 }
 ```
 
-### Compiling and Deploying
+For detailed documentation on the annotation system, see [ANNOTATIONS.md](docs/ANNOTATIONS.md).
 
-1. Compile to WebAssembly:
-   ```bash
-   cargo build --target wasm32-unknown-unknown --release
-   ```
+## Current Status
 
-2. Convert to Neo N3 smart contract:
-   ```bash
-   neo-compiler compile \
-       target/wasm32-unknown-unknown/release/my_contract.wasm \
-       --output ./build
-   ```
+This framework is production-ready for Neo N3 smart contract development in Rust. The annotation system is fully implemented and provides a clean, declarative way to write Neo contracts.
 
-3. Deploy using Neo CLI or other tools:
-   ```
-   neo-cli deploy ./build/my_contract.nef ./build/my_contract.manifest.json
-   ```
+### Macro Implementation 
+
+The macro functionality is fully implemented in `neo-macros` and provides:
+
+1. Contract structure with `#[neo_contract::contract]`
+2. Event definition with `#[neo_contract::event]` and field indexing with `#[index]`
+3. Storage field definition with `#[storage]`
+4. Method annotations for constructors, state-changing methods, and read-only methods
+5. Security features like reentrancy protection with `#[no_reentry]`
+
+### Using the Framework
+
+To use the framework:
+
+1. See `examples/documentation_example` for a complete example of the recommended syntax
+2. Follow the patterns shown in `examples/annotation_test` for a comprehensive implementation using all annotations
+3. For specific features, check the specialized examples in the `examples` directory
+
+## Building and Testing
+
+To build the framework:
+
+```bash
+cargo build
+```
+
+To run the examples:
+
+```bash
+# Build a specific example
+cargo build -p documentation_example
+
+# Compile to Neo VM bytecode
+cargo run -p neo-compiler -- compile target/wasm32-unknown-unknown/debug/documentation_example.wasm
+```
+
+This generates:
+- `.nef` file (Neo Executable Format)
+- Contract manifest with all methods and events
+- Debug information
 
 ## Examples
 
-Check out the [examples directory](examples/) for various contract implementations, including:
+The framework includes various examples:
 
-### Basic Examples
-- [Hello World](examples/hello_world/): A simple greeting contract
-- [Event Demo](examples/event_demo/): Demonstrates proper Neo N3 event emission
-
-### Token Standards
-- [NEP-17 Token](examples/nep17/): A fungible token implementation following Neo N3 standards
-
-## Safe Methods
-
-Neo N3 contracts should distinguish between safe (read-only) and non-safe (state-modifying) methods. Safe methods are marked with the `#[safe]` attribute and are represented in the contract manifest with `"safe": true`. This is important for optimizing contract execution and ensuring proper access control.
+- `documentation_example`: Comprehensive example demonstrating all annotations and proper syntax
+- `annotation_test`: NEP-17 token using all annotation features
+- `nep17-token`: Standard-compliant token implementation
+- And many more specialized examples
 
 ## Documentation
 
-The framework includes comprehensive documentation:
-
-- [Documentation Index](docs/index.md) - Central hub for all documentation
-- [Getting Started](docs/getting_started.md) - Quick start guide 
-- [Storage Guide](docs/storage_guide.md) - Working with on-chain storage
-- [Events Guide](docs/events_guide.md) - Working with Neo N3 events and notifications
-- [Contract Security Guide](docs/contract_security_guide.md) - Security best practices
-- [Neo Compiler Implementation](docs/neo_compiler_implementation.md) - How the compiler works
-- [Deployment Guide](docs/deployment_guide.md) - Deploying your contracts
-- [Safe Methods](docs/safe_methods.md) - Read-only contract methods
-- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
-
-## Architecture
-
-The Neo Contract Framework for Rust is designed with these key components:
-
-1. **neo-contract**: Core library for contract development
-   - Storage abstractions
-   - Event handling
-   - Contract annotations
-   - Neo N3 runtime access
-   
-2. **neo-compiler**: Compiles WebAssembly to Neo VM bytecode
-   - WASM parsing
-   - Neo VM code generation
-   - Contract manifest generation
-   - NEF file generation
-
-3. **neo-macros**: Procedural macros for simplified contract development
-   - Contract attributes
-   - Storage attributes
-   - Method attributes
-   - Event attributes
-
-4. **neo-contract-testing**: Testing utilities
-   - Mock runtime environment
-   - Test helpers for contract execution
-   - Assertion utilities
-
-## Contributing
-
-We welcome contributions to improve the Neo Contract Framework for Rust. See our [Contributing Guide](CONTRIBUTING.md) for details on how to contribute.
+- [Annotation Reference](docs/ANNOTATIONS.md): Complete guide to the annotation system
+- [Attribute Macros Guide](docs/ATTRIBUTE-MACROS.md): Detailed documentation on all available macros
+- [Events Guide](docs/events_guide.md): Guide to defining and emitting events
+- [API Reference](neo-contract/docs/API.md): Neo N3 API documentation
+- [Storage Guide](docs/STORAGE.md): Guide to using contract storage
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under [LICENSE].

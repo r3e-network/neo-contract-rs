@@ -2,14 +2,15 @@
 name = "dao-example"
 version = "0.1.0"
 edition = "2021"
-authors = ["Neo Contract Rust Team"]
-description = "A DAO example using Neo Contract Rust"
+authors = ["R3E Network Team"]
+description = "DAO Example for Neo N3 Smart Contracts"
+license = "MIT"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-neo-contract = { path = "../../neo-contract" }
+neo-contract = { path = "../../neo-contract", features = ["contract-macros"] }
 neo-macros = { path = "../../neo-macros" }
 hex = "0.4"
 

@@ -1,40 +1,93 @@
-# Neo N3 Contract Development Framework Documentation
+# NEO Contract Rust Framework Documentation
 
-## Overview
+## Current State
 
-The Neo N3 contract development framework for Rust enables developers to write smart contracts for the Neo N3 blockchain using the Rust programming language. This framework provides a comprehensive set of tools and libraries for contract development, compilation, and deployment.
-
-## Documentation Structure
-
-- [Getting Started](getting-started.md) - Quick start guide for new developers
-- [Architecture](architecture.md) - Overview of the framework architecture
-- [API Reference](api/README.md) - Detailed API documentation
-- [Examples](examples.md) - Example contracts and use cases
-- [Best Practices](best-practices.md) - Recommended patterns and practices
-- [Migration Guide](migration-guide.md) - Guide for migrating from other frameworks
-- [Troubleshooting](troubleshooting.md) - Common issues and solutions
-- [Contributing](contributing.md) - Guidelines for contributing to the project
+The NEO Contract Rust Framework is a comprehensive toolkit for developing smart contracts for the NEO N3 blockchain platform. This document outlines the current state of the framework, known issues, and recommended approaches.
 
 ## Framework Components
 
-The framework consists of three main components:
+1. **neo-contract**: Core library providing types, runtime functions, and APIs for NEO N3 contracts
+2. **neo-compiler**: Compiler for NEO contracts, converts WASM to NEO VM bytecode
+3. **neo-macros**: Procedural macros for simplified contract development
+4. **neo-contract-testing**: Testing utilities for NEO contracts
 
-1. **neo-contract** - Core library providing the Neo N3 contract development API
-2. **neo-compiler** - Compiler that converts WebAssembly to Neo VM bytecode
-3. **neo-macros** - Procedural macros for the attribute-based interface
+## Known Issues and Workarounds
 
-## Compilation Flow
+### 1. Macro Attribute Issues
 
+#### Issue
+Several attribute macros used for contract metadata are imported but not fully implemented:
+- `contract_author`
+- `contract_description`
+- `contract_version`
+- `supported_standards`
+- Other contract-related attributes (`event`, `index`, etc.)
+
+#### Workaround
+We've added placeholder implementations for these macros, but they're not fully functional yet. The current implementation allows compilation but doesn't perform the full functionality expected from these macros.
+
+### 2. Storage System
+
+#### Issue
+The storage system has inconsistencies between naming and implementation.
+
+#### Workaround
+Use type aliases to bridge differences:
+```rust
+use neo_contract::storage::map::Map as StorageMap;
 ```
-Rust code → WebAssembly → Neo VM bytecode → NEF file + Manifest
+
+### 3. Event Emission System
+
+#### Issue
+The event emission system using `EventName::emit()` is not fully implemented.
+
+#### Workaround
+Use the lower-level `Runtime::notify()` method:
+```rust
+let mut event_args = Array::new();
+event_args.push(Any::from(address));
+Runtime::notify(&ByteString::from("MemberAdded"), &event_args);
 ```
 
-## Key Features
+## Documentation-First Approach
 
-- **Rust-First Development**: Write smart contracts in pure Rust
-- **Neo N3 Compatibility**: Full support for Neo N3 features and standards
-- **Storage Abstractions**: Type-safe storage primitives for contract state
-- **Event System**: Strongly-typed event emission system
-- **Security Features**: Built-in security patterns and protections
-- **Testing Tools**: Utilities for unit and integration testing
-- **Standard Implementations**: Helpers for implementing Neo N3 standards (NEP-17, NEP-11, etc.)
+Following the requirement for a documentation-first approach:
+
+1. **Contract Documentation**: Each contract should include comprehensive documentation regarding its purpose, functions, and behavior.
+
+2. **Documentation/Implementation Pairing**: Maintain paired documentation and implementation files for each feature.
+
+3. **Documentation-Based Navigation**: Start with documentation to understand the framework before navigating to implementation details.
+
+4. **Consistent Structure**: The repository maintains a consistent documentation structure in the `docs/` directory.
+
+## Recommended Development Approach
+
+For developing new contracts:
+
+1. **Start with Hello World Example**: Use the simplified Hello World example as a starting point.
+
+2. **Manual Implementation for Now**: Until macros are fully functional, manually implement and manage events and storage.
+
+3. **Explicit Imports**: Be explicit about imports; avoid relying on prelude until it's stabilized.
+
+4. **Documentation First**: Write documentation describing the contract's functionality before implementing.
+
+## Next Steps
+
+To improve the framework:
+
+1. **Complete Macro Implementations**: Fully implement all attribute macros with proper functionality.
+
+2. **Standardize Storage API**: Create a consistent API for storage operations.
+
+3. **Event System**: Implement a type-safe event system.
+
+4. **Testing Utilities**: Enhance testing utilities for contract testing.
+
+5. **Documentation**: Continue improving documentation with examples and best practices.
+
+## Conclusion
+
+The NEO Contract Rust Framework is a promising framework for developing NEO N3 smart contracts. While there are currently some limitations with macros and APIs, workarounds exist to enable contract development. Following the documentation-first approach will help maintain a clean and well-structured project.

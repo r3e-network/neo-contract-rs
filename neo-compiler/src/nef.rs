@@ -8,6 +8,7 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::Path;
+use std::fs::File;
 
 /// The magic number for NEF files.
 pub const MAGIC: u32 = 0x3346454E; // "NEF3" in little-endian

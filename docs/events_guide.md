@@ -12,18 +12,18 @@ In Neo N3, events are implemented through notifications that contracts emit duri
 
 The Neo Contract Rust Framework provides a standardized pattern for defining and emitting events which improves code readability and type safety.
 
-### Event Definition with #[event] Attribute
+### Event Definition with #[neo_contract::event] Attribute
 
-The recommended way to define events is using Rust structs with the `#[event]` attribute:
+The recommended way to define events is using Rust structs with the `#[neo_contract::event]` attribute:
 
 ```rust
-#[event]
-struct Transfer {
+#[neo_contract::event]
+pub struct Transfer {
     #[index]
-    from: Option<H160>,
+    pub from: Option<H160>,
     #[index]
-    to: Option<H160>,
-    amount: u64,
+    pub to: Option<H160>,
+    pub amount: u64,
 }
 ```
 
@@ -38,13 +38,13 @@ Benefits of this approach:
 Use the `#[index]` attribute to mark event parameters that should be indexed for efficient filtering:
 
 ```rust
-#[event]
-struct Approval {
+#[neo_contract::event]
+pub struct Approval {
     #[index]  // Indexed for filtering - equivalent to Solidity's "indexed"
-    owner: H160,
+    pub owner: H160,
     #[index]  // Indexed for filtering
-    spender: H160,
-    amount: u64,  // Not indexed
+    pub spender: H160,
+    pub amount: u64,  // Not indexed
 }
 ```
 
@@ -60,7 +60,7 @@ Transfer {
     from: Some(sender),
     to: Some(receiver),
     amount: 100,
-}.emit();
+}.notify();
 ```
 
 ## Legacy Event Emission Method
@@ -100,13 +100,13 @@ When migrating to the standardized pattern, you should replace such implementati
 NEP-17 compliant contracts should include a standard Transfer event:
 
 ```rust
-#[event]
-struct Transfer {
+#[neo_contract::event]
+pub struct Transfer {
     #[index]
-    from: Option<H160>,  // None for minting
+    pub from: Option<H160>,  // None for minting
     #[index]
-    to: Option<H160>,    // None for burning
-    amount: u64,
+    pub to: Option<H160>,    // None for burning
+    pub amount: u64,
 }
 ```
 
@@ -115,15 +115,15 @@ struct Transfer {
 NEP-11 compliant contracts should include Transfer events with token ID:
 
 ```rust
-#[event]
-struct Transfer {
+#[neo_contract::event]
+pub struct Transfer {
     #[index]
-    from: Option<H160>,  // None for minting
+    pub from: Option<H160>,  // None for minting
     #[index]
-    to: Option<H160>,    // None for burning
+    pub to: Option<H160>,    // None for burning
     #[index]
-    token_id: ByteString,
-    amount: u64,         // Usually Int256::one() for NFTs
+    pub token_id: ByteString,
+    pub amount: u64,         // Usually 1 for NFTs
 }
 ```
 
@@ -138,7 +138,7 @@ impl MyContract {
             from,
             to,
             amount,
-        }.emit();
+        }.notify();
     }
 }
 ```
@@ -163,17 +163,17 @@ pub fn transfer(&mut self, from: H160, to: H160, amount: u64) -> bool {
 For complex events, structure your data logically:
 
 ```rust
-#[event]
-struct SwapExecuted {
+#[neo_contract::event]
+pub struct SwapExecuted {
     #[index]
-    user: H160,
+    pub user: H160,
     #[index]
-    pool_id: u32,
-    token_in: H160,
-    token_out: H160,
-    amount_in: u64,
-    amount_out: u64,
-    timestamp: u64,
+    pub pool_id: u32,
+    pub token_in: H160,
+    pub token_out: H160,
+    pub amount_in: u64,
+    pub amount_out: u64,
+    pub timestamp: u64,
 }
 ```
 
@@ -182,13 +182,13 @@ struct SwapExecuted {
 You can use collection types in your events for batch operations:
 
 ```rust
-#[event]
-struct BatchOperation {
+#[neo_contract::event]
+pub struct BatchOperation {
     #[index]
-    operator: H160,
-    addresses: Vec<H160>,
-    values: Vec<u64>,
-    timestamp: u64,
+    pub operator: H160,
+    pub addresses: Vec<H160>,
+    pub values: Vec<u64>,
+    pub timestamp: u64,
 }
 ```
 
@@ -196,7 +196,7 @@ struct BatchOperation {
 
 ### 1. Follow Standardized Pattern
 
-Use the `#[event]` attribute for all event definitions and the `.emit()` method for emission.
+Use the `#[neo_contract::event]` attribute for all event definitions and the `.notify()` method for emission.
 
 ### 2. Be Consistent with Event Names
 
@@ -217,12 +217,12 @@ Add documentation comments to your event definitions explaining their purpose:
 
 ```rust
 /// Event emitted when a user stakes tokens in the platform
-#[event]
-struct Staked {
+#[neo_contract::event]
+pub struct Staked {
     #[index]
-    user: H160,
-    amount: u64,
-    timestamp: u64,
+    pub user: H160,
+    pub amount: u64,
+    pub timestamp: u64,
 }
 ```
 
@@ -246,22 +246,22 @@ extern crate alloc;
 
 use neo_contract::prelude::*;
 
-#[event]
-struct Transfer {
+#[neo_contract::event]
+pub struct Transfer {
     #[index]
-    from: Option<H160>,
+    pub from: Option<H160>,
     #[index]
-    to: Option<H160>,
-    amount: u64,
+    pub to: Option<H160>,
+    pub amount: u64,
 }
 
-#[event]
-struct Approval {
+#[neo_contract::event]
+pub struct Approval {
     #[index]
-    owner: H160,
+    pub owner: H160,
     #[index]
-    spender: H160,
-    amount: u64,
+    pub spender: H160,
+    pub amount: u64,
 }
 
 #[contract]
@@ -300,7 +300,7 @@ mod token_contract {
                 from: Some(from),
                 to: Some(to),
                 amount,
-            }.emit();
+            }.notify();
             
             true
         }
@@ -319,7 +319,7 @@ mod token_contract {
                 owner,
                 spender,
                 amount,
-            }.emit();
+            }.notify();
             
             true
         }
@@ -329,6 +329,6 @@ mod token_contract {
 
 ## Conclusion
 
-The standardized event pattern with `#[event]` attribute and `EventName::emit()` method is the recommended approach for Neo N3 smart contracts. This pattern improves code readability, ensures type safety, and provides a more maintainable way to handle events in your contracts.
+The standardized event pattern with `#[neo_contract::event]` attribute and `EventName::notify()` method is the recommended approach for Neo N3 smart contracts. This pattern improves code readability, ensures type safety, and provides a more maintainable way to handle events in your contracts.
 
 For examples of this pattern in action, refer to the example contracts in the repository, such as the event_demo, secure_vault, and dex contracts.

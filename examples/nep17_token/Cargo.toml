@@ -8,5 +8,9 @@ crate-type = ["cdylib"]
 
 [dependencies]
 neo-contract = { path = "../../neo-contract" }
-neo-macros = { path = "../../neo-macros" }
-wee_alloc = "0.4.5"
+
+[profile.release]
+lto = true
+opt-level = "s"
+codegen-units = 1
+panic = "abort"

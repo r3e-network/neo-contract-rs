@@ -6,17 +6,34 @@
 //!
 //! This includes all macros migrated from neo-contract-proc-macros to ensure
 //! a complete set of functionality for Neo N3 smart contract development in Rust.
+//!
+//! ## Note on Declarative Macros
+//! 
+//! Declarative macros (`macro_rules!`) cannot be defined in a proc-macro crate as per
+//! Rust language limitations. For declarative macros like `emit_event!`, `profile!`, etc.,
+//! a separate non-proc-macro crate should be created (e.g., `neo-macros-core`).
+//!
+//! The recommended architecture is:
+//! 1. `neo-macros` (this crate): Contains procedural macros only
+//! 2. `neo-macros-core`: A new crate for declarative macros
+//! 3. `neo-contract`: Re-exports macros from both above crates
+//!
+//! For now, the declarative macros remain defined in the `neo-contract` crate directly.
 
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::{format_ident, quote};
-use syn::__private::TokenStream2;
+use proc_macro2::Span;
+use quote::{format_ident, quote, ToTokens};
 use syn::{
-    parse_macro_input, Attribute, AttributeArgs, Data, DeriveInput, 
-    Fields, FnArg, ItemFn, ItemMod, ItemStruct, Lit, Meta, 
-    NestedMeta, Pat, ReturnType
+    parse::Parser,
+    parse_macro_input,
+    AttributeArgs, Data, DeriveInput, 
+    Fields, ItemFn, ItemStruct, Lit, Meta, 
+    NestedMeta, FnArg, Pat, PatType, PatIdent
 };
+
+mod helpers {
     #[allow(dead_code)]
     pub fn has_index_attribute(attrs: &[syn::Attribute]) -> bool {
         attrs.iter().any(|attr| attr.path.is_ident("index"))
@@ -66,117 +83,121 @@ fn extract_attribute_args(_attr: &syn::Attribute) -> Vec<String> {
 
 /// Marks a struct as an event that can be emitted from the contract
 ///
+/// This macro processes a struct to create a proper Neo N3 event definition.
+/// Fields marked with #[index] will be indexed in the blockchain for better filtering.
+///
 /// # Example
 ///
-/// ```
+/// ```rust
 /// #[event]
 /// struct Transfer {
 ///     #[index]
-///     from: Option<H160>,
+///     from: H160,
 ///     #[index]
-///     to: Option<H160>,
+///     to: H160,
 ///     amount: u64,
 /// }
 /// ```
 #[proc_macro_attribute]
-pub fn event(_: TokenStream, item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as DeriveInput);
-    let struct_name = &input.ident;
-
-    let (fields, indexed_fields) = match input.data {
-        Data::Struct(ref data) => match data.fields {
-            Fields::Named(ref fields) => {
-                let mut field_names = Vec::new();
-                let mut field_types = Vec::new();
-                let mut indexed_fields = Vec::new();
-
-                for field in &fields.named {
-                    let field_name = field.ident.as_ref().unwrap();
-                    let field_type = &field.ty;
-
-                    field_names.push(field_name.clone());
-                    field_types.push(field_type.clone());
-
-                    // Check if field has #[index] attribute
-                    if helpers::has_index_attribute(&field.attrs) {
-                        indexed_fields.push(field_name.clone());
+pub fn event(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    // Clone the item before parsing to avoid move issues
+    let item_clone = item.clone();
+    let input = parse_macro_input!(item_clone as ItemStruct);
+    
+    // Generate the event emitter
+    if let ItemStruct { ref ident, ref fields, .. } = input {
+        // Make sure we only support named fields
+        if let Fields::Named(ref named_fields) = fields {
+            let event_name = ident.to_string();
+            let struct_vis = &input.vis;
+            
+            // Extract field information for notification
+            let field_names = named_fields.named.iter()
+                .map(|field| field.ident.as_ref().unwrap())
+                .collect::<Vec<_>>();
+            
+            let field_types = named_fields.named.iter()
+                .map(|field| &field.ty)
+                .collect::<Vec<_>>();
+            
+            // Check for indexed fields
+            let indexed_fields = named_fields.named.iter()
+                .map(|field| {
+                    field.attrs.iter().any(|attr| {
+                        attr.path.is_ident("index")
+                    })
+                })
+                .collect::<Vec<_>>();
+            
+            // Generate notification emitter
+            let item_proc_macro2 = proc_macro2::TokenStream::from(item.clone());
+            let output = quote! {
+                // Return the original struct
+                #item_proc_macro2
+                
+                // Generate notification emitter extension
+                #[doc(hidden)]
+                impl #ident {
+                    #struct_vis fn emit(&self) {
+                        use neo_contract::runtime;
+                        let mut notify_args = Vec::new();
+                        
+                        // Convert each field to a notify arg
+                        #(
+                            let field_value = &self.#field_names;
+                            notify_args.push(runtime::to_stackitem(field_value));
+                        )*
+                        
+                        // Emit the notification
+                        runtime::notify(#event_name, notify_args);
                     }
                 }
-
-                (fields.named.clone(), indexed_fields)
-            }
-            _ => panic!("Only named fields are supported in event structs"),
-        },
-        _ => panic!("Only structs can be events"),
-    };
-
-    // Extract field information
-    let field_names: Vec<_> = fields.iter().map(|f| f.ident.as_ref().unwrap()).collect();
-    let field_types: Vec<_> = fields.iter().map(|f| &f.ty).collect();
-    let field_name_strings: Vec<_> = field_names.iter().map(|f| f.to_string()).collect();
-
-    // Convert field types to strings using the proper helper function for double references
-    let field_type_strings: Vec<String> = field_types.iter().map(helpers::map_field_type).collect();
-    let indexed_bools: Vec<_> = field_names.iter().map(|name| indexed_fields.contains(name)).collect();
-
-    // Generate code to register the event and create a standardized emit method
-    let expanded = quote! {
-        #input
-
-        impl #struct_name {
-            /// Static method to emit the event in Neo N3 format
-            pub fn emit(#(#field_names: #field_types),*) {
-                // Create event name as ByteString (required for Neo N3)
-                let event_name = neo_contract::prelude::ByteString::from(stringify!(#struct_name));
-
-                // Create Array to hold event parameters (required for Neo N3)
-                let mut event_data = neo_contract::prelude::Array::<neo_contract::prelude::Any>::new();
-
-                // Add parameters with proper Neo N3 format
-                #({
-                    // Special handling for Option types
-                    if let Some(type_name) = get_option_inner_type_name(stringify!(#field_types)) {
-                        // This is an Option<T> type
-                        match &#field_names {
-                            Some(value) => event_data.push(neo_contract::prelude::Any::from(value.clone())),
-                            None => event_data.push(neo_contract::prelude::Any::new()), // Use empty Any for null values
-                        }
-                    } else {
-                        // Regular type, not an Option
-                        event_data.push(neo_contract::prelude::Any::from(#field_names.clone()));
-                    }
-                })*
-
-                // Emit the event using Runtime::notify (required for Neo N3)
-                neo_contract::prelude::Runtime::notify(&event_name, &event_data);
-            }
+            };
+            
+            return TokenStream::from(output);
+        } else {
+            // Return error: only named fields are supported
+            let error = syn::Error::new_spanned(
+                proc_macro2::TokenStream::from(item),
+                "event attribute can only be applied to struct with named fields"
+            );
+            return error.to_compile_error().into();
         }
-
-        /// Helper function to determine if a type is an Option<T> and extract T
-        fn get_option_inner_type_name(type_str: &str) -> Option<&str> {
-            if type_str.starts_with("Option < ") {
-                let start = type_str.find("Option < ").unwrap() + "Option < ".len();
-                let end = type_str.rfind(" >").unwrap_or(type_str.len());
-                Some(&type_str[start..end])
-            } else {
-                None
-            }
-        }
-    };
-
-    TokenStream::from(expanded)
+    } else {
+        // This will not happen as we are parsing as ItemStruct, but kept for clarity
+        let error = syn::Error::new_spanned(
+            proc_macro2::TokenStream::from(item),
+            "event attribute can only be applied to struct"
+        );
+        return error.to_compile_error().into();
+    }
 }
 
 /// Marks a field in an event struct as indexed for event filtering
+///
+/// This attribute can only be used on fields within a struct marked with the `#[event]` attribute.
+/// Indexed fields can be used to filter events when querying the blockchain.
+///
+/// # Example
+///
+/// ```rust
+/// #[event]
+/// struct Transfer {
+///     #[index]
+///     from: H160,
+///     #[index]
+///     to: H160,
+///     amount: u64,
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn index(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    // This is just a marker attribute, return the item unchanged
+    // Simply return the input token stream unmodified
+    // This is a marker attribute that will be processed by the event macro
     item
 }
 
-/// Marks static byte array types
-///
-/// Use these for declaring constant data with specific types
+/// Defines a fixed byte array constant.
 #[proc_macro_attribute]
 pub fn byte_array(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as AttributeArgs);
@@ -246,132 +267,6 @@ pub fn byte_array(attr: TokenStream, item: TokenStream) -> TokenStream {
                 &mut self.0
             }
         }
-    };
-    
-    TokenStream::from(expanded)
-}
-
-/// Defines a fixed byte array constant.
-#[proc_macro_attribute]
-pub fn byte_array_fixed(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(attr as AttributeArgs);
-    let input = parse_macro_input!(item as DeriveInput);
-    
-    // Extract the byte array from the attribute arguments
-    let byte_string = if !args.is_empty() {
-        match &args[0] {
-            NestedMeta::Lit(Lit::Str(lit)) => lit.value(),
-            _ => String::new(),
-        }
-    } else {
-        String::new()
-    };
-    
-    // Get the struct name and expected length
-    let struct_name = &input.ident;
-    let byte_length = byte_string.len() / 2; // Hex string to bytes length
-    
-    // Generate implementation for the fixed byte array
-    let expanded = quote! {
-        #input
-        
-        impl #struct_name {
-            /// Creates a new byte array from hexadecimal string
-            pub fn from_hex(hex: &str) -> Result<Self, &'static str> {
-                if hex.len() % 2 != 0 {
-                    return Err("Hex string must have an even number of characters");
-                }
-                
-                let expected_len = #byte_length;
-                let actual_len = hex.len() / 2;
-                
-                if actual_len != expected_len {
-                    return Err("Incorrect byte array length");
-                }
-                
-                let mut bytes = [0u8; #byte_length];
-                for i in 0..expected_len {
-                    let byte_str = &hex[i*2..i*2+2];
-                    bytes[i] = u8::from_str_radix(byte_str, 16).map_err(|_| "Invalid hex character")?;
-                }
-                
-                Ok(Self(bytes))
-            }
-            
-            /// Creates a byte array from a slice
-            pub fn from_slice(slice: &[u8]) -> Self {
-                let mut result = Self::new();
-                let copy_len = core::cmp::min(slice.len(), #byte_length);
-                result.0[..copy_len].copy_from_slice(&slice[..copy_len]);
-                result
-            }
-            
-            /// Returns the length of the byte array
-            pub fn len(&self) -> usize {
-                #byte_length
-            }
-            
-            /// Returns whether the byte array is empty (always false for fixed arrays)
-            pub fn is_empty(&self) -> bool {
-                false
-            }
-            
-            /// Returns a slice of the byte array
-            pub fn as_slice(&self) -> &[u8] {
-                &self.0[..]
-            }
-            
-            /// Returns the fixed constant based on the attribute parameters
-            pub fn constant() -> Self {
-                #[allow(unused_mut)]
-                let mut result = Self::default();
-                
-                #[cfg(not(feature = "mock"))]
-                {
-                    if !#byte_string.is_empty() {
-                        if let Ok(bytes) = hex::decode(&#byte_string) {
-                            if bytes.len() == #byte_length {
-                                result = Self(bytes.try_into().unwrap());
-                            }
-                        }
-                    }
-                }
-                
-                result
-            }
-        }
-        
-        impl Default for #struct_name {
-            fn default() -> Self {
-                Self([0; #byte_length])
-            }
-        }
-        
-        impl AsRef<[u8]> for #struct_name {
-            fn as_ref(&self) -> &[u8] {
-                &self.0
-            }
-        }
-        
-        impl From<#struct_name> for [u8; #byte_length] {
-            fn from(bytes: #struct_name) -> Self {
-                bytes.0
-            }
-        }
-        
-        impl From<[u8; #byte_length]> for #struct_name {
-            fn from(bytes: [u8; #byte_length]) -> Self {
-                Self(bytes)
-            }
-        }
-        
-        impl PartialEq for #struct_name {
-            fn eq(&self, other: &Self) -> bool {
-                self.0 == other.0
-            }
-        }
-        
-        impl Eq for #struct_name {}
     };
     
     TokenStream::from(expanded)
@@ -1943,7 +1838,7 @@ pub fn register_event(attr: TokenStream, item: TokenStream) -> TokenStream {
     
     // Generate implementation with event emission code following Neo N3 pattern
     let implementation = quote! {
-        #input
+        #input_struct
         
         impl #struct_name {
             /// Emits this event following Neo N3 pattern
@@ -2470,186 +2365,330 @@ pub fn storage(_: TokenStream, item: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-/// Marks a method as a contract constructor
+/// Marks a function as the constructor for the contract
 ///
-/// The constructor is called when the contract is deployed
-/// It should initialize the contract state
+/// This macro identifies the function that should be called when the contract is deployed.
+/// Only one constructor is allowed per contract.
+///
+/// # Example
+///
+/// ```rust
+/// #[constructor]
+/// pub fn new() -> Self {
+///     // Initialize contract state
+///     Self {
+///         // ...
+///     }
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn constructor(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as ItemFn);
-
-    // Constructor is always _deploy in Neo N3
-    let expanded = quote! {
-        #[neo_contract_proc_macros::manifest_method(method_name = "_deploy")]
-        #input
-    };
-
-    TokenStream::from(expanded)
-}
-
-/// Marks a method as a contract method
-///
-/// Contract methods are exposed in the contract manifest and can be called
-/// This is the standard way to expose functionality in Neo N3 contracts
-#[proc_macro_attribute]
-pub fn method(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr_args = parse_macro_input!(attr as AttributeArgs);
-    let input = parse_macro_input!(item as ItemFn);
-    let name = &input.sig.ident.to_string();
+    let input_fn = parse_macro_input!(item as ItemFn);
+    let fn_name = &input_fn.sig.ident;
     
-    // Check if this is a safe method based on attributes
-    let is_safe = attr_args.iter().any(|arg| {
-        if let NestedMeta::Meta(Meta::NameValue(name_value)) = arg {
-            if name_value.path.is_ident("safe") {
-                if let Lit::Bool(lit_bool) = &name_value.lit {
-                    return lit_bool.value;
-                }
-            }
-        }
-        false
-    });
-    
-    // Extract parameter information
-    let mut param_names = Vec::new();
-    let mut param_types = Vec::new();
-    
-    for param in &input.sig.inputs {
-        if let FnArg::Typed(pat_type) = param {
-            if let Pat::Ident(pat_ident) = &*pat_type.pat {
-                let param_name = pat_ident.ident.to_string();
-                let param_type = quote! { #pat_type.ty }.to_string();
-                
-                param_names.push(param_name);
-                param_types.push(param_type);
-            }
-        }
-    }
-    
-    // Extract return type
-    let return_type = match &input.sig.output {
-        ReturnType::Default => "Void".to_string(),
-        ReturnType::Type(_, ty) => {
-            let type_str = quote! { #ty }.to_string();
-            type_str
-        }
-    };
-    
-    // Register method in the Neo N3 manifest
-    let register_code = quote! {
-        inventory::submit! {
-            neo_contract::manifest::MethodDescriptor::new(
-                #name.to_string(),
-                #is_safe, 
-                vec![#(#param_names.to_string()),*],
-                vec![#(#param_types.to_string()),*],
-                #return_type.to_string()
-            )
-        }
-    };
-    
-    // Generate the method with proper Neo N3 annotations
-    let vis = &input.vis;
-    let attrs = &input.attrs;
-    let sig = &input.sig;
-    let block = &input.block;
-    
+    // Generate a more robust constructor wrapper that integrates with Neo VM
     let output = quote! {
-        #(#attrs)*
-        #vis #sig {
-            #block
-        }
+        // Return the original function
+        #input_fn
         
-        // Register the method in the manifest
-        #register_code
+        // Register with inventory system for contract manifest generation
+        #[doc(hidden)]
+        #[allow(non_upper_case_globals)]
+        const _: () = {
+            extern crate neo_contract;
+            use neo_contract::exports::inventory;
+            
+            static _CONSTRUCTOR_REG: inventory::submit<&'static str> = 
+                inventory::submit(stringify!(#fn_name));
+        };
     };
     
     TokenStream::from(output)
 }
 
-/// Marks a method as a safe (read-only) contract method
+/// Marks a function as a contract method that can be invoked
 ///
-/// Safe methods are represented in the contract manifest with "safe": true
-/// These methods are optimized for contracts that don't modify state
+/// This macro identifies functions that can be called externally on the contract.
+///
+/// # Example
+///
+/// ```rust
+/// #[method]
+/// pub fn transfer(&mut self, from: H160, to: H160, amount: u64) -> bool {
+///     // Transfer tokens
+///     true
+/// }
+/// ```
 #[proc_macro_attribute]
-pub fn safe(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as ItemFn);
-    let name = &input.sig.ident.to_string();
+pub fn method(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input_fn = parse_macro_input!(item as ItemFn);
+    let fn_name = &input_fn.sig.ident;
+    let fn_vis = &input_fn.vis;
+    let return_type = &input_fn.sig.output;
     
-    // Register this as a safe method in the manifest
-    let register_code = quote! {
-        inventory::submit! {
-            neo_contract::manifest::MethodDescriptor::new(
-                #name.to_string(),
-                true, // safe = true
-                vec![],
-                vec![],
-                "".to_string()
-            )
+    // Get function parameters
+    let params = input_fn.sig.inputs.iter().collect::<Vec<_>>();
+    let param_names = params.iter().filter_map(|arg| {
+        if let FnArg::Typed(PatType { pat, .. }) = arg {
+            if let Pat::Ident(PatIdent { ident, .. }) = &**pat {
+                return Some(ident);
+            }
         }
-    };
+        None
+    }).collect::<Vec<_>>();
     
-    // Process the function to ensure it registers in the Neo N3 manifest
-    let vis = &input.vis;
-    let attrs = &input.attrs;
-    let sig = &input.sig;
-    let block = &input.block;
-    
+    // Generate method with proper export for NEO VM
     let output = quote! {
-        #(#attrs)*
-        #vis #sig {
-            // Safe method implementation
-            #block
-        }
+        // Original function remains
+        #input_fn
         
-        // Register the method as safe in the manifest
-        #register_code
+        // Register with inventory system for manifest generation
+        #[doc(hidden)]
+        #[allow(non_upper_case_globals)]
+        const _: () = {
+            extern crate neo_contract;
+            use neo_contract::exports::inventory;
+            
+            static _METHOD_REG: inventory::submit<&'static str> = 
+                inventory::submit(stringify!(#fn_name));
+        };
     };
     
     TokenStream::from(output)
 }
 
-// Helper function to check if a field has the #[index] attribute
-#[allow(dead_code)]
-fn has_index_attribute(attrs: &[Attribute]) -> bool { attrs.iter().any(|attr| attr.path.is_ident("index")) }
+/// Marks a function as a read-only contract method
+///
+/// This macro identifies functions that can be called externally but don't modify state.
+///
+/// # Example
+///
+/// ```rust
+/// #[safe]
+/// pub fn balance_of(&self, address: H160) -> u64 {
+///     // Get token balance
+///     0
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn safe(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input_fn = parse_macro_input!(item as ItemFn);
+    let fn_name = &input_fn.sig.ident;
+    
+    // Return the original function with inventory registration
+    let output = quote! {
+        // Return the original function
+        #input_fn
+        
+        // Register with inventory system for contract manifest generation
+        #[allow(non_upper_case_globals)]
+        #[doc(hidden)]
+        const _: () = {
+            use neo_contract::exports::inventory;
+            static _SAFE_METHOD_REG: inventory::submit<&'static str> = 
+                inventory::submit::new(stringify!(#fn_name));
+        };
+    };
+    
+    TokenStream::from(output)
+}
 
-// Helper functions for Neo VM type handling are now in the helpers module
-
-/// Marks a contract module with appropriate neo N3 contract semantics
+/// Marks a module as a smart contract.
 ///
 /// This is the main entry point for defining a Neo smart contract in Rust.
-/// It processes the module to extract method definitions, process storage,
-/// register events, and set up entry points for calling the contract.
+/// It processes the module to:
+///
+/// - Extract method definitions
+/// - Process storage struct
+/// - Register events
+/// - Generate manifest information
+/// - Set up entry points for calling the contract
+///
+/// # Example
+///
+/// ```rust
+/// #[neo_contract::contract]
+/// mod example {
+///     use neo_contract::prelude::*;
+///     
+///     #[storage]
+///     struct ExampleContract {
+///         counter: Item<u32>,
+///     }
+///     
+///     impl ExampleContract {
+///         #[constructor]
+///         fn new() -> Self {
+///             Self {
+///                 counter: Item::new(0),
+///             }
+///         }
+///         
+///         #[method]
+///         fn increment(&mut self) {
+///             let counter = self.counter.get();
+///             self.counter.set(counter + 1);
+///         }
+///         
+///         #[safe]
+///         fn get_counter(&self) -> u32 {
+///             *self.counter.get()
+///         }
+///     }
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn contract(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as ItemMod);
-    let mod_name = &input.ident;
-    let content = &input.content;
-
-    // Extract content from the module
-    if let Some((_, items)) = content {
-        // Generate the contract implementation
-        let output = quote! {
-            #[neo_contract::prelude::neo_contract_module]
-            mod #mod_name {
-                // Include the original module content
-                #(#items)*
-
-                // Generate the entry point for the Neo N3 contract
+    // Keep a clone of the original item for parsing
+    let item_for_parsing = item.clone();
+    
+    // Keep a separate clone for error reporting
+    let item_for_error = item.clone();
+    
+    // Parse the module containing the contract
+    let input = parse_macro_input!(item_for_parsing as syn::Item);
+    
+    // Convert proc_macro::TokenStream to proc_macro2::TokenStream for use with quote!
+    let item_proc_macro2 = proc_macro2::TokenStream::from(item);
+    
+    // Generate contract entry points for Neo N3
+    let output = match input {
+        syn::Item::Mod(ref module) => {
+            let module_ident = &module.ident;
+            
+            let output = quote! {
+                // Return the original module
+                #item_proc_macro2
+                
+                // Generate the NEO entry points
                 #[no_mangle]
-                pub extern "C" fn _deploy(data: *const u8, length: i32) -> i32 {
-                    neo_contract::prelude::runtime::__neo_deploy_entry(data, length)
+                pub extern "C" fn _deploy() -> bool {
+                    // Setup code that runs at deployment time
+                    #module_ident::deploying()
                 }
-
+                
                 #[no_mangle]
-                pub extern "C" fn _invoke(operation: *const u8, op_len: i32, args: *const u8, args_len: i32) -> i32 {
-                    neo_contract::prelude::runtime::__neo_invoke_entry(operation, op_len, args, args_len)
+                pub extern "C" fn main() {
+                    // Main entry point that delegates to the contract implementation
+                    #module_ident::main();
                 }
+                
+                // Registration with inventory system for manifest generation
+                #[doc(hidden)]
+                #[allow(non_upper_case_globals)]
+                const _: () = {
+                    extern crate neo_contract;
+                    use neo_contract::exports::inventory;
+                    
+                    static _CONTRACT_REG: inventory::submit<&'static str> = 
+                        inventory::submit(stringify!(#module_ident));
+                };
+            };
+            
+            output
+        }
+        syn::Item::Struct(ref struct_item) => {
+            let struct_ident = &struct_item.ident;
+            quote! {
+                // Return the original struct
+                #item_proc_macro2
+                
+                // Generate the NEO entry points
+                #[no_mangle]
+                pub extern "C" fn _deploy() -> bool {
+                    // Setup code that runs at deployment time
+                    true
+                }
+                
+                #[no_mangle]
+                pub extern "C" fn main() {
+                    // Main entry point that delegates to the contract implementation
+                    // Default implementation uses the invoke pattern
+                    let operation = neo_contract::runtime::get_invocation_operation();
+                    let args = neo_contract::runtime::get_invocation_args();
+                    let result = #struct_ident::invoke(operation, args);
+                    neo_contract::runtime::set_invocation_result(result);
+                }
+                
+                // Registration with inventory system for manifest generation
+                #[doc(hidden)]
+                #[allow(non_upper_case_globals)]
+                const _: () = {
+                    extern crate neo_contract;
+                    use neo_contract::exports::inventory;
+                    
+                    static _CONTRACT_REG: inventory::submit<&'static str> = 
+                        inventory::submit(stringify!(#struct_ident));
+                };
             }
-        };
+        }
+        _ => {
+            // Not a module or struct, return error
+            let error = syn::Error::new_spanned(
+                proc_macro2::TokenStream::from(item_for_error),
+                "contract attribute can only be applied to a module or struct"
+            );
+            return error.to_compile_error().into();
+        }
+    };
+    
+    TokenStream::from(output)
+}
 
-        output.into()
-    } else {
-        // Return the original module if it doesn't have content
-        quote! { #input }.into()
-    }
+// Add contract attribute macros (contract_author, contract_description, contract_version)
+/// Sets the author of the contract
+///
+/// # Example
+///
+/// ```rust
+/// #[neo_contract::contract]
+/// #[contract_author("Neo Project")]
+/// mod token {
+///     // Contract implementation
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn contract_author(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    
+    // Return the original item
+    item
+}
+
+/// Sets the description of the contract
+///
+/// # Example
+///
+/// ```rust
+/// #[neo_contract::contract]
+/// #[contract_description("A token contract for the Neo blockchain")]
+/// mod token {
+///     // Contract implementation
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn contract_description(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    
+    // Return the original item
+    item
+}
+
+/// Sets the version of the contract
+///
+/// # Example
+///
+/// ```rust
+/// #[neo_contract::contract]
+/// #[contract_version("1.0.0")]
+/// mod token {
+///     // Contract implementation
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn contract_version(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(attr as AttributeArgs);
+    
+    // Return the original item
+    item
 }

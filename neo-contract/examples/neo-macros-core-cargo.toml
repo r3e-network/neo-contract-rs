@@ -1,0 +1,33 @@
+# Example Cargo.toml for the proposed neo-macros-core crate
+
+[package]
+name = "neo-macros-core"
+version = "0.1.0"
+edition = "2021"
+description = "Declarative macros for Neo N3 smart contract development"
+license = "MIT OR Apache-2.0"
+authors = ["Neo Global Development <dev@neo.org>"]
+repository = "https://github.com/neo-project/neo-contract-rs"
+readme = "README.md"
+keywords = ["neo", "blockchain", "smart-contract", "crypto"]
+categories = ["cryptography::cryptocurrencies", "no-std"]
+
+# IMPORTANT: This is NOT a proc-macro crate, so we don't set proc-macro = true
+# This is a regular library crate that provides declarative macros using macro_rules!
+
+[lib]
+# No proc-macro = true here!
+
+[dependencies]
+# No dependencies are required for the macros themselves
+# However, the macros use types from neo-contract, so users of this crate
+# will need to have neo-contract as a dependency
+neo-macros-core = { path = "../neo-macros-core", version = "0.1.0" }
+neo-macros = { path = "../neo-macros", version = "0.1.0" }
+
+[dev-dependencies]
+neo-contract = { path = "../neo-contract", version = "0.1.0" }
+
+[features]
+default = []
+# You can add features to conditionally include certain macros if needed 

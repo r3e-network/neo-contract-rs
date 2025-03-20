@@ -2,14 +2,17 @@
 //!
 //! This module defines the common types used throughout the framework.
 
+// Import Vec from alloc
+use alloc::vec::Vec;
+
 // Re-export core types
-pub use crate::builtin::any::Any;
-pub use crate::builtin::array::Array;
-pub use crate::builtin::h160::H160;
-pub use crate::builtin::h256::H256;
-pub use crate::builtin::int256::Int256;
-pub use crate::builtin::map::Map;
-pub use crate::builtin::string::ByteString;
+pub use crate::types::builtin::any::Any;
+pub use crate::types::builtin::array::Array;
+pub use crate::types::builtin::h160::H160;
+pub use crate::types::builtin::h256::H256;
+pub use crate::types::builtin::int256::Int256;
+pub use crate::types::builtin::map::Map;
+pub use crate::types::builtin::string::ByteString;
 
 pub mod block;
 pub mod bytes;

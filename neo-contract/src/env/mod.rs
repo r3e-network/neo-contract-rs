@@ -14,6 +14,9 @@ pub mod syscall_non_wasm;
 /// Module for syscalls in WASM environments
 pub mod syscall;
 
+/// Module providing system calls with i32 return types
+pub mod syscall_with_i32_return;
+
 /// Contract module
 pub mod contract;
 

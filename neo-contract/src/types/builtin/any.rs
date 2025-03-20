@@ -9,6 +9,7 @@ use super::string::ByteString;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt;
+use core::cell::RefCell;
 
 /// Enum representing the type of an Any value
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -293,6 +294,56 @@ impl Any {
 
         result
     }
+
+    /// Alias for is_boolean for compatibility
+    pub fn is_bool(&self) -> bool { self.is_boolean() }
+    
+    /// Alias for is_byte_string for compatibility
+    pub fn is_bytestring(&self) -> bool { self.is_byte_string() }
+    
+    /// Alias for as_boolean for compatibility
+    pub fn as_bool(&self) -> Option<bool> { 
+        match self {
+            Any::Boolean(val) => Some(*val),
+            _ => None,
+        }
+    }
+    
+    /// Alias for as_byte_string for compatibility
+    pub fn as_bytestring(&self) -> Option<&ByteString> { self.as_byte_string() }
+    
+    /// Alias for as_integer returning i64 for compatibility
+    pub fn as_i64(&self) -> Option<i64> {
+        match self {
+            Any::Integer(val) => val.to_i64(),
+            _ => None,
+        }
+    }
+    
+    /// Check if the value is a Hash160 type
+    pub fn is_h160(&self) -> bool {
+        if let Some(bs) = self.as_byte_string() {
+            return bs.len() == 20;
+        }
+        false
+    }
+    
+    /// Get as H160 if possible
+    pub fn as_h160(&self) -> Option<H160> {
+        if let Some(bs) = self.as_byte_string() {
+            if bs.len() == 20 {
+                let mut bytes = [0u8; 20];
+                bytes.copy_from_slice(&bs);
+                return Some(H160(bytes));
+            }
+        }
+        None
+    }
+
+    /// Create a new Neo Any value from a H160 hash
+    pub fn h160(val: H160) -> Self {
+        Self::from(val)
+    }
 }
 
 impl From<Int256> for Any {
@@ -324,7 +375,10 @@ impl From<String> for Any {
 }
 
 impl From<H160> for Any {
-    fn from(val: H160) -> Self { Any::ByteString(ByteString::from(val.as_bytes())) }
+    fn from(val: H160) -> Self { 
+        // Convert H160 to ByteString and then to Any
+        Any::byte_string(ByteString::from(val.as_bytes())) 
+    }
 }
 
 impl From<H256> for Any {
@@ -353,6 +407,17 @@ impl From<u32> for Any {
 
 impl From<u64> for Any {
     fn from(val: u64) -> Self { Any::Integer(Int256::from(val)) }
+}
+
+impl<T> From<super::array::Array<T>> for Any 
+where 
+    T: Clone,
+    T: Into<Any>
+{
+    fn from(array: super::array::Array<T>) -> Self {
+        let items: Vec<Any> = array.into_iter().map(|item| item.into()).collect();
+        Any::Array(items)
+    }
 }
 
 impl fmt::Debug for Any {
@@ -414,5 +479,16 @@ impl fmt::Display for Any {
             }
             Any::Null => write!(f, "null"),
         }
+    }
+}
+
+impl AsRef<[u8]> for Any {
+    fn as_ref(&self) -> &[u8] {
+        // In a no_std environment, we can't use thread_local easily.
+        // For now, we'll just return a reference to an empty slice.
+        // In a real implementation, we would need to either:
+        // 1. Add a cached serialization field to the Any struct
+        // 2. Use a different approach that doesn't require returning a slice
+        &[]
     }
 }

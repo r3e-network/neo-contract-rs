@@ -1,126 +1,116 @@
-# Neo N3 Contract Compiler
+# Neo Contract Compiler
 
-A compiler that converts WebAssembly modules to Neo N3 smart contracts. This tool enables writing Neo N3 smart contracts in Rust and compiling them to Neo VM bytecode for deployment on the Neo N3 blockchain.
-
-## Overview
-
-The `neo-compiler` is a critical component of the Neo N3 smart contract development ecosystem in Rust. It takes WebAssembly modules compiled from Rust code and converts them to the Neo Executable Format (NEF) and contract manifests required for deployment to the Neo N3 blockchain.
+The Neo Contract Compiler is a tool for compiling WebAssembly (WASM) smart contracts into Neo Virtual Machine (NeoVM) bytecode for deployment on the Neo N3 blockchain.
 
 ## Features
 
-- **WebAssembly to Neo N3 VM Conversion**: Compile Rust to WebAssembly, then to Neo N3 VM bytecode
-- **NEF File Generation**: Create valid Neo N3 Executable Format files for deployment
-- **Manifest Generation**: Automatically generate contract manifests with proper ABI definitions for Neo N3
-- **Safe Method Identification**: Properly mark read-only methods as "safe" in the manifest
-- **Neo N3 Optimizations**: Apply optimizations specific to Neo N3 VM bytecode
-- **Clean API**: Easy-to-use API for working with Neo N3 VM scripts and NEF files
-
-## Installation
-
-```bash
-cargo install --git https://github.com/neo-project/neo-contract-rs neo-compiler
-```
+- Convert WebAssembly modules to Neo Executable Format (NEF) files
+- Generate contract manifests with metadata, permissions, and ABI information
+- Optimize contract bytecode for efficiency and cost
+- Generate debug information for improved developer experience
+- Support for various contract types and templates
 
 ## Usage
 
-### Basic Compilation
+### Basic Usage
 
-The simplest way to use the compiler is through the command line:
+```rust
+use neo_compiler::{compile, CompilerOptions};
+
+// Compile a WASM file to NEF and manifest
+let result = compile("path/to/contract.wasm")?;
+println!("NEF file created at: {}", result.nef_path.display());
+println!("Manifest file created at: {}", result.manifest_path.display());
+```
+
+### Advanced Options
+
+```rust
+use neo_compiler::{compile_with_options, CompilerOptions, ManifestOverride};
+use std::path::PathBuf;
+
+// Customize the compilation process
+let options = CompilerOptions {
+    optimize: true,
+    debug: true,
+    manifest_template: Some("path/to/template.json".to_string()),
+    manifest_overrides: Some(vec![
+        ManifestOverride {
+            key: "name".to_string(),
+            value: "MyCustomContract".to_string(),
+        },
+        ManifestOverride {
+            key: "author".to_string(),
+            value: "Neo Developer".to_string(),
+        },
+    ]),
+    output_dir: Some(PathBuf::from("./output")),
+    contract_name: Some("my_contract".to_string()),
+};
+
+let result = compile_with_options("path/to/contract.wasm", options)?;
+```
+
+## Compilation Process
+
+1. The compiler loads and validates the WASM binary
+2. It translates WASM instructions to NeoVM opcodes
+3. Optimization passes are applied (when enabled)
+4. Debug information is generated (when enabled)
+5. NEF and manifest files are created in the output directory
+
+## Manifest Generation
+
+The compiler generates a contract manifest that includes:
+
+- Basic metadata (name, description, etc.)
+- ABI definition (methods and events)
+- Required permissions
+- Supported standards
+- Trust settings
+
+You can customize the manifest by providing:
+
+1. A template manifest file as a starting point
+2. Key-value overrides for specific fields
+
+## Debug Information
+
+When debug mode is enabled, the compiler generates a JSON file with:
+
+- Source code mappings
+- Variable information
+- Function descriptions
+- Sequence points for debugging
+
+## Installation
+
+Add to your `Cargo.toml`:
+
+```toml
+[dependencies]
+neo-compiler = "0.1.0"
+```
+
+## Command Line Interface
+
+The compiler is also available as a command-line tool:
 
 ```bash
-neo-compiler compile your_contract.wasm --output-dir ./output
+cargo install neo-compiler-cli
+
+# Basic usage
+neo-compiler ./contract.wasm
+
+# With options
+neo-compiler ./contract.wasm --optimize --debug --output ./output
 ```
 
-This will produce both the NEF file and manifest required for Neo N3 deployment.
+## Requirements
 
-### Programmatic Usage
-
-You can also use the compiler programmatically in your own Rust code:
-
-```rust
-use neo_compiler::{Compiler, CompilerOptions};
-use std::path::Path;
-
-fn main() {
-    // Configure the compiler
-    let options = CompilerOptions {
-        debug: true,
-        optimize: true,
-        contract_name: Some("MyContract".to_string()),
-        manifest_template: None,
-    };
-    
-    let compiler = Compiler::with_options(options);
-    
-    // Compile the WebAssembly module
-    let wasm_path = Path::new("./your_contract.wasm");
-    let output_dir = Path::new("./output");
-    let contract_name = "MyContract";
-    
-    compiler.compile(wasm_path, output_dir, contract_name).unwrap();
-    
-    println!("Compilation successful!");
-}
-```
-
-### Manual Script Creation
-
-For advanced use cases, you can manually create Neo N3 VM scripts:
-
-```rust
-use neo_compiler::{script::Script, neo::OpCode, nef::NefFile};
-use std::path::Path;
-
-fn main() {
-    // Create a new script
-    let mut script = Script::new();
-    
-    // Add instructions
-    script.emit_push_data(b"Hello, Neo N3!").unwrap();
-    script.emit_opcode(OpCode::RET);
-    
-    // Save the script to a file
-    script.write_to_file("./output/hello.neo").unwrap();
-    
-    // Create a NEF file from the script
-    let nef = NefFile::with_script(script.to_bytes().unwrap());
-    nef.save_to("./output/hello.nef").unwrap();
-    
-    println!("Script created successfully!");
-}
-```
-
-## Neo N3 Compilation Process
-
-The compilation process involves several stages:
-
-1. **Parse WebAssembly**: Read and analyze the WebAssembly binary format
-2. **Analyze Code**: Determine function signatures, types, and other metadata
-3. **Generate Neo N3 Bytecode**: Convert WebAssembly instructions to Neo N3 VM instructions
-4. **Create NEF**: Package the bytecode into the Neo N3 Executable Format
-5. **Generate Manifest**: Create a contract manifest with proper metadata, permissions, and ABI
-
-## Documentation
-
-For more detailed documentation:
-
-- **[User Guide](docs/user_guide.md)**: Comprehensive guide on using the neo-compiler
-- **[Neo N3 Implementation Guide](../docs/neo_n3_implementation_guide.md)**: Guide for Neo N3 contract patterns and best practices
-- **[Neo N3 Opcode Mapping](docs/neo_n3_opcode_mapping.md)**: Mapping between WebAssembly and Neo N3 opcodes
-- **[Contract Structure](docs/contract_structure.md)**: Understanding Neo N3 contract structure
-- **API Documentation**: Run `cargo doc --open` to view the API documentation
-
-## Examples
-
-See the [examples directory](../examples/) for complete examples of Neo N3 contracts written in Rust:
-
-- **[NEP-17 Token](../examples/nep17/)**: Implementation of the Neo N3 fungible token standard
-- **[Event Demo](../examples/event_demo/)**: Demonstration of proper Neo N3 event emission
-
-## Contributing
-
-Contributions to improve the Neo N3 Contract Compiler are welcome! Please see our [Contributing Guide](../CONTRIBUTING.md) for details.
+- Rust 1.60 or later
+- WASM files produced by supported toolchains (e.g., Rust with wasm32-unknown-unknown target)
 
 ## License
 
-This project is licensed under the MIT License.
+Licensed under the MIT License.

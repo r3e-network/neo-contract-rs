@@ -15,6 +15,12 @@ extern crate alloc;
 // Re-export core crates
 pub use alloc::{boxed, collections, fmt, string, vec};
 
+// Re-export declarative macros from neo-macros-core
+pub use neo_macros_core::{
+    emit_event, implement_event, extend_event,
+    profile, profile_scope, benchmark
+};
+
 // Modules
 pub mod attributes;
 pub mod call_flags;
@@ -22,6 +28,7 @@ pub mod codec;
 pub mod error;
 pub mod event; // New Neo N3 standard event utilities
 pub mod events; // Old events module - kept for backward compatibility
+pub mod exports; // Re-exports macros for easier usage
 pub mod find_options;
 pub mod manifest;
 pub mod role;
@@ -30,7 +37,6 @@ pub mod transaction_attribute_type;
 
 // Core functionality
 pub mod env;
-pub mod macros;
 pub mod num256;
 pub mod policy;
 pub mod runtime;
@@ -51,23 +57,27 @@ pub use types::builtin::map::Map;
 pub use types::builtin::string::ByteString;
 
 // Re-export all Neo N3 attribute macros
-pub use neo_macros::{
-    constructor,
-    // Contract macros
-    contract,
-    contract_permission,
-    contract_trust,
-    // Basic contract structure macros
-    event,
-    index,
-    // Manifest related macros
-    manifest_extra,
-    method,
-    no_reentrant,
-    safe,
-    storage,
-    supported_standards,
-};
+// Remove these imports since they cause duplicate definitions
+// pub use crate::exports::{
+//     constructor,
+//     // Use as to avoid conflicts with module names
+//     contract as contract_macro,
+//     contract_author,
+//     contract_description,
+//     contract_version,
+//     contract_permission,
+//     contract_trust,
+//     // Use as to avoid conflicts with module names
+//     event as event_macro,
+//     index,
+//     manifest_extra,
+//     method,
+//     no_reentrant,
+//     safe,
+//     // Use as to avoid conflicts with module names
+//     storage as storage_macro,
+//     supported_standards,
+// };
 
 // Module re-exports for convenience - env module already has these
 // pub use env::{storage, runtime as env_runtime, blockchain, contract};
@@ -79,8 +89,7 @@ pub use self::manifest::{register_contract, register_event, register_method, reg
 
 // Re-export event helpers for easier Neo N3 standard event emission
 pub use self::event::{
-    emit_event2, emit_event3, emit_event_array, emit_transfer, null_or_value, register_transfer_event, EventBuilder,
-    EventEmitter, StandardEventEmitter,
+    emit_transfer, EventEmitter, null_or_value
 };
 
 // Contract module
@@ -99,6 +108,12 @@ pub mod profiling;
 pub mod prelude {
     //! The prelude module exports all the most commonly used types and functions.
     //! This allows users to import everything they need with a single import.
+
+    // Re-export declarative macros in the prelude
+    pub use neo_macros_core::{
+        emit_event, implement_event, extend_event,
+        profile, profile_scope, benchmark
+    };
 
     // Import env modules
     pub use crate::env::{blockchain, contract, runtime, storage};
@@ -132,23 +147,9 @@ pub mod prelude {
         Context as StorageContext, // Import Context directly from storage module
     };
 
-    // macros are imported directly where needed
-
-    // Attribute macros
-    pub use neo_macros::{
-        constructor, contract, contract_permission, contract_trust, manifest_extra, method, no_reentrant, safe,
-        storage, supported_standards,
-    };
-
     // Commonly used alloc types
     pub use alloc::{boxed::Box, string::String, vec::Vec};
 }
-
-// Note: macros are already imported above, so we don't need to import them again
-
-// Add a re-export for neo_method to make it available for the safe attribute
-#[doc(hidden)]
-pub use neo_macros::method as neo_method;
 
 // Re-export for serialization
 pub mod serialize;

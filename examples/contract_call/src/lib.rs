@@ -3,6 +3,7 @@
 extern crate alloc;
 
 use alloc::string::String;
+use neo_contract::prelude::*;
 
 //! # Contract Call Example for Neo N3
 //!
@@ -13,236 +14,199 @@ use alloc::string::String;
 //! - Event logging with Neo N3 indexing
 //! - Method visibility controls with Neo N3 annotations
 
-#[contract]
+/// Event emitted when a contract is called
+#[neo_contract::event]
+pub struct ContractCalled {
+    #[index]
+    pub caller: Address,
+    #[index]
+    pub target_contract: Hash160,
+    pub method: String,
+    pub success: bool
+}
+
+/// Event emitted when ownership is transferred
+#[neo_contract::event]
+pub struct OwnershipTransferred {
+    #[index]
+    pub previous_owner: Address,
+    #[index]
+    pub new_owner: Address,
+}
+
+/// Contract Call Example for Neo N3
+#[neo_contract::contract]
 #[contract_author("R3E Network")]
 #[contract_description("Contract Call Example for Neo N3")]
 #[contract_version("0.1.0")]
-mod contract_caller {
-    use neo_contract::prelude::*;
-    use alloc::string::String;
-    
-    /// Event emitted when a contract is called
-    #[event]
-    struct ContractCalled {
-        #[index]
-        caller: Address,
-        #[index]
-        target_contract: Hash160,
-        method: String,
-        success: bool
-    }
-    
-    /// Implementation for properly emitting the ContractCalled event using Neo N3 standards
-    impl ContractCalled {
-        /// Static method to emit the ContractCalled event in Neo N3 format
-        pub fn emit(caller: Address, target_contract: Hash160, method: String, success: bool) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("ContractCalled");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(caller));
-            event_data.push(Any::from(target_contract));
-            event_data.push(Any::from(method));
-            event_data.push(Any::from(success));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
-    }
-    
-    /// Event emitted when ownership is transferred
-    #[event]
-    struct OwnershipTransferred {
-        #[index]
-        previous_owner: Address,
-        #[index]
-        new_owner: Address,
-    }
-    
-    /// Implementation for properly emitting the OwnershipTransferred event using Neo N3 standards
-    impl OwnershipTransferred {
-        /// Static method to emit the OwnershipTransferred event in Neo N3 format
-        pub fn emit(previous_owner: Address, new_owner: Address) {
-            // Create event name as ByteString (required for Neo N3)
-            let event_name = ByteString::from("OwnershipTransferred");
-            
-            // Create Array to hold event parameters (required for Neo N3)
-            let mut event_data = Array::<Any>::new();
-            
-            // Add parameters with proper Neo N3 format
-            event_data.push(Any::from(previous_owner));
-            event_data.push(Any::from(new_owner));
-            
-            // Emit the event using Runtime::notify (required for Neo N3)
-            Runtime::notify(&event_name, &event_data);
-        }
-    }
-    
-    /// Storage for the contract call example
+pub struct ContractCaller {
+    /// Owner of the contract
     #[storage]
-    struct ContractCaller {
-        /// Owner of the contract
-        owner: Item<Address>,
+    owner: StorageItem<Address>,
+    
+    /// Last called contract hash
+    #[storage]
+    last_called: StorageItem<Hash160>,
+    
+    /// Number of successful calls
+    #[storage]
+    successful_calls: StorageItem<u32>,
+    
+    /// Number of failed calls
+    #[storage]
+    failed_calls: StorageItem<u32>
+}
+
+impl ContractCaller {
+    /// Creates a new instance of the contract
+    #[constructor]
+    pub fn new(owner: Address) -> Self {
+        // Initialize the contract
+        let mut instance = Self {
+            owner: StorageItem::new(b"owner"),
+            last_called: StorageItem::new(b"last_called"),
+            successful_calls: StorageItem::new(b"successful_calls"),
+            failed_calls: StorageItem::new(b"failed_calls"),
+        };
         
-        /// Last called contract hash
-        last_called: Item<Hash160>,
+        // Set the owner
+        instance.owner.set(&owner);
         
-        /// Number of successful calls
-        successful_calls: Item<u32>,
+        // Initialize counters
+        instance.successful_calls.set(&0);
+        instance.failed_calls.set(&0);
         
-        /// Number of failed calls
-        failed_calls: Item<u32>
+        // Return the initialized contract
+        instance
     }
     
-    impl ContractCaller {
-        /// Initialize the contract with an owner
-        #[constructor]
-        fn new(owner: Address) -> Self {
-            let mut instance = Self {
-                owner: Item::new("owner"),
-                last_called: Item::new("last_called"),
-                successful_calls: Item::new("successful_calls"),
-                failed_calls: Item::new("failed_calls"),
-            };
-            
-            // Initialize storage values
-            instance.owner.set(owner);
-            instance.successful_calls.set(0);
-            instance.failed_calls.set(0);
-            
-            instance
+    /// Call another contract with specified parameters
+    #[method]
+    #[no_reentry]
+    pub fn call_contract(
+        &mut self,
+        script_hash: Hash160,
+        method: String,
+        args: Vec<ByteArray>
+    ) -> bool {
+        // Get the caller
+        let caller = Runtime::calling_script_hash();
+        
+        // Check authorization
+        assert!(Runtime::check_witness(&caller), "No authorization");
+        
+        // Set the last called contract
+        self.last_called.set(&script_hash);
+        
+        // Convert arguments to Any for Neo VM
+        let mut call_args = Array::<Any>::new();
+        for arg in args {
+            call_args.push(Any::from(arg));
         }
         
-        /// Call another contract with parameters
-        #[method]
-        #[no_reentry]
-        fn call_contract(
-            &mut self,
-            script_hash: Hash160,
-            method: String,
-            args: Vec<ByteArray>
-        ) -> bool {
-            // Get the caller of this transaction
-            let caller = Runtime::calling_script_hash();
-            
-            // Verify caller signature
-            assert!(Runtime::check_witness(&caller), "Invalid signature");
-            
-            // Track success status
-            let mut success = false;
-            
-            // Convert args from Vec<ByteArray> to an array of Any values
-            let mut call_args = Array::<Any>::new();
-            for arg in args {
-                call_args.push(Any::from(arg));
+        // Make the contract call
+        let result = Runtime::call_contract(&script_hash, &method, &call_args);
+        
+        let success = match result {
+            Ok(_) => {
+                // Increment successful calls counter
+                let count = self.successful_calls.get().unwrap_or(0);
+                self.successful_calls.set(&(count + 1));
+                true
+            },
+            Err(_) => {
+                // Increment failed calls counter
+                let count = self.failed_calls.get().unwrap_or(0);
+                self.failed_calls.set(&(count + 1));
+                false
             }
-            
-            // Call the target contract
-            let result = Runtime::call_contract(
-                &script_hash,
-                &method,
-                &call_args
-            );
-            
-            // Update state based on result
-            match result {
-                Ok(_) => {
-                    // Increment success counter
-                    let current = self.successful_calls.get().unwrap_or_default();
-                    self.successful_calls.set(current + 1);
-                    success = true;
-                },
-                Err(_) => {
-                    // Increment failure counter
-                    let current = self.failed_calls.get().unwrap_or_default();
-                    self.failed_calls.set(current + 1);
-                }
-            }
-            
-            // Update last called contract
-            self.last_called.set(script_hash);
-            
-            // Emit event with proper Neo N3 format
-            ContractCalled::emit(caller, script_hash, method, success);
-            
+        };
+        
+        // Emit event
+        ContractCalled {
+            caller,
+            target_contract: script_hash,
+            method,
             success
-        }
+        }.notify();
         
-        /// Get an integer value from another contract
-        #[safe]
-        fn get_integer(&self, script_hash: Hash160, method: String) -> u32 {
-            // Call the target contract
-            let result: Result<u32, Error> = Runtime::call_contract(
-                &script_hash,
-                &method,
-                &[]
-            );
-            
-            // Return the result or 0 if failed
-            result.unwrap_or_default()
-        }
+        success
+    }
+    
+    /// Get an integer value from another contract
+    #[safe]
+    pub fn get_integer(&self, script_hash: Hash160, method: String) -> u32 {
+        // Call the contract
+        let mut args = Array::<Any>::new();
+        let result: Result<Any, Error> = Runtime::call_contract(&script_hash, &method, &args);
         
-        /// Get a string value from another contract
-        #[safe]
-        fn get_string(&self, script_hash: Hash160, method: String) -> String {
-            // Call the target contract
-            let result: Result<String, Error> = Runtime::call_contract(
-                &script_hash,
-                &method,
-                &[]
-            );
-            
-            // Return the result or empty string if failed
-            result.unwrap_or_default()
+        // Return the result
+        match result {
+            Ok(value) => value.as_integer().unwrap_or(0) as u32,
+            Err(_) => 0,
         }
+    }
+    
+    /// Get a string value from another contract
+    #[safe]
+    pub fn get_string(&self, script_hash: Hash160, method: String) -> String {
+        // Call the contract
+        let mut args = Array::<Any>::new();
+        let result: Result<Any, Error> = Runtime::call_contract(&script_hash, &method, &args);
         
-        /// Get the number of successful calls
-        #[safe]
-        fn get_successful_calls(&self) -> u32 {
-            self.successful_calls.get().unwrap_or_default()
+        // Return the result
+        match result {
+            Ok(value) => value.as_string().unwrap_or_default().to_string(),
+            Err(_) => "".to_string(),
         }
+    }
+    
+    /// Get the number of successful contract calls
+    #[safe]
+    pub fn get_successful_calls(&self) -> u32 {
+        self.successful_calls.get().unwrap_or(0)
+    }
+    
+    /// Get the number of failed contract calls
+    #[safe]
+    pub fn get_failed_calls(&self) -> u32 {
+        self.failed_calls.get().unwrap_or(0)
+    }
+    
+    /// Get the last called contract hash
+    #[safe]
+    pub fn get_last_called(&self) -> Hash160 {
+        self.last_called.get().unwrap_or_default()
+    }
+    
+    /// Get the owner of the contract
+    #[safe]
+    pub fn get_owner(&self) -> Address {
+        self.owner.get().unwrap_or_default()
+    }
+    
+    /// Transfer ownership of the contract to a new owner
+    #[method]
+    #[no_reentry]
+    pub fn transfer_ownership(&mut self, new_owner: Address) -> bool {
+        // Get current owner
+        let current_owner = self.get_owner();
         
-        /// Get the number of failed calls
-        #[safe]
-        fn get_failed_calls(&self) -> u32 {
-            self.failed_calls.get().unwrap_or_default()
-        }
+        // Check if caller is owner
+        assert!(Runtime::check_witness(&current_owner), "Only owner can transfer ownership");
         
-        /// Get the last called contract
-        #[safe]
-        fn get_last_called(&self) -> Hash160 {
-            self.last_called.get().unwrap_or_default()
-        }
+        // Cannot transfer to zero address
+        assert!(new_owner != Address::zero(), "New owner cannot be zero address");
         
-        /// Get the contract owner
-        #[safe]
-        fn get_owner(&self) -> Address {
-            self.owner.get().unwrap_or_default()
-        }
+        // Set the new owner
+        self.owner.set(&new_owner);
         
-        /// Transfer ownership of the contract
-        #[method]
-        #[no_reentry]
-        fn transfer_ownership(&mut self, new_owner: Address) -> bool {
-            // Get current owner
-            let current_owner = self.owner.get().unwrap_or_default();
-            
-            // Verify ownership
-            assert!(Runtime::check_witness(&current_owner), "Only the owner can transfer ownership");
-            
-            // Ensure new owner is not zero address
-            assert!(new_owner != Address::zero(), "Cannot transfer to zero address");
-            
-            // Update owner
-            self.owner.set(new_owner);
-            
-            // Emit ownership transfer event
-            OwnershipTransferred::emit(current_owner, new_owner);
-            
-            true
-        }
+        // Emit ownership transferred event
+        OwnershipTransferred {
+            previous_owner: current_owner,
+            new_owner
+        }.notify();
+        
+        true
     }
 }

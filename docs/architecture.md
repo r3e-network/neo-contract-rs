@@ -1,122 +1,178 @@
-# Neo N3 Contract Framework Architecture
+# Neo Contract Rust Framework Architecture
 
-This document outlines the architecture of the Neo N3 contract development framework for Rust, explaining how the components work together to enable smart contract development for the Neo N3 blockchain.
+This document provides a detailed explanation of the Neo Contract Rust Framework architecture, including the compilation process, component interactions, and design decisions.
 
-## Overview
+## Compilation Process
 
-The framework consists of three main components that work together to provide a comprehensive solution for Neo N3 smart contract development in Rust:
+The Neo Contract Rust Framework follows a multi-stage compilation process to transform Rust code into NeoVM bytecode that can be executed on the Neo N3 blockchain.
 
-1. **neo-contract**: The core library providing the contract development API
-2. **neo-compiler**: The compiler that converts WebAssembly to Neo VM bytecode
-3. **neo-macros**: Procedural macros for the attribute-based interface
+### 1. Rust to WebAssembly Compilation
 
-## Component Details
-
-### neo-contract
-
-The `neo-contract` crate provides the core API for writing Neo N3 smart contracts in Rust. It offers:
-
-- Type definitions for Neo N3 primitives (Address, ByteString, etc.)
-- Storage abstractions for managing contract state
-- Runtime interactions with the Neo N3 blockchain
-- Event emission utilities
-- Security features and standard implementations
-
-Key modules include:
-
-- **prelude**: Common imports for contract development
-- **storage**: Storage primitives (StorageItem, StorageMap)
-- **types**: Neo N3-specific type definitions
-- **env**: Low-level interaction with the Neo VM
-- **contracts**: Standard contract implementations and helpers
-
-### neo-compiler
-
-The `neo-compiler` is responsible for converting Rust/WebAssembly code into Neo VM bytecode. It performs:
-
-1. WebAssembly parsing and analysis
-2. WASM to Neo VM bytecode conversion
-3. Intermediate representation optimization
-4. NEF file and manifest generation
-
-The compiler ensures that Rust contracts are correctly translated to run on the Neo N3 blockchain, handling:
-
-- Memory management differences
-- Call conventions
-- Stack operations
-- Contract ABIs
-- Syscall mappings
-
-### neo-macros
-
-The `neo-macros` crate provides procedural macros that simplify contract development:
-
-- `#[contract]`: Marks a module as a smart contract
-- `#[storage]`: Defines the contract storage structure
-- `#[method]`: Exposes a function as a contract method
-- `#[safe]`: Marks methods as read-only for optimized execution
-- `#[initialize]`: Designates the contract initialization method
-
-## Compilation Flow
-
-The compilation process follows these steps:
-
-1. **Rust Compilation**: Rust code is compiled to WebAssembly using the standard Rust toolchain
-2. **WebAssembly Processing**: The WebAssembly binary is optimized and prepared for Neo VM
-3. **Neo VM Translation**: The WebAssembly is converted to Neo VM bytecode
-4. **NEF Generation**: A NEF file and contract manifest are generated for deployment
+The first stage of the compilation process uses the Rust compiler to convert Rust code to WebAssembly (WASM) bytecode. This is achieved using the `wasm32-unknown-unknown` target.
 
 ```
-Rust Source → WASM Binary → Neo VM Bytecode → NEF File + Manifest
+Rust Code → rustc → WASM Bytecode
 ```
 
-## Contract Lifecycle
+Key considerations at this stage:
+- Only a subset of Rust is supported (no std library, limited allocator support)
+- External functions are defined for Neo-specific operations
+- Metadata is generated for function exports
 
-### Development
+### 2. WebAssembly to NeoVM Conversion
 
-1. Define contract structure using the `#[contract]` and `#[storage]` attributes
-2. Implement contract methods with appropriate attributes (`#[method]`, `#[safe]`)
-3. Use storage abstractions to manage contract state
-4. Emit events using the `Runtime::notify` method
+The second stage of the compilation process uses the `neo-compiler` crate to convert WebAssembly bytecode to NeoVM bytecode.
 
-### Compilation
+```
+WASM Bytecode → neo-compiler → NeoVM Bytecode
+```
 
-1. Compile the contract to WebAssembly
-2. Use `neo-compiler` to convert WebAssembly to Neo VM bytecode
-3. Generate NEF file and manifest
+This conversion involves:
+- Parsing the WASM module
+- Converting WASM instructions to equivalent NeoVM instructions
+- Handling WASM control flow constructs
+- Managing the stack and memory differences between WASM and NeoVM
 
-### Deployment
+### 3. NEF File Generation
 
-1. Deploy the NEF file and manifest to the Neo N3 blockchain
-2. Initialize the contract (calls the method marked with `#[initialize]`)
+The third stage packages the NeoVM bytecode into a NEF (Neo Executable Format) file, which is the deployable unit for Neo N3 contracts.
 
-### Execution
+```
+NeoVM Bytecode → nef::NefFile → .nef File
+```
 
-1. Users interact with the contract through method calls
-2. Safe methods (marked with `#[safe]`) can be called without modifying state
-3. State-modifying methods update the contract storage
-4. Events are emitted to notify external systems
+NEF files include:
+- Magic number and version information
+- Compiler name and version
+- Contract script (NeoVM bytecode)
+- Checksum for verification
 
-## Key Design Decisions
+### 4. Manifest Generation
 
-### Safe Methods
+The fourth stage generates a manifest JSON file that describes the contract's structure, methods, events, and permissions.
 
-The framework properly distinguishes between safe (read-only) and non-safe (state-modifying) methods. Safe methods are marked with the `#[safe]` attribute and are represented in the contract manifest with `"safe": true`. This is important for optimizing contract execution and ensuring proper access control.
+```
+Contract Metadata → manifest::Manifest → .manifest.json File
+```
 
-### Event Emission
+The manifest includes:
+- Contract name and description
+- ABI (methods and events)
+- Supported standards (e.g., NEP-17)
+- Permissions and trusted contracts
+- Extra metadata
 
-Events in Neo N3 contracts are emitted using the `Runtime::notify` method rather than event macros. This follows the Neo N3 specifications and ensures compatibility with the Neo N3 ecosystem.
+## Component Interactions
 
-### Storage Model
+The Neo Contract Rust Framework consists of several components that interact to provide a seamless development experience:
 
-The framework uses a key-value storage model that maps directly to the Neo N3 storage system, with type-safe abstractions to simplify development.
+### neo-contract (Core Library)
 
-### WebAssembly Approach
+The `neo-contract` crate provides the core functionality and types required for developing Neo N3 smart contracts in Rust.
 
-Using WebAssembly as an intermediate format allows the framework to leverage Rust's existing toolchain while targeting the Neo VM, providing the best of both worlds.
+**Responsibilities:**
+- Defining Neo-specific types (Hash160, ByteString, etc.)
+- Providing storage operations
+- Supporting event emission
+- Exposing runtime context and utilities
 
-## System Requirements
+**Interactions:**
+- Used by contract code for Neo-specific operations
+- Interfaces with `neo-macros` for code generation
+- Provides metadata for the compiler
 
-- **Rust**: 1.60 or higher
-- **WebAssembly Support**: wasm32-unknown-unknown target
-- **Neo N3 Compatibility**: The framework targets Neo N3 and is not compatible with Neo Legacy
+### neo-compiler (Compiler)
+
+The `neo-compiler` crate handles the conversion of WebAssembly to NeoVM bytecode and the generation of deployment files.
+
+**Responsibilities:**
+- Parsing WASM modules
+- Converting WASM to NeoVM instructions
+- Generating NEF files
+- Creating contract manifests
+
+**Interactions:**
+- Takes WASM output from the Rust compiler
+- Produces NEF and manifest files for deployment
+- Uses the contract's metadata for manifest generation
+
+### neo-macros (Procedural Macros)
+
+The `neo-macros` crate provides procedural macros that simplify contract development by generating boilerplate code.
+
+**Responsibilities:**
+- Generating contract entrypoints
+- Automating method exports
+- Simplifying event definitions
+- Providing storage abstractions
+
+**Interactions:**
+- Expands macros in contract code
+- Interfaces with `neo-contract` for type definitions
+- Generates metadata for the compiler
+
+## Design Decisions
+
+The Neo Contract Rust Framework's architecture is influenced by several key design decisions:
+
+### 1. WebAssembly as an Intermediate Representation
+
+Using WebAssembly as an intermediate representation offers several advantages:
+- Leverages the Rust compiler's wasm32 target
+- Provides a well-defined, stable bytecode format
+- Enables easier debugging and tooling
+- Supports future languages beyond Rust
+
+### 2. Separation of Concerns
+
+The framework separates concerns to improve maintainability and extensibility:
+- Core library (`neo-contract`) for runtime functionality
+- Compiler (`neo-compiler`) for code transformation
+- Macros (`neo-macros`) for code generation
+
+### 3. Minimal Runtime
+
+The runtime is designed to be minimal, providing only essential functionality:
+- Basic Neo N3 types
+- Storage operations
+- Event emission
+- Context utilities
+
+### 4. Familiar Developer Experience
+
+The framework aims to provide a familiar developer experience for Rust programmers:
+- Idiomatic Rust APIs
+- Standard Rust tooling (cargo, rustc)
+- Minimal framework-specific knowledge required
+
+## Future Considerations
+
+The Neo Contract Rust Framework architecture has been designed with several future enhancements in mind:
+
+### 1. Enhanced Type Safety
+
+Future versions may include:
+- More sophisticated type checking
+- Static analysis for common errors
+- Compile-time verification of contract properties
+
+### 2. Optimization Improvements
+
+Potential optimizations include:
+- Better WASM to NeoVM instruction mapping
+- Contract-level optimizations
+- Storage operation optimizations
+
+### 3. Testing Framework
+
+A comprehensive testing framework is planned:
+- Unit testing for contracts
+- Integration testing with blockchain simulation
+- Property-based testing for robustness
+
+### 4. IDE Integration
+
+Improved developer experience through better IDE integration:
+- Language server protocol support
+- Smart contract debugging
+- Deployment and interaction tools

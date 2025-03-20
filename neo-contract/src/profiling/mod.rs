@@ -50,7 +50,7 @@ impl Profiler {
         }
 
         self.start_time = Some(Runtime::time());
-        self.start_gas = Some(Runtime::gas_left());
+        self.start_gas = Some(Runtime::gas_left().into());
     }
 
     /// Stop the profiler and return the elapsed time and gas
@@ -60,7 +60,7 @@ impl Profiler {
         }
 
         let end_time = Runtime::time();
-        let end_gas = Runtime::gas_left();
+        let end_gas: Int256 = Runtime::gas_left().into();
 
         let elapsed_time = end_time - self.start_time.unwrap();
         let gas_used = self.start_gas.clone().unwrap() - end_gas;
@@ -97,16 +97,11 @@ impl Profiler {
 }
 
 /// Profile a function and return its result
-#[macro_export]
-macro_rules! profile {
-    ($name:expr, $body:expr) => {{
-        let mut profiler = $crate::profiling::Profiler::new($name);
-        profiler.start();
-        let result = $body;
-        profiler.stop();
-        result
-    }};
-}
+/// 
+/// This functionality is now provided by the profile! macro from neo-macros-core,
+/// which is re-exported by neo-contract.
+/// 
+/// @see profile!
 
 /// Profile scope for measuring execution time and gas costs
 /// automatically stops the profiler when it goes out of scope
@@ -130,12 +125,11 @@ impl Drop for ProfileScope {
 
 /// Profile a method execution and return the result
 /// Create a profiling scope that automatically stops when it goes out of scope
-#[macro_export]
-macro_rules! profile_scope {
-    ($name:expr) => {
-        let _profiler = $crate::profiling::ProfileScope::new($name);
-    };
-}
+/// 
+/// This functionality is now provided by the profile_scope! macro from neo-macros-core,
+/// which is re-exported by neo-contract.
+/// 
+/// @see profile_scope!
 
 /// Benchmark utility for measuring multiple executions
 pub struct Benchmark {
@@ -232,13 +226,11 @@ impl Benchmark {
 }
 
 /// Benchmark a function execution and return the result
-#[macro_export]
-macro_rules! benchmark {
-    ($name:expr, $iterations:expr, $body:expr) => {{
-        let mut benchmark = $crate::profiling::Benchmark::new($name, $iterations);
-        benchmark.run(|| $body)
-    }};
-}
+/// 
+/// This functionality is now provided by the benchmark! macro from neo-macros-core,
+/// which is re-exported by neo-contract.
+/// 
+/// @see benchmark!
 
 /// Gas statistics for different operations
 pub struct GasStats;

@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Created storage script: {}", storage_path.display());
 
     // Example 3: Create NEF file from script
-    let nef = NefFile::with_script(storage_script.to_bytes());
+    let nef = NefFile::with_script(storage_script.bytes().to_vec());
     let nef_path = output_dir.join("storage.nef");
     nef.save_to(&nef_path)?;
     println!("  Created NEF file: {}", nef_path.display());
@@ -103,7 +103,7 @@ fn create_storage_script() -> Script {
 }
 
 /// Creates a more complex contract with multiple functions.
-fn create_contract_script() -> Script {
+fn create_contract_script() -> Result<Script, neo_compiler::error::Error> {
     println!("\nCreating contract script...");
     println!("  This script demonstrates a contract with multiple functions.");
 
@@ -116,38 +116,41 @@ fn create_contract_script() -> Script {
     // Check for "name" method
     script.emit_comment("Check for 'name' method");
     script.emit_opcode(OpCode::DUP);
-    script.emit_push_data(b"name").unwrap();
+    script.emit_push_data(b"name")?;
     script.emit_opcode(OpCode::EQUAL);
 
     // Jump to name implementation if matched
     script.emit_opcode(OpCode::JMPIF);
-    script.emit_push_data(100)?; // Jump to offset 100 (placeholder)
+    // Convert integer to byte array for offset
+    script.emit_push_data(&100u32.to_le_bytes())?; // Jump to offset 100 (placeholder)
 
     // Check for "balanceOf" method
     script.emit_comment("Check for 'balanceOf' method");
     script.emit_opcode(OpCode::DUP);
-    script.emit_push_data(b"balanceOf").unwrap();
+    script.emit_push_data(b"balanceOf")?;
     script.emit_opcode(OpCode::EQUAL);
 
     // Jump to balanceOf implementation if matched
     script.emit_opcode(OpCode::JMPIF);
-    script.emit_push_data(200)?; // Jump to offset 200 (placeholder)
+    // Convert integer to byte array for offset
+    script.emit_push_data(&200u32.to_le_bytes())?; // Jump to offset 200 (placeholder)
 
     // If no method matched, throw error
     script.emit_comment("Method not found");
-    script.emit_push_data(b"Method not found").unwrap();
+    script.emit_push_data(b"Method not found")?;
     script.emit_opcode(OpCode::THROW);
 
     // 'name' method implementation (would be at offset 100)
     script.emit_comment("'name' method implementation");
-    script.emit_push_data(b"ExampleToken").unwrap();
+    script.emit_push_data(b"ExampleToken")?;
     script.emit_opcode(OpCode::RET);
 
     // 'balanceOf' method implementation (would be at offset 200)
     script.emit_comment("'balanceOf' method implementation");
     script.emit_opcode(OpCode::LDARG1); // Load account argument
-    script.emit_push_data(1000)?; // Return fixed balance of 1000 for testing
+    // Convert integer to byte array for balance
+    script.emit_push_data(&1000u32.to_le_bytes())?; // Return fixed balance of 1000 for testing
     script.emit_opcode(OpCode::RET);
 
-    script
+    Ok(script)
 }

@@ -9,6 +9,27 @@ use core::fmt;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FindOptions(pub u8);
 
+/// Constants for the FindOptions flags
+pub mod flags {
+    /// No special options
+    pub const NONE: u8 = 0;
+    
+    /// Remove the prefix from the keys in the results
+    pub const REMOVE_PREFIX: u8 = 1;
+    
+    /// Only return keys, not values
+    pub const KEYS_ONLY: u8 = 2;
+    
+    /// Return values as key-value pairs (default)
+    pub const VALUES: u8 = 4;
+    
+    /// Deserialize keys after retrieval
+    pub const DESERIALIZE_VALUES: u8 = 8;
+    
+    /// Pick the first element without creating an iterator
+    pub const PICK_FIELD_0: u8 = 16;
+}
+
 impl FindOptions {
     /// None - no special options
     pub const NONE: FindOptions = FindOptions(0);
@@ -51,6 +72,56 @@ impl FindOptions {
 
     /// Creates a new FindOptions with the given option removed
     pub fn without(self, option: FindOptions) -> Self { FindOptions(self.0 & !option.0) }
+
+    /// Create a new FindOptions with default settings
+    pub fn default_options() -> Self {
+        Self(flags::NONE)
+    }
+    
+    /// Set the option to remove prefix from keys in the results
+    pub fn set_remove_prefix(mut self, value: bool) -> Self {
+        if value {
+            self.0 |= flags::REMOVE_PREFIX;
+        } else {
+            self.0 &= !flags::REMOVE_PREFIX;
+        }
+        self
+    }
+    
+    /// Set the option to only return keys, not values
+    pub fn set_keys_only(mut self, value: bool) -> Self {
+        if value {
+            self.0 |= flags::KEYS_ONLY;
+        } else {
+            self.0 &= !flags::KEYS_ONLY;
+        }
+        self
+    }
+    
+    /// Set the option to return values as key-value pairs
+    pub fn set_values(mut self, value: bool) -> Self {
+        if value {
+            self.0 |= flags::VALUES;
+        } else {
+            self.0 &= !flags::VALUES;
+        }
+        self
+    }
+    
+    /// Check if the remove prefix option is set
+    pub fn has_remove_prefix(&self) -> bool {
+        (self.0 & flags::REMOVE_PREFIX) != 0
+    }
+    
+    /// Check if the keys only option is set
+    pub fn has_keys_only(&self) -> bool {
+        (self.0 & flags::KEYS_ONLY) != 0
+    }
+    
+    /// Check if the values option is set
+    pub fn has_values(&self) -> bool {
+        (self.0 & flags::VALUES) != 0
+    }
 }
 
 impl fmt::Display for FindOptions {

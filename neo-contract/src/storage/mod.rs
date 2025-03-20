@@ -16,6 +16,10 @@ use alloc::vec::Vec;
 
 use crate::find_options::FindOptions;
 use crate::static_values::Hash160;
+use crate::env::syscall;
+use crate::prelude::StorageMap;
+use crate::alloc::string::ToString;
+use crate::storage::item::Codec;
 
 // Re-export important types for convenience
 pub use crate::storage::context::Context;
@@ -301,10 +305,22 @@ pub fn create_key(parts: &[&[u8]]) -> Vec<u8> {
     key
 }
 
+/// Creates a new storage map with the specified prefix
+pub fn new_storage_map<K, V>(prefix: &str) -> StorageMap<K, V> 
+where
+    K: Codec,
+    V: Codec,
+{
+    StorageMap::new(prefix.as_bytes())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use crate::alloc::string::ToString;
+    use crate::test_utils;
+    use crate::storage::context::Context;
+    
     #[test]
     fn test_storage_operations() {
         // Clear any existing mock data
@@ -382,5 +398,20 @@ mod tests {
         // The following should not modify storage (since ro_ctx is read-only)
         ro_ctx.put(b"key2", b"value2");
         assert!(!has(b"key2"));
+    }
+
+    #[test]
+    fn test_get_set_string() {
+        // Test the get_string and put_string helper functions
+        let context = Context::new();
+        
+        // Set value
+        context.put_string(b"greeting", "Hello, Neo!");
+        
+        // Get value and check
+        assert_eq!(context.get_string(b"greeting"), Some("Hello, Neo!".to_string()));
+        
+        // Test missing key
+        assert_eq!(context.get_string(b"missing"), None);
     }
 }

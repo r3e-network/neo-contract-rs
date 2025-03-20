@@ -6,6 +6,9 @@ members = [
     "neo-contract-testing",
     "examples/dao",
     "examples/hello_world",
+    "examples/hello_with_macros",
+    "examples/token_with_annotations",
+    "examples/annotation_test",
 ]
 
 resolver = "2"

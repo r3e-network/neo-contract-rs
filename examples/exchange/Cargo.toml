@@ -1,0 +1,25 @@
+[package]
+name = "exchange"
+version = "0.1.0"
+edition = "2021"
+authors = ["NEO Rust Team"]
+description = "Exchange example showing Neo Contract interoperability"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+neo-contract = { path = "../../neo-contract" }
+
+[dev-dependencies]
+
+[features]
+default = []
+
+[profile.release]
+lto = true
+opt-level = "z"  # Optimize for size
+codegen-units = 1
+panic = "abort"
+strip = "symbols" 

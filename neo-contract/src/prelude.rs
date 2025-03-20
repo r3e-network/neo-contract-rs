@@ -14,6 +14,9 @@ pub use crate::runtime::Runtime;
 // Event system
 pub use crate::event::{register_event, EventBuilder, emit_transfer, emit_event, emit_event2, emit_event3};
 
+// Re-export all macros from exports module
+pub use crate::exports::*;
+
 // Contract attributes
 pub use crate::{
     contract, storage, constructor, method, event,
@@ -28,7 +31,18 @@ pub use crate::neo_method as manifest_method;
 
 // Neo contract module marker
 #[doc(hidden)]
-pub struct neo_contract_module;
+pub struct neo_contract_module {
+    _private: ()
+}
+
+// Create a global static instance for macros to find
+#[doc(hidden)]
+#[allow(non_upper_case_globals)]
+pub static neo_contract_module: neo_contract_module = neo_contract_module { _private: () };
+
+// Re-export runtime entry point functions needed by contract macro
+#[doc(hidden)]
+pub use crate::runtime::{__neo_deploy_entry, __neo_invoke_entry};
 
 // Native contracts
 pub use crate::contract::native::{gas, legder, neo, oracle, policy};

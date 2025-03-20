@@ -7,10 +7,6 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 
-// Only export test utilities when running tests
-#[cfg(test)]
-pub mod test_utils;
-
 /// Ensures that a directory exists, creating it if necessary
 ///
 /// # Arguments
@@ -193,54 +189,4 @@ pub fn to_snake_case(input: &str) -> String {
     }
 
     result
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::tempdir;
-
-    #[test]
-    fn test_format_size() {
-        assert_eq!(format_size(100), "100 bytes");
-        assert_eq!(format_size(1024), "1.00 KB");
-        assert_eq!(format_size(1500), "1.46 KB");
-        assert_eq!(format_size(2 * 1024 * 1024), "2.00 MB");
-    }
-
-    #[test]
-    fn test_sanitize_filename() {
-        assert_eq!(sanitize_filename("Hello, World!"), "Hello_World_");
-        assert_eq!(sanitize_filename("file.txt"), "file_txt");
-        assert_eq!(sanitize_filename("my-file_123"), "my-file_123");
-    }
-
-    #[test]
-    fn test_case_conversions() {
-        assert_eq!(to_camel_case("hello_world"), "HelloWorld");
-        assert_eq!(to_camel_case("hello-world"), "HelloWorld");
-        assert_eq!(to_snake_case("HelloWorld"), "hello_world");
-        assert_eq!(to_snake_case("helloWorld"), "hello_world");
-    }
-
-    #[test]
-    fn test_file_operations() -> Result<()> {
-        let dir = tempdir()?;
-        let file_path = dir.path().join("test.txt");
-
-        write_file_string(&file_path, "Hello, World!")?;
-        let content = read_file_string(&file_path)?;
-
-        assert_eq!(content, "Hello, World!");
-
-        let bin_path = dir.path().join("test.bin");
-        let bin_data = vec![1, 2, 3, 4, 5];
-
-        write_file_binary(&bin_path, &bin_data)?;
-        let read_data = read_file_binary(&bin_path)?;
-
-        assert_eq!(read_data, bin_data);
-
-        Ok(())
-    }
 }

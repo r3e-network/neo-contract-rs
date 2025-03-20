@@ -1,181 +1,202 @@
-# Troubleshooting Neo Contract Rust Framework
+# Troubleshooting Guide for NEO Rust Contract Framework
 
-This guide helps resolve common issues encountered when working with the Neo Contract Rust framework.
+This guide addresses common issues you might encounter when developing smart contracts with the NEO Rust Contract Framework.
 
-## Common Compilation Errors
+## Compilation Issues
 
-### 1. Missing Parameters in Runtime Function Calls
+### 1. Macro Import Errors
 
-**Error Example:**
-```
-expected 1 argument, found 0
-```
+**Issue**: Errors like `unresolved import neo_macros` when trying to use macros.
 
-**Problem:**
-Functions like `Runtime::check_witness()` are called without required parameters.
-
-**Solution:**
-Update the function calls to include the required arguments. For example:
+**Solution**: The macros are not properly exposed in the current version. Use a manual implementation approach:
 
 ```rust
-// Incorrect
-let caller = Runtime::check_witness();
+// Instead of:
+#[contract]
+#[contract_author("Your Name")]
+pub struct MyContract {
+    // ...
+}
 
-// Correct
-let caller = Runtime::check_witness(&address);
+// Use a manual approach:
+mod my_contract {
+    // Contract implementation
+}
+
+#[no_mangle]
+pub fn deploying() -> bool {
+    // Initialization code
+    true
+}
+
+#[no_mangle]
+pub fn invoke(action: String, args: Vec<Any>) -> Any {
+    // Method dispatch logic
+}
 ```
 
-### 2. Procedural Macro Resolution Failures
+### 2. Storage Issues
 
-**Error Example:**
-```
-failed to resolve: could not find `neo_contract_module` in `prelude`
-failed to resolve: could not find `manifest_method` in `prelude`
-```
+**Issue**: Cannot use `StorageItem` or other storage abstractions.
 
-**Solution:**
-- Ensure you have the latest version of `neo-macros` in your dependencies
-- Add the feature flag `std` during development:
-  ```bash
-  cargo check -p your-example --features std
-  ```
-- If needed, modify your import structure:
-  ```rust
-  // Add explicit imports
-  use neo_contract::prelude::*;
-  use neo_contract::macros::{contract, method, safe, constructor};
-  ```
-
-### 3. Storage Trait Issues
-
-**Error Example:**
-```
-failed to resolve: could not find `StorageContext` in `storage`
-failed to resolve: could not find `Storage` in `prelude`
-```
-
-**Solution:**
-Add explicit imports for storage-related types:
+**Solution**: Implement a manual storage approach:
 
 ```rust
-use neo_contract::types::context::StorageContext;
-use neo_contract::types::storage::Storage;
-```
+pub struct ContractStorage {
+    data: Vec<u8>,
+    counter: u32,
+}
 
-### 4. Codec Implementation for Custom Types
-
-**Error Example:**
-```
-the trait bound `alloc::string::String: Codec` is not satisfied
-```
-
-**Solution:**
-Implement the `Codec` trait for custom types that need to be stored:
-
-```rust
-impl Codec for MyType {
-    fn encode(&self) -> Vec<u8> {
-        // Serialization logic here
+impl ContractStorage {
+    pub fn new() -> Self {
+        Self {
+            data: Vec::new(),
+            counter: 0,
+        }
     }
     
-    fn decode(bytes: &[u8]) -> Result<Self> {
-        // Deserialization logic here
+    fn save_data(&mut self, data: &[u8]) {
+        self.data = data.to_vec();
+    }
+    
+    fn load_data(&self) -> &[u8] {
+        &self.data
     }
 }
 ```
 
-For standard types like `String`, use a wrapper or convert to a type that implements `Codec`:
+### 3. Event Emission Errors
+
+**Issue**: Cannot use the `emit()` method on event structs.
+
+**Solution**: Manually construct and emit events:
 
 ```rust
-// Store strings as ByteString which implements Codec
-let byte_string = ByteString::from(my_string);
+// Instead of:
+Transfer { from, to, amount }.emit();
+
+// Use:
+let mut event_args = Array::new();
+event_args.push(Any::from(from));
+event_args.push(Any::from(to));
+event_args.push(Any::integer(amount));
+
+Runtime::notify(&ByteString::from("Transfer"), &event_args);
 ```
 
-### 5. Type Mismatches in Storage Operations
+### 4. String Conversion Issues
 
-**Error Example:**
-```
-mismatched types
-expected `&u32`, found `u32`
-```
+**Issue**: Cannot convert directly between `ByteString` and Rust's `String`.
 
-**Solution:**
-When setting values in storage, make sure to match the expected reference type:
+**Solution**: Use helper functions:
 
 ```rust
-// Incorrect
-self.counter.set(value);
+fn byte_string_to_string(bs: &ByteString) -> String {
+    String::from_utf8_lossy(bs.as_bytes()).into_owned()
+}
 
-// Correct
-self.counter.set(&value);  // Pass by reference when required
+fn string_to_byte_string(s: &str) -> ByteString {
+    ByteString::from(s)
+}
 ```
 
-## Framework-Specific Issues
+### 5. Type Conversion Issues
 
-### 1. DAO Example Check Witness Issues
+**Issue**: Type conversion errors when working with NEO types.
 
-The DAO example has multiple instances where `Runtime::check_witness()` is called without parameters. To fix:
+**Solution**: Use explicit conversion methods:
 
 ```rust
-// In each method that needs authentication
-// Change this:
-let caller = Runtime::check_witness();
-
-// To this:
-let caller_address = Runtime::current_sender(); // Get caller address
-let caller = Runtime::check_witness(&caller_address);
+// Converting between types
+let bs: ByteString = ByteString::from("Hello");
+let bytes: Vec<u8> = bs.as_bytes().to_vec();
+let str_value: String = String::from_utf8_lossy(bs.as_bytes()).into_owned();
+let any_value: Any = Any::byte_string(bs);
 ```
 
-### 2. Hello World Example Storage Issues
+## Runtime Issues
 
-The Hello World example has issues with `Codec` trait for String storage. To fix:
+### 1. NEO VM Compilation Errors
 
-```rust
-// Instead of directly storing strings
-self.message.set(message);
+**Issue**: Errors when compiling to NEO VM bytecode.
 
-// Convert to a known codec type first
-let message_bytes = message.into_bytes();
-self.message.set(&message_bytes);
-
-// Then when retrieving
-let message_bytes = self.message.get().unwrap_or_default();
-let message = String::from_utf8(message_bytes).unwrap_or_default();
-```
-
-## Development Workflow Tips
-
-1. **Use Feature Flags**:
-   ```bash
-   cargo check --features std
-   cargo build --features std
+**Solution**: 
+1. Check that your WASM is correctly generated
+2. Ensure you're using compatible types
+3. Run with the `--debug` flag to get more information:
+   ```
+   neo-compiler compile path/to/your_contract.wasm --output build/ --debug
    ```
 
-2. **Incremental Testing**:
-   Test small parts of your contract separately before integrating
+### 2. Authentication Issues
 
-3. **Inspect Generated Code**:
-   Use `cargo expand` to view the expanded macros:
-   ```bash
-   cargo install cargo-expand
-   cargo expand --features std
-   ```
+**Issue**: Permission problems when contract is deployed.
 
-4. **Use Debug Builds First**:
-   Only move to release builds after verifying functionality
+**Solution**: Always use proper authentication checks:
 
-## Contacting Support
+```rust
+// Check if caller is authorized
+assert!(Runtime::check_witness(&owner), "Not authorized");
+```
 
-If you continue to face issues:
+### 3. Serialization Issues
 
-1. Check the [Neo Discord](https://discord.gg/neo)
-2. Open an issue on the [GitHub repository](https://github.com/neo-project/neo-contract-rs)
-3. Search for similar issues in the repository's issue tracker
+**Issue**: Problems with serializing/deserializing data.
 
-## Contributing Solutions
+**Solution**: Use explicit byte conversions and avoid complex types:
 
-If you find and fix an issue not covered in this guide, please consider:
+```rust
+// Store data as bytes
+let data_bytes = data.as_bytes().to_vec();
 
-1. Opening a pull request with your fix
-2. Adding your solution to this troubleshooting guide
-3. Adding comments in the code to help others avoid the same issue 
+// Load and convert back
+let loaded_string = String::from_utf8_lossy(&data_bytes).into_owned();
+```
+
+## Development Workflow Issues
+
+### 1. Creating a New Contract
+
+**Issue**: Unsure of the proper project structure.
+
+**Solution**: Follow this template:
+1. Create a library crate: `cargo new --lib my_contract`
+2. Add no_std and wasm target: `rustup target add wasm32-unknown-unknown`
+3. Update Cargo.toml with correct dependencies
+4. Implement the contract with proper entry points
+5. Build with: `cargo build --release --target wasm32-unknown-unknown`
+6. Compile for NEO VM: `neo-compiler compile target/.../my_contract.wasm --output build/`
+
+### 2. Testing Contracts
+
+**Issue**: Difficulty testing contracts without deployment.
+
+**Solution**: Create unit tests for logic when possible, then use the testing framework for integration testing:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_business_logic() {
+        // Test core business logic independent of blockchain
+        let mut contract = MyContract::new();
+        assert_eq!(contract.calculate_value(10), 42);
+    }
+}
+```
+
+### 3. Debugging Tips
+
+1. Add debug output in your contract during development
+2. Use the `--debug` flag when compiling
+3. Test functionality in small, isolated units
+4. Check for common issues like incorrect type conversions
+5. Review the NEO VM script to understand the compiled code
+
+## Additional Resources
+
+- See [DEVELOPMENT-GUIDE.md](DEVELOPMENT-GUIDE.md) for more detailed development instructions
+- See [FUTURE-IMPROVEMENTS.md](FUTURE-IMPROVEMENTS.md) for upcoming features that will address some of these limitations
+- Review the example contracts for working patterns and approaches 

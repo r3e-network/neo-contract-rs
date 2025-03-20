@@ -216,13 +216,14 @@ mod tests {
 
     #[test]
     fn test_stack_analysis_simple() {
-        // Create a simple function: i32.const 1, i32.const 2, i32.add
+        // Simple function that pushes 2 values and adds them
+        // First byte is the number of local declarations, which should be 0
         let wasm_code = vec![
-            0x00, 0x00, // Empty locals
-            0x41, 0x01, // i32.const 1
-            0x41, 0x02, // i32.const 2
-            0x6A, // i32.add
-            0x0B, // end
+            0x00,       // 0 local declarations
+            0x41, 0x2A, // i32.const 42
+            0x41, 0x3A, // i32.const 58
+            0x6A,       // i32.add
+            0x0B,       // end
         ];
 
         // Create a WasmFunction with its fields directly instead of using new()

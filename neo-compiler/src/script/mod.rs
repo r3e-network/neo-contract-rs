@@ -57,59 +57,59 @@ impl Instruction {
     }
 }
 
-/// Represents a Neo VM script.
-#[derive(Debug, Clone, Default)]
+/// NEO VM script representation
+#[derive(Debug, Clone)]
 pub struct Script {
-    /// The instructions in the script.
-    pub instructions: Vec<Instruction>,
+    /// Script bytes
+    bytes: Vec<u8>,
 }
 
 impl Script {
-    /// Creates a new empty script.
-    pub fn new() -> Self { Self { instructions: Vec::new() } }
-
-    /// Creates a script from a sequence of bytes.
+    /// Create a new empty script
+    pub fn new() -> Self {
+        Self { bytes: Vec::new() }
+    }
+    
+    /// Create a script from bytes
     pub fn from_bytes(bytes: &[u8]) -> Self {
-        Self {
-            instructions: vec![Instruction::with_operand(OpCode::PUSHDATA1, bytes.to_vec())],
-        }
+        Self { bytes: bytes.to_vec() }
+    }
+    
+    /// Get the script bytes
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+    
+    /// Push data onto the script
+    pub fn emit_push_data(&mut self, data: &[u8]) -> Result<(), crate::error::Error> {
+        self.bytes.extend_from_slice(data);
+        Ok(())
     }
 
     /// Returns the size of the script in bytes.
-    pub fn size(&self) -> usize { self.instructions.iter().map(|i| i.size()).sum() }
+    pub fn size(&self) -> usize { self.bytes.len() }
 
     /// Returns the current position in the script (number of instructions).
-    pub fn len(&self) -> usize { self.instructions.len() }
+    pub fn len(&self) -> usize { self.bytes.len() }
 
     /// Returns true if the script has no instructions.
-    pub fn is_empty(&self) -> bool { self.instructions.is_empty() }
+    pub fn is_empty(&self) -> bool { self.bytes.is_empty() }
 
     /// Emits a u32 value to the script.
     pub fn emit_u32(&mut self, value: u32) {
         let bytes = value.to_le_bytes().to_vec();
-        self.emit_with_operand(OpCode::PUSHDATA1, bytes);
+        self.bytes.extend_from_slice(&bytes);
     }
 
     /// Emits an opcode without an operand.
-    pub fn emit_opcode(&mut self, opcode: OpCode) { self.add_instruction(Instruction::new(opcode)); }
+    pub fn emit_opcode(&mut self, opcode: OpCode) {
+        self.bytes.push(opcode as u8);
+    }
 
     /// Emits an opcode with an operand.
     pub fn emit_with_operand(&mut self, opcode: OpCode, operand: Vec<u8>) {
-        self.add_instruction(Instruction::with_operand(opcode, operand));
-    }
-
-    /// Adds binary data to the script.
-    pub fn emit_push_data(&mut self, data: &[u8]) -> Result<(), Error> {
-        let opcode = if data.len() <= 0xFF {
-            OpCode::PUSHDATA1
-        } else if data.len() <= 0xFFFF {
-            OpCode::PUSHDATA2
-        } else {
-            OpCode::PUSHDATA4
-        };
-
-        self.emit_with_operand(opcode, data.to_vec());
-        Ok(())
+        self.bytes.push(opcode as u8);
+        self.bytes.extend_from_slice(&operand);
     }
 
     /// Emits an integer value to the script.
@@ -137,16 +137,16 @@ impl Script {
                 // For other values, use the appropriate PUSHINT opcode based on size
                 if value >= i8::MIN as i64 && value <= i8::MAX as i64 {
                     let bytes = (value as i8).to_le_bytes().to_vec();
-                    self.emit_with_operand(OpCode::PUSHINT8, bytes);
+                    self.bytes.extend_from_slice(&bytes);
                 } else if value >= i16::MIN as i64 && value <= i16::MAX as i64 {
                     let bytes = (value as i16).to_le_bytes().to_vec();
-                    self.emit_with_operand(OpCode::PUSHINT16, bytes);
+                    self.bytes.extend_from_slice(&bytes);
                 } else if value >= i32::MIN as i64 && value <= i32::MAX as i64 {
                     let bytes = (value as i32).to_le_bytes().to_vec();
-                    self.emit_with_operand(OpCode::PUSHINT32, bytes);
+                    self.bytes.extend_from_slice(&bytes);
                 } else {
                     let bytes = value.to_le_bytes().to_vec();
-                    self.emit_with_operand(OpCode::PUSHINT64, bytes);
+                    self.bytes.extend_from_slice(&bytes);
                 }
             }
         }
@@ -163,68 +163,23 @@ impl Script {
         // Comments are only stored in the source code
     }
 
-    /// Adds an instruction to the script.
-    pub fn add_instruction(&mut self, instruction: Instruction) { self.instructions.push(instruction); }
-
-    /// Returns the script as bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut result = Vec::new();
-
-        for instruction in &self.instructions {
-            if let Ok(bytes) = instruction.encode() {
-                result.extend_from_slice(&bytes);
-            }
-        }
-
-        result
-    }
-
-    /// Returns a reference to the script's bytes.
-    pub fn bytes(&self) -> Vec<u8> { self.to_bytes() }
-
     /// Updates the operand of an instruction at a specific offset.
     /// This is particularly useful for jump targets that need to be updated
     /// after the full script is generated.
     pub fn update_operand_at(&mut self, offset: usize, new_operand: &[u8]) -> bool {
-        let mut current_offset = 0;
-
-        for instruction in &mut self.instructions {
-            let instr_size = instruction.size();
-
-            // Check if the target offset is within this instruction
-            if offset >= current_offset && offset < current_offset + instr_size {
-                // Calculate the offset within the instruction
-                let instr_offset = offset - current_offset;
-
-                // For most instructions, the operand starts after the opcode
-                // and possibly after the size prefix
-                let operand_start = match instruction.opcode.size_prefix() {
-                    Some(size_prefix) => 1 + size_prefix, // opcode + size prefix
-                    None => 1,                            // just opcode
-                };
-
-                // If the offset points to the operand part
-                if instr_offset == operand_start {
-                    // Replace the operand
-                    instruction.operand = new_operand.to_vec();
-                    return true;
-                }
-            }
-
-            current_offset += instr_size;
+        if offset < self.bytes.len() {
+            self.bytes.splice(offset..offset + new_operand.len(), new_operand.iter().cloned());
+            true
+        } else {
+            false // Offset not found
         }
-
-        false // Offset not found
     }
 
     /// Disassembles the script into a string representation.
     pub fn disassemble(&self) -> String {
         let mut result = String::new();
-        for (i, instruction) in self.instructions.iter().enumerate() {
-            result.push_str(&format!("{:04X}: {:?}", i, instruction.opcode));
-            if !instruction.operand.is_empty() {
-                result.push_str(&format!(" {:?}", instruction.operand));
-            }
+        for (i, byte) in self.bytes.iter().enumerate() {
+            result.push_str(&format!("{:04X}: {:?}", i, *byte));
             result.push('\n');
         }
         result
@@ -233,7 +188,7 @@ impl Script {
 
 /// Save a script to a file
 pub fn save_script<P: AsRef<Path>>(script: &Script, path: P) -> Result<(), Error> {
-    let bytes = script.to_bytes();
+    let bytes = script.bytes().to_vec();
     let mut file = File::create(path)?;
     file.write_all(&bytes)?;
     Ok(())
@@ -251,20 +206,8 @@ pub fn load_script<P: AsRef<Path>>(path: P) -> Result<Script, Error> {
 pub fn disassemble_script(script: &Script) -> String {
     let mut result = String::new();
 
-    for (i, instruction) in script.instructions.iter().enumerate() {
-        result.push_str(&format!("{:04X}: {:?}", i, instruction.opcode));
-
-        if !instruction.operand.is_empty() {
-            if instruction.operand.len() <= 8 {
-                // For small operands, show the bytes
-                let hex = instruction.operand.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
-                result.push_str(&format!(" {}", hex));
-            } else {
-                // For larger operands, just show the length
-                result.push_str(&format!(" [{}]", instruction.operand.len()));
-            }
-        }
-
+    for (i, byte) in script.bytes().iter().enumerate() {
+        result.push_str(&format!("{:04X}: {:?}", i, *byte));
         result.push('\n');
     }
 

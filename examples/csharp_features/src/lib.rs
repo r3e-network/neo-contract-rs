@@ -10,9 +10,7 @@ extern crate wee_alloc;
 use neo_contract::{
     builtin::{H160, Int256, ByteString, Map, Array, Any},
     Runtime,
-    contract, contract_author, contract_description,
-    contract_version, contract_email,
-    storage, constructor, message,
+    prelude::*,
 };
 use core::panic::PanicInfo;
 
@@ -26,137 +24,144 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[contract]
+// Define the Transfer event
+#[neo_contract::event]
+pub struct Transfer {
+    #[index]
+    pub from: H160,
+    #[index]
+    pub to: H160,
+    pub amount: Int256,
+}
+
+#[neo_contract::contract]
 #[contract_author("R3E Network")]
 #[contract_email("dev@r3e.network")]
 #[contract_description("An example contract using C# features")]
 #[contract_version("0.1.0")]
-mod token_contract {
-    use super::*;
+pub struct Token {
+    // Total supply of tokens
+    #[storage]
+    token_supply: StorageItem<Int256>,
+    // Map of account balances
+    #[storage]
+    balances: StorageMap<H160, Int256>,
+}
 
-    pub fn emit_transfer(from: H160, to: H160, amount: Int256) {
-        // Create event name as ByteString
-        let event_name = ByteString::from("transfer");
+impl Token {
+    // Constructor
+    #[constructor]
+    pub fn new(initial_supply: Int256) -> Self {
+        let owner = Runtime::executing_script_hash();
         
-        // Create an Array to hold our parameters
-        let mut event_data = Array::<Any>::new();
+        let mut instance = Self {
+            token_supply: StorageItem::new(b"token_supply"),
+            balances: StorageMap::new(b"balances"),
+        };
         
-        // Add the parameters as Any values
-        event_data.push(Any::from(from));
-        event_data.push(Any::from(to));
-        event_data.push(Any::from(amount));
+        instance.balances.insert(owner, initial_supply);
+        instance.token_supply.set(&initial_supply);
         
-        // Emit the event
-        Runtime::notify(&event_name, &event_data);
+        // Emit transfer event for minting
+        Transfer {
+            from: H160::zero(),
+            to: owner,
+            amount: initial_supply
+        }.notify();
+        
+        instance
     }
     
-    #[storage]
-    pub struct Token {
-        // Total supply of tokens
-        token_supply: Int256,
-        // Map of account balances
-        balances: Map<H160, Int256>,
+    // Safe method that doesn't modify state
+    #[safe]
+    pub fn total_supply(&self) -> Int256 {
+        self.token_supply.get().unwrap_or_default()
     }
-
-    impl Token {
-        // Constructor
-        #[constructor]
-        pub fn new(initial_supply: Int256) -> Self {
-            let owner = Runtime::executing_script_hash();
-            
-            let mut balances = Map::new();
-            balances.put(owner, initial_supply);
-            
-            Self {
-                token_supply: initial_supply,
-                balances,
-            }
+    
+    // Method with transfer functionality
+    #[method]
+    #[no_reentry]
+    pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
+        if !Runtime::check_witness(&from) {
+            return false;
         }
         
-        // Safe method that doesn't modify state
-        #[safe]
-        pub fn total_supply(&self) -> Int256 {
-            self.token_supply
+        if amount <= Int256::zero() {
+            return false;
         }
         
-        // Method with transfer functionality
-        #[message]
-        pub fn transfer(&mut self, from: H160, to: H160, amount: Int256) -> bool {
-            if !Runtime::check_witness(from) {
-                return false;
-            }
-            
-            if amount <= Int256::zero() {
-                return false;
-            }
-            
-            let from_balance = self.balance_of(from);
-            if from_balance < amount {
-                return false;
-            }
-            
-            if from != to {
-                let from_new_balance = from_balance - amount;
-                if from_new_balance.is_zero() {
-                    self.balances.delete(&from);
-                } else {
-                    self.balances.put(from, from_new_balance);
-                }
-                
-                let to_balance = self.balance_of(to);
-                let to_new_balance = to_balance + amount;
-                self.balances.put(to, to_new_balance);
-            }
-            
-            // Emit the transfer event
-            emit_transfer(from, to, amount);
-            
-            true
+        let from_balance = self.balance_of(from);
+        if from_balance < amount {
+            return false;
         }
         
-        // Method with withdraw functionality
-        #[message]
-        pub fn withdraw(&mut self, account: H160, amount: Int256) -> bool {
-            if !Runtime::check_witness(account) {
-                return false;
-            }
-            
-            if amount <= Int256::zero() {
-                return false;
-            }
-            
-            let balance = self.balance_of(account);
-            if balance < amount {
-                return false;
-            }
-            
-            let new_balance = balance - amount;
-            if new_balance.is_zero() {
-                self.balances.delete(&account);
+        if from != to {
+            let from_new_balance = from_balance - amount;
+            if from_new_balance.is_zero() {
+                self.balances.remove(&from);
             } else {
-                self.balances.put(account, new_balance);
+                self.balances.insert(from, from_new_balance);
             }
             
-            // Emit withdraw event (same as transfer from account to 0)
-            emit_transfer(account, H160::zero(), amount);
-            
-            true
+            let to_balance = self.balance_of(to);
+            let to_new_balance = to_balance + amount;
+            self.balances.insert(to, to_new_balance);
         }
         
-        // Call other contract
-        #[safe]
-        pub fn call_other_contract(&self, contract_hash: H160, method: ByteString, args: Array<Any>) -> Any {
-            // Call contract without flags
-            Runtime::call_contract(contract_hash, method, args)
+        // Emit the transfer event
+        Transfer {
+            from: from,
+            to: to,
+            amount: amount
+        }.notify();
+        
+        true
+    }
+    
+    // Method with withdraw functionality
+    #[method]
+    #[no_reentry]
+    pub fn withdraw(&mut self, account: H160, amount: Int256) -> bool {
+        if !Runtime::check_witness(&account) {
+            return false;
         }
         
-        // Safe method to check balance
-        #[safe]
-        pub fn balance_of(&self, account: H160) -> Int256 {
-            match self.balances.get(&account) {
-                Some(balance) => *balance,
-                None => Int256::zero(),
-            }
+        if amount <= Int256::zero() {
+            return false;
         }
+        
+        let balance = self.balance_of(account);
+        if balance < amount {
+            return false;
+        }
+        
+        let new_balance = balance - amount;
+        if new_balance.is_zero() {
+            self.balances.remove(&account);
+        } else {
+            self.balances.insert(account, new_balance);
+        }
+        
+        // Emit withdraw event (same as transfer from account to 0)
+        Transfer {
+            from: account,
+            to: H160::zero(),
+            amount: amount
+        }.notify();
+        
+        true
+    }
+    
+    // Call other contract
+    #[safe]
+    pub fn call_other_contract(&self, contract_hash: H160, method: ByteString, args: Array<Any>) -> Any {
+        // Call contract without flags
+        Runtime::call_contract(contract_hash, method, args)
+    }
+    
+    // Safe method to check balance
+    #[safe]
+    pub fn balance_of(&self, account: H160) -> Int256 {
+        self.balances.get(&account).unwrap_or_default()
     }
 }

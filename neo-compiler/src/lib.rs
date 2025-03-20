@@ -96,7 +96,7 @@ pub fn compile_with_options<P: AsRef<Path>>(
     options: CompilerOptions,
 ) -> Result<CompilationResult, Error> {
     // Load and parse the WebAssembly module
-    let wasm_data = std::fs::read(&wasm_path).map_err(Error::Io)?;
+    let wasm_data = std::fs::read(&wasm_path).map_err(|e| Error::Io(e.to_string()))?;
     let module = WasmModule::parse(&wasm_data)?;
 
     // Get contract name either from options or from file name
@@ -106,7 +106,7 @@ pub fn compile_with_options<P: AsRef<Path>>(
         .unwrap_or_else(|| wasm_path.as_ref().file_stem().unwrap_or_default().to_string_lossy().to_string());
 
     // Get output directory
-    let output_dir = std::env::current_dir().map_err(Error::Io)?;
+    let output_dir = std::env::current_dir().map_err(|e| Error::Io(e.to_string()))?;
 
     // Create a new compiler and compile the contract
     let compiler = Compiler::with_options(options);
@@ -124,7 +124,7 @@ pub fn compile_with_options<P: AsRef<Path>>(
     let manifest = compiler.generate_manifest(&contract_name, &module)?;
 
     // Create the output directory if it doesn't exist
-    std::fs::create_dir_all(&output_dir).map_err(Error::Io)?;
+    std::fs::create_dir_all(&output_dir).map_err(|e| Error::Io(e.to_string()))?;
 
     // Save the NEF file and manifest
     let nef_path = output_dir.join(format!("{}.nef", contract_name));
