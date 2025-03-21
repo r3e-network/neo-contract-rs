@@ -44,6 +44,11 @@ impl ByteString {
     pub fn hex_encode(&self) -> Self {
         unsafe { env::stdlib::hex_encode(Self(self.0)) }
     }
+
+    #[inline(always)]
+    pub fn from_literal(literal: &str) -> Self {
+        unsafe { env::asm::string_from_literal(literal) }
+    }
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -88,6 +93,10 @@ impl ByteString {
 
     pub(crate) fn to_string(self) -> String {
         String::from_utf8_lossy(&self.0).to_string()
+    }
+
+    pub fn from_literal(literal: &str) -> Self {
+        Self(literal.as_bytes().to_vec())
     }
 }
 

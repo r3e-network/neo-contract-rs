@@ -5,9 +5,22 @@ pub mod contract;
 pub mod crypto;
 pub mod env;
 pub mod event;
+pub mod macros;
 pub mod runtime;
 pub mod serialize;
 pub mod storage;
 pub mod types;
 
 pub use neo_contract_proc_macros::{contract, structs};
+
+// Modules re-exported for convenience
+pub mod prelude {
+    pub use crate::contract::*;
+    pub use crate::crypto::*;
+    pub use crate::event::*;
+    pub use crate::macros::*;
+    pub use crate::runtime::*;
+    pub use crate::storage::*;
+    pub use crate::types::*;
+    pub use neo_contract_proc_macros::*;
+}

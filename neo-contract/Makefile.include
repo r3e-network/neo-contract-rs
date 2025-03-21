@@ -1,0 +1,12 @@
+# Common Makefile configuration for Neo contracts
+
+# Path to the neo-wasm tool
+NEO_WASM_PATH := $(REPO_ROOT)/target/release
+NEO_WASM := $(NEO_WASM_PATH)/neo-wasm
+
+# Ensure the neo-wasm tool is built
+$(NEO_WASM):
+	cd $(REPO_ROOT) && cargo build --release -p neo-wasm
+
+# Default flags for rust compilation
+RUSTFLAGS := -Ctarget-feature=+multivalue -Cllvm-args=--combiner-store-merging=false -Clink-arg=--initial-memory=262144 -Clink-arg=-zstack-size=131072

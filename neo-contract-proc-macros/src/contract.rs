@@ -35,9 +35,21 @@ fn expand_impl_item(item: &syn::ItemImpl) -> TokenStream {
             let name = &method.sig.ident;
             let args = &method.sig.inputs;
             let returns = &method.sig.output;
+            
+            // Check if the method has a #[safe] attribute
+            let is_safe = has_safe_attribute(method);
+            
+            // If the method is marked as safe, add a comment that can be parsed by the WASM to NEF converter
+            let safe_comment = if is_safe {
+                quote::quote! { /* @safe */ }
+            } else {
+                quote::quote! {}
+            };
+            
             quote::quote! {
                 #[no_mangle]
-                pub fn #name() #returns {
+                #safe_comment
+                pub fn #name(#args) #returns {
                     #self_type::#name(#args)
                 }
             }
@@ -58,6 +70,17 @@ fn expand_impl_item(item: &syn::ItemImpl) -> TokenStream {
     methods
 }
 
+// Check if the method has a #[safe] attribute
+fn has_safe_attribute(method: &syn::ImplItemFn) -> bool {
+    method.attrs.iter().any(|attr| {
+        if let Some(ident) = attr.path().get_ident() {
+            ident.to_string() == "safe"
+        } else {
+            false
+        }
+    })
+}
+
 fn expand_nep17_methods(item: &syn::ItemImpl) -> TokenStream {
     let self_type = item.self_ty.as_ref();
     let mut methods: TokenStream = quote::quote! {};
@@ -76,6 +99,7 @@ fn expand_nep17_methods(item: &syn::ItemImpl) -> TokenStream {
     if !has_method(item, "total_supply") {
         methods.extend(quote::quote! {
             #[no_mangle]
+            /* @safe */
             pub fn total_supply() -> neo_contract::types::Int256 {
                 #self_type::total_supply()
             }
@@ -86,6 +110,7 @@ fn expand_nep17_methods(item: &syn::ItemImpl) -> TokenStream {
     if !has_method(item, "balance_of") {
         methods.extend(quote::quote! {
             #[no_mangle]
+            /* @safe */
             pub fn balance_of(owner: neo_contract::types::H160) -> neo_contract::types::Int256 {
                 #self_type::balance_of(owner)
             }
@@ -100,28 +125,9 @@ fn expand_nep17_methods(item: &syn::ItemImpl) -> TokenStream {
                 from: neo_contract::types::H160,
                 to: neo_contract::types::H160,
                 amount: neo_contract::types::Int256,
+                data: neo_contract::types::Array<neo_contract::types::Any>,
             ) -> bool {
-                #self_type::transfer(from, to, amount)
-            }
-        });
-    }
-
-    // `mint` has default implementation
-    if !has_method(item, "mint") {
-        methods.extend(quote::quote! {
-            #[no_mangle]
-            pub fn mint(to: neo_contract::types::H160, amount: neo_contract::types::Int256) {
-                #self_type::mint(to, amount)
-            }
-        });
-    }
-
-    // `burn` has default implementation
-    if !has_method(item, "burn") {
-        methods.extend(quote::quote! {
-            #[no_mangle]
-            pub fn burn(from: neo_contract::types::H160, amount: neo_contract::types::Int256) {
-                #self_type::burn(from, amount)
+                #self_type::transfer(from, to, amount, data)
             }
         });
     }
@@ -130,26 +136,17 @@ fn expand_nep17_methods(item: &syn::ItemImpl) -> TokenStream {
 }
 
 fn expand_nep11_methods(item: &syn::ItemImpl) -> TokenStream {
-    let self_type = item.self_ty.as_ref();
-    let mut methods: TokenStream = quote::quote! {};
-    if !has_method(item, "_initialize") {
-        methods.extend(quote::quote! {
-            #[no_mangle]
-            pub fn _initialize() {
-                #self_type::_initialize()
-            }
-        });
-    }
+    let _self_type = item.self_ty.as_ref();
+    let methods: TokenStream = quote::quote! {};
+
+    // Add default NEP-11 methods here if needed
 
     methods
 }
 
 fn has_method(item: &syn::ItemImpl, name: &str) -> bool {
-    item.items.iter().any(|item| {
-        if let syn::ImplItem::Fn(method) = item {
-            method.sig.ident == name
-        } else {
-            false
-        }
+    item.items.iter().any(|item| match item {
+        syn::ImplItem::Fn(method) => method.sig.ident == name,
+        _ => false,
     })
 }

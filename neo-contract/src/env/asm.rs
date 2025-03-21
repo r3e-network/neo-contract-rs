@@ -97,6 +97,9 @@ extern "C" {
     /// `string_len` returns the length of the given string.
     pub(crate) fn string_len(str: ByteString) -> usize;
 
+    /// `string_from_literal` creates a new string from a literal.
+    pub(crate) fn string_from_literal(literal: &str) -> ByteString;
+
     /// `string_eq` checks if two strings are equal.
     pub(crate) fn string_eq(a: ByteString, b: ByteString) -> bool;
 

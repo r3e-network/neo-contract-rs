@@ -1,0 +1,22 @@
+[package]
+name = "oracle-price-feed"
+version = "0.1.0"
+edition = "2021"
+authors = ["Neo Contract Rust Team"]
+description = "An oracle price feed example for the Neo blockchain"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+neo-contract = { path = "../../neo-contract" }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+overflow-checks = true
+panic = "abort"
+strip = "symbols"
+debug = false 

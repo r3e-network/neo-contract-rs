@@ -1,0 +1,27 @@
+# Copyright @ 2024 - present, R3E Network
+# All Rights Reserved
+
+[package]
+name = "simple-storage"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+neo-contract = { path = "../../neo-contract", default-features = false, features = ["wasm"] }
+
+[features]
+default = ["wasm"]
+wasm = []
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true 

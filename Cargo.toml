@@ -7,6 +7,8 @@ resolver = "2"
 members = [
     "neo-contract",
     "neo-contract-proc-macros",
+    "neo-wasm/examples/hello-world",
+    # "examples/hello-world",
 ]
 
 [profile.release]

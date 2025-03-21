@@ -31,7 +31,7 @@ pub trait Nep17Token {
         token::balance_of(owner)
     }
 
-    fn transfer(from: H160, to: H160, amount: Int256) -> bool {
+    fn transfer(from: H160, to: H160, amount: Int256, data: Array<Any>) -> bool {
         if amount.is_negative() {
             runtime::abort();
             return false;
