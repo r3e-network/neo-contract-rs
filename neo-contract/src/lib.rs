@@ -13,6 +13,16 @@ pub mod types;
 
 pub use neo_contract_proc_macros::{contract, structs};
 
+// Export contract annotations
+pub use neo_contract_proc_macros::{
+    method, 
+    safe as safe_attr,
+    contract_author, 
+    contract_permission, 
+    contract_standards, 
+    contract_meta
+};
+
 // Modules re-exported for convenience
 pub mod prelude {
     pub use crate::contract::*;

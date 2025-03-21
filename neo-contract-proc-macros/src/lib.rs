@@ -99,3 +99,113 @@ pub fn contract(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) 
 pub fn structs(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     structs::expand_structs_impl(input)
 }
+
+/// Marks a method to be exposed in the contract interface
+///
+/// # Example
+///
+/// ```
+/// #[method]
+/// pub fn transfer(from: &Address, to: &Address, amount: u64) -> bool {
+///     // Implementation...
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn method(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // This attribute is only used as a marker for the manifest generator,
+    // it does not modify the code itself
+    input
+}
+
+/// Marks a method as read-only (does not modify state)
+///
+/// # Example
+///
+/// ```
+/// #[method]
+/// #[safe]
+/// pub fn symbol() -> ByteString {
+///     ByteString::from_literal("DEMO")
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn safe(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // This attribute is only used as a marker for the manifest generator,
+    // it does not modify the code itself
+    input
+}
+
+/// Specifies the contract author in the manifest
+///
+/// # Example
+///
+/// ```
+/// #[contract_author("Neo Contract Team")]
+/// pub struct TokenContract;
+/// ```
+#[proc_macro_attribute]
+pub fn contract_author(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // This attribute is only used as a marker for the manifest generator,
+    // it does not modify the code itself
+    input
+}
+
+/// Defines contract permissions in the manifest
+///
+/// # Example
+///
+/// ```
+/// #[contract_permission("*:*")]
+/// pub struct TokenContract;
+/// ```
+#[proc_macro_attribute]
+pub fn contract_permission(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // This attribute is only used as a marker for the manifest generator,
+    // it does not modify the code itself
+    input
+}
+
+/// Declares supported standards in the manifest
+///
+/// # Example
+///
+/// ```
+/// #[contract_standards("NEP-17")]
+/// pub struct TokenContract;
+/// ```
+#[proc_macro_attribute]
+pub fn contract_standards(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // This attribute is only used as a marker for the manifest generator,
+    // it does not modify the code itself
+    input
+}
+
+/// Specifies the contract version in the manifest
+///
+/// # Example
+///
+/// ```
+/// #[contract_version("1.0.0")]
+/// pub struct TokenContract;
+/// ```
+#[proc_macro_attribute]
+pub fn contract_version(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // This attribute is only used as a marker for the manifest generator,
+    // it does not modify the code itself
+    input
+}
+
+/// Adds extra metadata to the manifest
+///
+/// # Example
+///
+/// ```
+/// #[contract_meta("Version", "1.0.0")]
+/// pub struct TokenContract;
+/// ```
+#[proc_macro_attribute]
+pub fn contract_meta(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // This attribute is only used as a marker for the manifest generator,
+    // it does not modify the code itself
+    input
+} 
