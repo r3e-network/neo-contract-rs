@@ -7,6 +7,7 @@ function show_usage {
   echo "Options:"
   echo "  -m, --manifest <file> Path to manifest file (default: ./build/<project>.manifest.json)"
   echo "  -s, --source <file>   Path to Rust source file (default: <project>/src/lib.rs)"
+  echo "  -a, --asm <file>      Path to .neo.asm file (for offset debugging)"
   echo "  -h, --help            Show this help message"
   exit 1
 }
@@ -14,12 +15,14 @@ function show_usage {
 # Parse arguments
 MANIFEST_FILE=""
 SOURCE_FILE=""
+ASM_FILE=""
 PROJECT_PATH=""
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     -m|--manifest) MANIFEST_FILE="$2"; shift ;;
     -s|--source) SOURCE_FILE="$2"; shift ;;
+    -a|--asm) ASM_FILE="$2"; shift ;;
     -h|--help) show_usage ;;
     *) 
       if [[ -z "$PROJECT_PATH" ]]; then
@@ -80,24 +83,118 @@ echo "Source file: $SOURCE_FILE"
 # Build neo-wasm if needed
 REPO_ROOT=$(dirname "$(realpath "$0")")
 NEOWASM_DIR="${REPO_ROOT}/neo-wasm"
-if [[ ! -d "$NEOWASM_DIR" ]]; then
-  echo "Error: neo-wasm directory not found at $NEOWASM_DIR"
-  exit 1
-fi
+NEOWASM_BIN="${NEOWASM_DIR}/neo-wasm"
 
-cd "$NEOWASM_DIR"
-if [[ ! -f "neo-wasm" ]]; then
+if [[ ! -f "$NEOWASM_BIN" ]]; then
   echo "Building neo-wasm..."
-  go build -o neo-wasm .
+  (cd "$NEOWASM_DIR" && go build)
 fi
 
-if [[ ! -f "neo-wasm" ]]; then
-  echo "Error: Failed to build neo-wasm"
-  exit 1
+# Create a backup of the original manifest
+echo "Creating backup of original manifest..."
+cp "$MANIFEST_FILE" "${MANIFEST_FILE}.original"
+
+# Phase 1: Use the fix-manifest command to parse Rust source and update metadata
+echo "Phase 1: Updating manifest metadata from Rust source..."
+"$NEOWASM_BIN" fix-manifest --manifest "$MANIFEST_FILE" --source "$SOURCE_FILE"
+
+# Phase 2: Verify method offsets if ASM file is provided
+if [[ -n "$ASM_FILE" && -f "$ASM_FILE" ]]; then
+  echo "Phase 2: Verifying method offsets using ASM file..."
+  
+  # Extract method offsets from ASM file
+  echo "Extracting method offsets from ASM file..."
+  TEMP_FILE=$(mktemp)
+  trap "rm -f $TEMP_FILE" EXIT
+  
+  # Parse ASM file to extract method offsets
+  # Format: // methodName (index):
+  #           000: INSTRUCTION
+  grep -A 1 "^// " "$ASM_FILE" | grep -v "wasm" | sed -n 'N;s/\/\/ \([^ ]*\) .*\n *\([0-9]*\):.*/\1 \2/p' > "$TEMP_FILE"
+  
+  # Update the manifest with extracted offsets
+  while read -r method offset; do
+    if [[ -n "$method" && -n "$offset" ]]; then
+      echo "  Method: $method, Offset: $offset"
+      
+      # Update the manifest using jq if available
+      if command -v jq &> /dev/null; then
+        # Use jq to update the offset (more reliable)
+        jq --arg method "$method" --argjson offset "$offset" '
+          .abi.methods = (.abi.methods | map(
+            if .name == $method then .offset = $offset | . else . end
+          ))
+        ' "$MANIFEST_FILE" > "${MANIFEST_FILE}.tmp" && mv "${MANIFEST_FILE}.tmp" "$MANIFEST_FILE"
+      else
+        # Fallback to sed if jq is not available
+        sed -i.tmp -E "s/(\"name\":[[:space:]]*\"$method\"[[:space:]]*,[[:space:]]*[^{}]+\"offset\":[[:space:]]*)[0-9]+/\1$offset/g" "$MANIFEST_FILE"
+        rm -f "${MANIFEST_FILE}.tmp"
+      fi
+    fi
+  done < "$TEMP_FILE"
+  
+  echo "Method offsets updated based on ASM file."
 fi
 
-# Run the fix-manifest command
-echo "Fixing manifest file..."
-./neo-wasm fix-manifest --manifest "$MANIFEST_FILE" --source "$SOURCE_FILE"
+# Phase 3: Apply method name mappings from neo-contract.yaml if it exists
+MAPPING_FILE="${PROJECT_DIR}/neo-contract.yaml"
+if [[ -f "$MAPPING_FILE" ]]; then
+  echo "Phase 3: Applying method name mappings from $MAPPING_FILE..."
+  
+  # First backup current manifest with correct offsets
+  cp "$MANIFEST_FILE" "${MANIFEST_FILE}.with_offsets"
+  
+  # Process each mapping
+  while IFS= read -r line; do
+    # Skip comments and empty lines
+    if [[ "$line" == \#* ]] || [[ -z "${line// }" ]]; then
+      continue
+    fi
+    
+    # Extract WASM name and Rust name
+    if [[ "$line" =~ ([^:]+):(.+) ]]; then
+      wasm_name=$(echo "${BASH_REMATCH[1]}" | xargs)  # Trim whitespace
+      rust_name=$(echo "${BASH_REMATCH[2]}" | xargs)  # Trim whitespace
+      
+      if [[ -n "$wasm_name" && -n "$rust_name" ]]; then
+        echo "  Mapping WASM method '$wasm_name' to Rust method '$rust_name'"
+        
+        # Get offset for wasm_name
+        offset=$(grep -A 5 "\"name\":[[:space:]]*\"$wasm_name\"" "$MANIFEST_FILE" | grep "\"offset\":" | sed -E 's/.*"offset":([0-9]+).*/\1/')
+        
+        if [[ -n "$offset" ]]; then
+          echo "    Found offset for '$wasm_name': $offset"
+          
+          # Replace name but preserve offset
+          if command -v jq &> /dev/null; then
+            # Use jq for more reliable replacement
+            jq --arg wasm "$wasm_name" --arg rust "$rust_name" --argjson offset "$offset" '
+              .abi.methods = (.abi.methods | map(
+                if .name == $wasm then .name = $rust | .offset = $offset | . else . end
+              ))
+            ' "$MANIFEST_FILE" > "${MANIFEST_FILE}.tmp" && mv "${MANIFEST_FILE}.tmp" "$MANIFEST_FILE"
+          else
+            # Fallback to sed if jq is not available
+            sed -i '' "s/\"name\":[[:space:]]*\"$wasm_name\"/\"name\": \"$rust_name\"/" "$MANIFEST_FILE"
+          fi
+        else
+          echo "    WARNING: Could not find offset for method '$wasm_name'"
+          sed -i '' "s/\"name\":[[:space:]]*\"$wasm_name\"/\"name\": \"$rust_name\"/" "$MANIFEST_FILE"
+        fi
+      fi
+    fi
+  done < "$MAPPING_FILE"
+  
+  echo "Method name mappings applied."
+else
+  echo "No neo-contract.yaml found for method name mappings."
+fi
 
-echo "Manifest file has been updated successfully!" 
+echo "Manifest updated successfully!"
+echo "Original manifest backed up to: ${MANIFEST_FILE}.original"
+
+# Display the final method offsets in the manifest
+echo "Final manifest method names and offsets:"
+grep -A 2 "\"name\":" "$MANIFEST_FILE" | grep -A 1 "\"offset\":" | cat
+
+exit 0 

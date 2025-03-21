@@ -135,6 +135,26 @@ pub fn safe(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> p
     input
 }
 
+/// Specifies the WASM export name for a method
+///
+/// This allows mapping between the Rust method name and the name exported in the WASM file.
+///
+/// # Example
+///
+/// ```
+/// #[method]
+/// #[wasm_export(name = "add")]
+/// pub fn hello(name: &ByteString) -> ByteString {
+///     // Implementation...
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn wasm_export(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // Note: In a full implementation, this would parse the name attribute and modify the export name.
+    // For now, this is just a marker for documentation purposes.
+    input
+}
+
 /// Specifies the contract author in the manifest
 ///
 /// # Example

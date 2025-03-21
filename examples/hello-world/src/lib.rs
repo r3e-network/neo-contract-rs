@@ -6,10 +6,33 @@
 
 use neo_contract as neo;
 use neo::{contract::*, types::*};
+use neo_contract::storage::StorageMap;
 
+/// HelloWorld is a simple example contract demonstrating annotations
+/// for NEO N3 smart contract development with Rust.
+/// 
+/// @contract_author("Neo Contract Rust Team")
+/// @contract_permission("*:*")
+/// @contract_meta("Version", "1.0.0")
+/// @contract_meta("Website", "https://example.com/hello-world")
 pub struct HelloWorld;
 
 #[neo::contract]
+impl Nep17Token for HelloWorld {
+    /// @method
+    /// @safe
+    fn symbol() -> ByteString {
+        ByteString::from_literal("HELLO")
+    }
+
+    /// @method
+    /// @safe
+    fn decimals() -> u32 {
+        8
+    }
+}
+
+// Additional methods for the HelloWorld contract
 impl HelloWorld {
     /// Returns a greeting message
     ///
@@ -23,15 +46,19 @@ impl HelloWorld {
     /// # Returns
     ///
     /// A ByteString containing the greeting message
-    pub fn hello(name: ByteString) -> ByteString {
+    /// 
+    /// @method
+    /// @safe
+    /// @wasm_export(name = "add")
+    pub fn hello(name: &ByteString) -> ByteString {
         if name.is_empty() {
-            return ByteString::from("Hello, World!");
+            return ByteString::from_literal("Hello, World!");
         }
         
         // Create a personalized greeting
-        let mut result = ByteString::from("Hello, ");
-        result = result.concat(&name);
-        result = result.concat(&ByteString::from("!"));
+        let mut result = ByteString::from_literal("Hello, ");
+        result = result.concat(name);
+        result = result.concat(&ByteString::from_literal("!"));
         
         result
     }
@@ -41,8 +68,12 @@ impl HelloWorld {
     /// # Returns
     ///
     /// A ByteString containing contract information
+    /// 
+    /// @method
+    /// @safe
+    /// @wasm_export(name = "flip")
     pub fn contract_info() -> ByteString {
-        ByteString::from("Hello World Contract - A simple Neo N3 smart contract example written in Rust")
+        ByteString::from_literal("Hello World Contract - A simple Neo N3 smart contract example written in Rust")
     }
     
     /// Stores a greeting message in contract storage
@@ -51,9 +82,12 @@ impl HelloWorld {
     ///
     /// * `name` - The name to associate with the greeting
     /// * `message` - The custom greeting message to store
-    pub fn store_greeting(name: ByteString, message: ByteString) {
+    /// 
+    /// @method
+    /// @wasm_export(name = "option")
+    pub fn store_greeting(name: &ByteString, message: &ByteString) {
         let mut storage = StorageMap::new();
-        storage.put(name, message);
+        storage.put(name.clone(), message.clone());
     }
     
     /// Retrieves a stored greeting message
@@ -65,9 +99,13 @@ impl HelloWorld {
     /// # Returns
     ///
     /// The stored greeting message, or an empty ByteString if not found
-    pub fn get_greeting(name: ByteString) -> ByteString {
+    /// 
+    /// @method
+    /// @safe
+    /// @wasm_export(name = "main")
+    pub fn get_greeting(name: &ByteString) -> ByteString {
         let storage = StorageMap::new();
-        let value = storage.get(name);
+        let value = storage.get(name.clone());
         
         if value.is_null() {
             return ByteString::empty();
