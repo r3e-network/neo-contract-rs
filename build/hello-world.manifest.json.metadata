@@ -1,0 +1,86 @@
+{
+  "name": "hello-world",
+  "features": {},
+  "supportedstandards": [],
+  "abi": {
+    "methods": [
+      {
+        "name": "symbol",
+        "parameters": [],
+        "offset": 0,
+        "return_type": 18,
+        "safe": true
+      },
+      {
+        "name": "decimals",
+        "parameters": [],
+        "offset": 0,
+        "return_type": 17,
+        "safe": true
+      },
+      {
+        "name": "hello",
+        "parameters": [
+          {
+            "name": "name",
+            "type": 18
+          }
+        ],
+        "offset": 0,
+        "return_type": 18,
+        "safe": true
+      },
+      {
+        "name": "contract_info",
+        "parameters": [],
+        "offset": 0,
+        "return_type": 18,
+        "safe": true
+      },
+      {
+        "name": "store_greeting",
+        "parameters": [
+          {
+            "name": "name",
+            "type": 18
+          },
+          {
+            "name": "message",
+            "type": 18
+          }
+        ],
+        "offset": 0,
+        "return_type": 0,
+        "safe": false
+      },
+      {
+        "name": "get_greeting",
+        "parameters": [
+          {
+            "name": "name",
+            "type": 18
+          }
+        ],
+        "offset": 0,
+        "return_type": 18,
+        "safe": true
+      }
+    ],
+    "events": []
+  },
+  "permissions": [
+    {
+      "contract": "*",
+      "methods": [
+        "*"
+      ]
+    }
+  ],
+  "trusts": [],
+  "extra": {
+    "Author": "Neo Contract Rust Team",
+    "Description": "HelloWorld is a simple example contract demonstrating annotations\n/// for NEO N3 smart contract development with Rust.\n///",
+    "Version": "1.0.0",
+    "Website": "https://example.com/hello-world"
+  }
+}

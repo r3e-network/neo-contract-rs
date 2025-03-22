@@ -8,6 +8,7 @@ members = [
     "neo-contract",
     "neo-contract-proc-macros",
     "neo-wasm/examples/hello-world",
+    "neo-wasm/examples/syscall-test",
     # "examples/hello-world",
 ]
 

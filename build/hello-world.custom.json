@@ -5,21 +5,21 @@
   "abi": {
     "methods": [
       {
-        "name": "add",
+        "name": "hello",
         "parameters": [],
         "offset": 0,
         "return_type": 0,
         "safe": false
       },
       {
-        "name": "flip",
+        "name": "contract_info",
         "parameters": [],
         "offset": 20,
         "return_type": 0,
         "safe": false
       },
       {
-        "name": "option",
+        "name": "store_greeting",
         "parameters": [],
         "offset": 25,
         "return_type": 0,
@@ -45,9 +45,7 @@
   ],
   "trusts": [],
   "extra": {
-    "Author": "Neo Contract Rust Team",
-    "Description": "HelloWorld is a simple example contract demonstrating annotations\n/// for NEO N3 smart contract development with Rust.\n///",
-    "Version": "1.0.0",
-    "Website": "https://example.com/hello-world"
+    "Author": "neo-contract-rs",
+    "Description": "hello-world"
   }
 }
