@@ -1,5 +1,5 @@
 [package]
-name = "transfer"
+name = "nep11"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 neo-contract = { path = "../../neo-contract" }
-
 
 [profile.dev]
 opt-level        = "s"

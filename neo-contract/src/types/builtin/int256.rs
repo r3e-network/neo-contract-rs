@@ -9,6 +9,7 @@ use crate::{
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
+#[derive(Hash)]
 pub struct Int256(num256::Int256);
 
 #[cfg(target_family = "wasm")]

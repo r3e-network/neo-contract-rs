@@ -4,131 +4,152 @@
 use crate::types::*;
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct ContractHash {
-    id: u32,
+    /// an u32 value
+    #[get(pub)]
+    id: Int256,
+
+    #[get(pub)]
     hash: H160,
 }
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct Contract {
-    id: u32,
-    update_counter: u32,
+    /// an u32 value
+    #[get(pub)]
+    id: Int256,
+
+    /// an u16 value
+    #[get(pub)]
+    update_counter: Int256,
+
+    #[get(pub)]
     hash: H160,
+
+    #[get(pub)]
     nef: ByteString,
-    manifest: ContractManifest,
-}
-
-impl Contract {
-    #[inline(always)]
-    pub fn id(&self) -> u32 {
-        self.id
-    }
-
-    #[inline(always)]
-    pub fn update_counter(&self) -> u32 {
-        self.update_counter
-    }
-
-    #[inline(always)]
-    pub fn hash(&self) -> H160 {
-        self.hash
-    }
-
-    #[inline(always)]
-    pub fn nef(&self) -> ByteString {
-        self.nef.clone()
-    }
 }
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct ContractManifest {
+    #[get(pub)]
     name: ByteString,
+
+    #[get(pub)]
     groups: Array<ContractGroup>,
+
     _reserved: Any,
+
+    #[get(pub)]
     supported_standards: Array<ByteString>,
+
+    #[get(pub)]
     abi: ContractAbi,
+
+    #[get(pub)]
     permissions: Array<ContractPermission>,
+
+    #[get(pub)]
     trusts: Array<ByteString>,
+
+    #[get(pub)]
     extra: ByteString,
 }
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct ContractGroup {
+    #[get(pub)]
     public_key: PublicKey,
+
+    #[get(pub)]
     sign: ByteString,
 }
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct ContractPermission {
+    #[get(pub)]
     contract: ByteString,
+
+    #[get(pub)]
     methods: Array<ByteString>,
 }
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct ContractAbi {
+    #[get(pub)]
     methods: Array<ContractMethodDescriptor>,
+
+    #[get(pub)]
     events: Array<ContractEventDescriptor>,
 }
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct ContractMethodDescriptor {
+    #[get(pub)]
     name: ByteString,
+
+    #[get(pub)]
     params: Array<ContractParam>,
-    return_type: ContractParamType,
-    offset: u32,
+
+    /// an u8 value, see ContractParamType
+    #[get(pub)]
+    return_type: Int256,
+
+    /// an u32 value
+    #[get(pub)]
+    offset: Int256,
+
+    #[get(pub)]
     safe: bool,
 }
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct ContractEventDescriptor {
+    #[get(pub)]
     name: ByteString,
+
+    #[get(pub)]
     params: Array<ContractParam>,
 }
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct ContractParam {
+    #[get(pub)]
     name: ByteString,
-    param_type: ContractParamType,
+
+    /// an u8 value, see ContractParamType
+    #[get(pub)]
+    param_type: Int256,
 }
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct NeoCandidate {
+    #[get(pub)]
     public_key: PublicKey,
+
+    #[get(pub)]
     votes: Int256,
 }
 
-impl NeoCandidate {
-    #[inline(always)]
-    pub fn public_key(&self) -> PublicKey {
-        self.public_key.clone()
-    }
-
-    #[inline(always)]
-    pub fn votes(&self) -> Int256 {
-        self.votes
-    }
-}
-
 #[repr(C)]
+#[crate::inner_structs]
 pub struct NeoAccountState {
+    #[get(pub)]
     balance: Int256,
+
+    #[get(pub)]
     height: Int256,
+
+    #[get(pub)]
     vote_to: PublicKey,
-}
-
-impl NeoAccountState {
-    #[inline(always)]
-    pub fn balance(&self) -> Int256 {
-        self.balance
-    }
-
-    #[inline(always)]
-    pub fn height(&self) -> Int256 {
-        self.height
-    }
-
-    #[inline(always)]
-    pub fn vote_to(&self) -> PublicKey {
-        self.vote_to.clone()
-    }
 }

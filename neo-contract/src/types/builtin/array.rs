@@ -2,16 +2,12 @@
 // All Rights Reserved.
 
 #[allow(unused_imports)]
-use crate::{
-    env,
-    types::{placeholder::*, *},
-};
+use crate::{env, types::{placeholder::*, *}};
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
 pub struct Array<T> {
     value: Vec<T>,
-    // _marker: core::marker::PhantomData<T>,
 }
 
 #[cfg(target_family = "wasm")]
@@ -36,33 +32,46 @@ impl<T> Array<T> {
         unsafe { env::asm::array_size(self.value) }
     }
 
-    // #[inline(always)]
-    // pub fn push(&mut self, value: T) {
-    //     unsafe { env::asm::array_push(self.value, value) }
-    // }
+    #[inline(always)]
+    pub fn clear(&mut self) {
+        unsafe { env::asm::array_clear(self.value) }
+    }
 
-    // #[inline(always)]
-    // pub fn pop(&mut self) -> T {
-    //     unsafe { env::asm::array_pop(self.value) }
-    // }
+    #[inline(always)]
+    pub fn reverse(&mut self) {
+        unsafe { env::asm::array_reverse(self.value) }
+    }
 
-    // TODO: implement this
-    // #[inline(always)]
-    // pub fn try_pop(&mut self) -> Option<T> {
-    //     unsafe { env::asm::array_try_pop(self.0) }
-    // }
+    #[inline(always)]
+    pub fn remove(&mut self, index: usize) {
+        unsafe { env::asm::array_remove(self.value, index) }
+    }
+}
 
-    // TODO: implement this
-    // #[inline(always)]
-    // pub fn get(&self, index: usize) -> T {
-    //     unsafe { env::asm::array_get(self.value, index) }
-    // }
+#[cfg(target_family = "wasm")]
+impl<T: IntoPlaceholder> Array<T> {
+    #[inline(always)]
+    pub fn push(&mut self, value: T) {
+        unsafe { env::asm::array_push(self.value, value.into_placeholder()) }
+    }
 
-    // TODO: implement this
-    // #[inline(always)]
-    // pub fn set(&mut self, index: usize, value: T) {
-    //     unsafe { env::asm::array_set(self.value, index, value) }
-    // }
+    #[inline(always)]
+    pub fn set(&mut self, index: usize, value: T) {
+        unsafe { env::asm::array_set(self.value, index, value.into_placeholder()) }
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl<T: FromPlaceholder> Array<T> {
+    #[inline(always)]
+    pub fn pop(&mut self) -> T {
+        T::from_placeholder(unsafe { env::asm::array_pop(self.value) })
+    }
+
+    #[inline(always)]
+    pub fn get(&self, index: usize) -> T {
+        T::from_placeholder(unsafe { env::asm::array_get(self.value, index) })
+    }
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -71,8 +80,24 @@ impl<T> Array<T> {
         Self { value: Vec::new() }
     }
 
+    pub(crate) fn from_vec(value: Vec<T>) -> Self {
+        Self { value }
+    }
+
     pub fn size(&self) -> usize {
         self.value.len()
+    }
+
+    pub fn clear(&mut self) {
+        self.value.clear();
+    }
+
+    pub fn reverse(&mut self) {
+        self.value.reverse();
+    }
+
+    pub fn remove(&mut self, index: usize) {
+        self.value.remove(index);
     }
 
     pub fn push(&mut self, value: T) {

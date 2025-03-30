@@ -67,8 +67,8 @@ extern "C" {
     /// `new_map` creates a new empty `Map`.
     pub(crate) fn map_new() -> Placeholder;
 
-    /// `map_set` sets a value in the map.
-    pub(crate) fn map_set(map: Placeholder, key: Placeholder, value: Placeholder);
+    /// `map_put` puts a key-value pair into the map.
+    pub(crate) fn map_put(map: Placeholder, key: Placeholder, value: Placeholder);
 
     /// `map_get` gets a value from the map.
     pub(crate) fn map_get(map: Placeholder, key: Placeholder) -> Placeholder;
@@ -87,6 +87,9 @@ extern "C" {
 
     /// `map_values` returns the values of the map.
     pub(crate) fn map_values(map: Placeholder) -> Placeholder;
+
+    /// `map_contains` checks if the map contains the given key.
+    pub(crate) fn map_contains(map: Placeholder, key: Placeholder) -> bool;
 
     /// `string_sub` returns a substring of the given string.
     pub(crate) fn string_sub(str: ByteString, start_index: usize, end_index: usize) -> ByteString;
@@ -118,7 +121,7 @@ extern "C" {
     pub(crate) fn abort_with_message(message: ByteString) -> !;
 
     /// `throw` for throw opcode
-    pub(crate) fn throw();
+    pub(crate) fn throw() -> !;
 
     /// `try` for try or try-l opcode
     pub(crate) fn r#try();

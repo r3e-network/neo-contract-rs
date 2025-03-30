@@ -22,7 +22,7 @@ pub fn assert_with_message(condition: bool, message: ByteString) {
 }
 
 #[inline(always)]
-pub fn abort() {
+pub fn abort() -> ! {
     #[cfg(target_family = "wasm")]
     unsafe { crate::env::asm::abort() };
 
@@ -31,7 +31,7 @@ pub fn abort() {
 }
 
 #[inline(always)]
-pub fn abort_with_message(message: ByteString) {
+pub fn abort_with_message(message: ByteString) -> ! {
     #[cfg(target_family = "wasm")]
     unsafe { crate::env::asm::abort_with_message(message) };
 
@@ -39,7 +39,8 @@ pub fn abort_with_message(message: ByteString) {
     panic!("{}", message.to_string());
 }
 
-pub fn throw(/*message: ByteString*/) {
+#[inline(always)]
+pub fn throw(/*message: ByteString*/) -> ! {
     #[cfg(target_family = "wasm")]
     unsafe { crate::env::asm::throw() };
 

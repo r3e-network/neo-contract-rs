@@ -1,15 +1,18 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
-use crate::{contract::*, runtime, storage::StorageMap, types::*};
+use crate::contract::{self, native::ContractManagement};
+use crate::runtime;
+use crate::storage::StorageMap;
+use crate::types::{builtin::IntoAny, *};
 
 /// Default total supply key.
-/// Do not change the default TOTAL_SUPPLY_KEY value if really necessary.
-pub const TOTAL_SUPPLY_KEY: u8 = 0x00;
+/// Do not change the default TOTAL_NEP17_SUPPLY_KEY value if really necessary.
+pub const TOTAL_NEP17_SUPPLY_KEY: u8 = 0x00;
 
 /// Default balance key prefix.
-/// Do not change the default PREFIX_BALANCE value if really necessary.
-pub const PREFIX_BALANCE: u8 = 0x01;
+/// Do not change the default PREFIX_NEP17_BALANCE value if really necessary.
+pub const PREFIX_NEP17_BALANCE: u8 = 0x01;
 
 // NOTE: neo-contract-proc-macros must be updated
 //if any method definition changed(add, remove, modify) in this trait
@@ -22,19 +25,15 @@ pub trait Nep17Token {
     fn decimals() -> u32;
 
     #[inline(always)]
-    fn total_supply() -> Int256 {
-        token::total_supply()
-    }
+    fn total_supply() -> Int256 { contract::token::total_supply::<TOTAL_NEP17_SUPPLY_KEY>() }
 
     #[inline(always)]
-    fn balance_of(owner: H160) -> Int256 {
-        token::balance_of(owner)
-    }
+    fn balance_of(owner: H160) -> Int256 { contract::token::balance_of::<PREFIX_NEP17_BALANCE>(owner) }
 
     fn transfer(from: H160, to: H160, amount: Int256) -> bool {
         if amount.is_negative() {
-            runtime::throw(); // TODO: add message "The amount must be a positive number."
-            return false;
+            runtime::throw(/* TODO: add message */);
+            // return false; // unreachable
         }
 
         if runtime::check_witness_with_account(from) {
@@ -42,35 +41,39 @@ pub trait Nep17Token {
         }
 
         if amount.is_positive() {
-            if !update_nep17_balance::<PREFIX_BALANCE>(from, amount.checked_neg()) {
+            if !update_nep17_balance::<PREFIX_NEP17_BALANCE>(from, amount.checked_neg()) {
                 return false;
             }
-            let _ = update_nep17_balance::<PREFIX_BALANCE>(to, amount);
+            let _ = update_nep17_balance::<PREFIX_NEP17_BALANCE>(to, amount);
         }
 
-        return true;
+        // TODO: add `data` argument
+        post_nep17_transfer(Nullable::new(from), Nullable::new(to), amount, Any::null());
+        true
     }
 
     // fn transfer_with_data(from: H160, to: H160, amount: Int256, data: Any) -> bool;
 
     fn mint(account: H160, amount: Int256) {
         if amount.is_negative() {
-            runtime::throw(); // TODO: add message "The amount is negative."
-            return;
+            runtime::throw(/* TODO: add message */);
+            // return; // unreachable
         }
 
         if amount.is_zero() {
             return;
         }
 
-        let _ = update_nep17_balance::<PREFIX_BALANCE>(account, amount);
-        update_nep17_total_supply::<TOTAL_SUPPLY_KEY>(amount);
+        let _ = update_nep17_balance::<PREFIX_NEP17_BALANCE>(account, amount);
+        update_nep17_total_supply::<TOTAL_NEP17_SUPPLY_KEY>(amount);
+
+        post_nep17_transfer(Nullable::null(), Nullable::new(account), amount, Any::null());
     }
 
     fn burn(account: H160, amount: Int256) {
         if amount.is_negative() {
-            runtime::throw(); // TODO: add message "The amount is negative."
-            return;
+            runtime::throw(/* TODO: add message */);
+            // return; // unreachable
         }
 
         if amount.is_zero() {
@@ -78,36 +81,39 @@ pub trait Nep17Token {
         }
 
         let burned = amount.checked_neg();
-        let _ = update_nep17_balance::<PREFIX_BALANCE>(account, burned);
-        update_nep17_total_supply::<TOTAL_SUPPLY_KEY>(burned);
+        let _ = update_nep17_balance::<PREFIX_NEP17_BALANCE>(account, burned);
+        update_nep17_total_supply::<TOTAL_NEP17_SUPPLY_KEY>(burned);
+        post_nep17_transfer(Nullable::new(account), Nullable::null(), amount, Any::null());
     }
 }
 
 pub fn update_nep17_balance<const PREFIX: u8>(account: H160, amount: Int256) -> bool {
     let mut storage = StorageMap::new();
-    token::update_balance::<PREFIX>(&mut storage, account, amount)
+    contract::token::update_balance::<PREFIX>(&mut storage, account, amount)
 }
 
-pub fn update_nep17_total_supply<const KEY: u8>(amount: Int256) {
-    #[cfg(target_family = "wasm")]
-    let key = unsafe { env::extension::concat_u8_byte_string(KEY, ByteString::empty()) };
-
-    #[cfg(not(target_family = "wasm"))]
-    let key = ByteString::with_bytes(&[KEY]);
-
+pub fn update_nep17_total_supply<const PREFIX: u8>(amount: Int256) {
     let mut storage = StorageMap::new();
-    let value = storage.get(key.clone());
-    let total_supply = if value.is_null() {
-        Int256::zero()
-    } else {
-        Int256::from_byte_string(value.unwrap())
-    };
+    contract::token::update_total_supply::<TOTAL_NEP17_SUPPLY_KEY>(&mut storage, amount)
+}
 
-    let new_total_supply = total_supply.checked_add(&amount);
-    if new_total_supply.is_negative() {
-        runtime::abort();
+pub fn post_nep17_transfer(from: Nullable<H160>, to: Nullable<H160>, amount: Int256, data: Any) {
+    let mut event_state = Array::new();
+    event_state.push(from.into_any());
+    event_state.push(to.clone().into_any());
+    event_state.push(amount.into_any()); // TODO: optimize with PACK
+    contract::event::notify(ByteString::empty() /* TODO: 'OnTransfer' */, event_state);
+
+    if to.is_null() {
         return;
     }
 
-    storage.put(key, new_total_supply.into_byte_string());
+    let hash = unsafe { to.unwrap_unchecked() };
+    if !ContractManagement::contract_of_hash(hash).is_null() {
+        let mut args = Array::new();
+        args.push(data);
+
+        // TODO: 'onNEP17Payment'
+        contract::call(hash, ByteString::empty(), CallFlags::All, args);
+    }
 }

@@ -2,10 +2,7 @@
 // All Rights Reserved.
 
 #[allow(unused_imports)]
-use crate::{
-    env,
-    types::{placeholder::*, *},
-};
+use crate::{env, types::{placeholder::*, *}};
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
@@ -27,6 +24,21 @@ impl Buffer {
     #[inline(always)]
     pub fn size(&self) -> usize {
         unsafe { env::asm::buffer_size(Self(self.0)) }
+    }
+
+    #[inline(always)]
+    pub fn sha256(&self) -> H256 {
+        unsafe { env::crypto::sha256(self.0) }
+    }
+
+    #[inline(always)]
+    pub fn ripemd160(&self) -> H160 {
+        unsafe { env::crypto::ripemd160(self.0) }
+    }
+
+    #[inline(always)]
+    pub fn keccak256(&self) -> H256 {
+        unsafe { env::crypto::keccak256(self.0) }
     }
 }
 

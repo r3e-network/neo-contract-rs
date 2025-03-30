@@ -128,12 +128,12 @@ fn expand_fields_getset(_crate: &syn::Ident, fields: &syn::Fields) -> TokenStrea
 fn expand_named_field(_crate: &syn::Ident, fields: &syn::FieldsNamed) -> TokenStream {
     let mut expanded = quote::quote! {};
     for (index, field) in fields.named.iter().enumerate() {
-        let Some(name) = &field.ident else {
+        let Some(name) = field.ident.as_ref().filter(|x| !x.to_string().starts_with('_')) else {
             continue;
         };
 
         let ty = &field.ty;
-        let vis = find_attr(field, "get").map(|attr| get_vis(attr));
+        let vis = get_attr(field, "get").map(|attr| get_vis(attr));
         expanded.extend(quote::quote! {
             #[cfg(target_family = "wasm")]
             #vis fn #name(&self) -> #ty {
@@ -147,7 +147,7 @@ fn expand_named_field(_crate: &syn::Ident, fields: &syn::FieldsNamed) -> TokenSt
         }); // private getter in default
 
         let name = &format_ident!("set_{}", name);
-        if let Some(set) = find_attr(field, "set") {
+        if let Some(set) = get_attr(field, "set") {
             let vis = get_vis(set);
             expanded.extend(quote::quote! {
                 #[cfg(target_family = "wasm")]
@@ -171,7 +171,7 @@ fn expand_unamed_field(_crate: &syn::Ident, fields: &syn::FieldsUnnamed) -> Toke
     for (index, field) in fields.unnamed.iter().enumerate() {
         let ty = &field.ty;
         let name = &format_ident!("get_{}", index);
-        let vis = find_attr(field, "get").map(|attr| get_vis(attr));
+        let vis = get_attr(field, "get").map(|attr| get_vis(attr));
         expanded.extend(quote::quote! {
             #vis fn #name(&self) -> #ty {
                 #_crate::types::structs::internal_struct_get::<#index, #ty>(self.0)
@@ -179,7 +179,7 @@ fn expand_unamed_field(_crate: &syn::Ident, fields: &syn::FieldsUnnamed) -> Toke
         }); // private getter in default
 
         let name = &format_ident!("set_{}", index);
-        if let Some(set) = find_attr(field, "set") {
+        if let Some(set) = get_attr(field, "set") {
             let vis = get_vis(set);
             expanded.extend(quote::quote! {
                 #vis fn #name(&mut self, value: #ty) {
@@ -193,32 +193,26 @@ fn expand_unamed_field(_crate: &syn::Ident, fields: &syn::FieldsUnnamed) -> Toke
 }
 
 fn remove_attr(fields: &mut syn::Fields, name: &str) {
+    let remove = |field: &mut syn::Field| {
+        field
+            .attrs
+            .clone()
+            .into_iter()
+            .filter(|attr| !attr.path().is_ident(name))
+            .collect()
+    };
     match fields {
         syn::Fields::Named(fields) => {
-            fields.named.iter_mut().for_each(|field| {
-                field.attrs = field
-                    .attrs
-                    .clone()
-                    .into_iter()
-                    .filter(|attr| !attr.path().is_ident(name))
-                    .collect();
-            });
+            fields.named.iter_mut().for_each(|field| field.attrs = remove(field));
         }
         syn::Fields::Unnamed(fields) => {
-            fields.unnamed.iter_mut().for_each(|field| {
-                field.attrs = field
-                    .attrs
-                    .clone()
-                    .into_iter()
-                    .filter(|attr| !attr.path().is_ident(name))
-                    .collect();
-            });
+            fields.unnamed.iter_mut().for_each(|field| field.attrs = remove(field));
         }
         syn::Fields::Unit => {}
     }
 }
 
-fn find_attr<'a>(field: &'a syn::Field, name: &str) -> Option<&'a syn::Attribute> {
+fn get_attr<'a>(field: &'a syn::Field, name: &str) -> Option<&'a syn::Attribute> {
     field
         .attrs
         .iter()

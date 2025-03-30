@@ -30,12 +30,12 @@ impl ContractManagement {
     }
 
     #[inline(always)]
-    pub fn contract_of_hash(hash: H160) -> Contract {
+    pub fn contract_of_hash(hash: H160) -> Nullable<Contract> {
         unsafe { env::contract::native_contract_management_contract_of_hash(hash) }
     }
 
     #[inline(always)]
-    pub fn contract_of_id(id: u32) -> Contract {
+    pub fn contract_of_id(id: u32) -> Nullable<Contract> {
         unsafe { env::contract::native_contract_management_contract_of_id(id) }
     }
 

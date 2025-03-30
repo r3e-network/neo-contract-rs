@@ -3,7 +3,7 @@ name = "nep17"
 version = "0.1.0"
 edition = "2021"
 
-[workspace]
+[workspace] # This line can be removed if in a separate dir
 
 [dependencies]
 neo-contract = { path = "../../neo-contract" }

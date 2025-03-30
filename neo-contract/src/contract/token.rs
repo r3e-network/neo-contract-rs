@@ -1,40 +1,55 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
-use crate::contract::{PREFIX_BALANCE, TOTAL_SUPPLY_KEY};
-
 #[allow(unused_imports)]
-use crate::{env, storage::StorageMap, types::*};
+use crate::{env, runtime, storage::StorageMap, types::*};
 
-pub(crate) fn total_supply() -> Int256 {
-    #[cfg(target_family = "wasm")]
-    let key = unsafe { env::extension::concat_u8_byte_string(TOTAL_SUPPLY_KEY, ByteString::empty()) };
+#[inline(always)]
+pub(crate) fn prefixed_key<const PREFIX: u8>(key: ByteString) -> ByteString {
+    ByteString::one_byte::<PREFIX>().concat(key)
+}
 
-    #[cfg(not(target_family = "wasm"))]
-    let key = ByteString::with_bytes(&[TOTAL_SUPPLY_KEY]);
-
+pub(crate) fn total_supply<const KEY: u8>() -> Int256 {
+    let key = ByteString::one_byte::<KEY>();
     let storage = StorageMap::new();
     let value = storage.get(key.clone());
     if value.is_null() {
         Int256::zero()
     } else {
-        Int256::from_byte_string(value.unwrap())
+        Int256::from_byte_string(unsafe { value.unwrap_unchecked() })
     }
 }
 
-pub(crate) fn balance_of(account: H160) -> Int256 {
-    #[cfg(target_family = "wasm")]
-    let key = unsafe { env::extension::concat_u8_byte_string(PREFIX_BALANCE, account.into_byte_string()) };
+// It must be inline becaue it has a reference argument.
+// Otherwise, the compiled wasm ops cannot transfer to neo ops.
+#[inline(always)]
+pub(crate) fn update_total_supply<const KEY: u8>(storage: &mut StorageMap, amount: Int256) {
+    let key = ByteString::one_byte::<KEY>();
+    let value = storage.get(key.clone());
+    let total_supply = if value.is_null() {
+        Int256::zero()
+    } else {
+        Int256::from_byte_string(unsafe { value.unwrap_unchecked() })
+    };
 
-    #[cfg(not(target_family = "wasm"))]
-    let key = ByteString::with_bytes(&[PREFIX_BALANCE]).concat(&account.into_byte_string());
+    let new_total_supply = total_supply.checked_add(&amount);
+    if new_total_supply.is_negative() {
+        runtime::abort(/* TODO: add message */);
+        // return; // unreachable
+    }
 
+    storage.put(key, new_total_supply.into_byte_string());
+}
+
+
+pub(crate) fn balance_of<const PREFIX: u8>(account: H160) -> Int256 {
+    let key = prefixed_key::<PREFIX>(account.into_byte_string());
     let storage = StorageMap::new();
     let value = storage.get(key.clone());
     if value.is_null() {
         Int256::zero()
     } else {
-        Int256::from_byte_string(value.unwrap())
+        Int256::from_byte_string(unsafe { value.unwrap_unchecked() })
     }
 }
 
@@ -42,17 +57,12 @@ pub(crate) fn balance_of(account: H160) -> Int256 {
 // Otherwise, the compiled wasm ops cannot transfer to neo ops.
 #[inline(always)]
 pub(crate) fn update_balance<const PREFIX: u8>(storage: &mut StorageMap, account: H160, amount: Int256) -> bool {
-    #[cfg(target_family = "wasm")]
-    let key = unsafe { env::extension::concat_u8_byte_string(PREFIX, account.into_byte_string()) };
-
-    #[cfg(not(target_family = "wasm"))]
-    let key = ByteString::with_bytes(&[PREFIX]).concat(&account.into_byte_string());
-
+    let key = prefixed_key::<PREFIX>(account.into_byte_string());
     let value = storage.get(key.clone());
     let balance = if value.is_null() {
         Int256::zero()
     } else {
-        Int256::from_byte_string(value.unwrap())
+        Int256::from_byte_string(unsafe { value.unwrap_unchecked() })
     };
 
     let new_balance = balance.checked_add(&amount);

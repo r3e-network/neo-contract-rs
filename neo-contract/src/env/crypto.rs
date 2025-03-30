@@ -19,6 +19,9 @@ extern "C" {
     /// `keccak256` computes the Keccak-256 hash of the given data(ByteString or Buffer).
     pub(crate) fn keccak256(data: Placeholder) -> H256;
 
+    // /// `murmur32` computes the Murmur32 hash of the given data(ByteString or Buffer).
+    // pub(crate) fn murmur32(data: Placeholder, seed: u32) -> u32;
+
     /// `verify_ecdsa` verifies the ECDSA signature of the given message with the given public key.
     pub(crate) fn verify_ecdsa(
         message: ByteString,
@@ -27,9 +30,6 @@ extern "C" {
         named_curve_hash: NamedCurveHash,
     ) -> bool;
 
-    pub(crate) fn verify_ed25519(
-        message: ByteString,
-        public_key: PublicKey,
-        sign: ByteString,
-    ) -> bool;
+    /// `verify_ed25519` verifies the ED25519 signature of the given message with the given public key.
+    pub(crate) fn verify_ed25519(message: ByteString, public_key: PublicKey, sign: ByteString) -> bool;
 }

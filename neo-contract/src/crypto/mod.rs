@@ -1,10 +1,6 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
-pub(crate) mod hash;
-
-pub use hash::*;
-
 use crate::{env, types::*};
 
 #[inline(always)]

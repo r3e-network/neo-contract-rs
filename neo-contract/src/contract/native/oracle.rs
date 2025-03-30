@@ -4,6 +4,8 @@
 #[allow(unused_imports)]
 use crate::{env, types::*};
 
+pub const MINIMUM_RESPONSE_FEE: u64 = 0_10000000;
+
 pub struct Oracle;
 
 impl Oracle {
@@ -15,5 +17,19 @@ impl Oracle {
 
         #[cfg(not(target_family = "wasm"))]
         H160::hex_decode("0xfe924b7cfe89ddd271abaf7210a80a7e11178758")
+    }
+
+    #[inline(always)]
+    pub fn get_price() -> Int256 { unsafe { env::contract::native_oracle_get_price() } }
+
+    #[inline(always)]
+    pub fn request(
+        url: ByteString,
+        filter: ByteString,
+        callback: ByteString,
+        user_data: Any,
+        gas_for_response: Int256,
+    ) {
+        unsafe { env::contract::native_oracle_request(url, filter, callback, user_data, gas_for_response); }
     }
 }

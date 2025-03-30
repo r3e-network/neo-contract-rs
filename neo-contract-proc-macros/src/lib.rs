@@ -2,6 +2,7 @@
 // All Rights Reserved
 
 mod contract;
+mod nep;
 mod structs;
 
 /// It exports the MyContract methods as no_mangle methods:

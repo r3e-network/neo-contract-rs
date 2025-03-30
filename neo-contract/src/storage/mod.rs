@@ -6,10 +6,7 @@ pub(crate) mod map;
 pub use map::*;
 
 #[allow(unused_imports)]
-use crate::{
-    env,
-    types::{placeholder::*, *},
-};
+use crate::{env, types::{placeholder::*, *}};
 
 #[repr(C)]
 pub struct StorageContext(Placeholder);
@@ -90,3 +87,19 @@ crate::impl_placeholder!(StorageContext);
 
 #[cfg(target_family = "wasm")]
 crate::impl_placeholder!(ReadOnlyStorageContext);
+
+#[cfg(target_family = "wasm")]
+impl<T: 'static> FromPlaceholder for Iter<T> {
+    #[inline(always)]
+    fn from_placeholder(placeholder: Placeholder) -> Self {
+        Self { iter: placeholder, _marker: core::marker::PhantomData }
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl<T: 'static> IntoPlaceholder for Iter<T> {
+    #[inline(always)]
+    fn into_placeholder(self) -> Placeholder {
+        self.iter
+    }
+}

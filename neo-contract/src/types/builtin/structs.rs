@@ -2,10 +2,7 @@
 // All Rights Reserved.
 
 #[allow(unused_imports)]
-use crate::{
-    env,
-    types::{placeholder::*, *},
-};
+use crate::{env, types::{placeholder::*, *}};
 
 // This is for neo contract internal use.
 // DO NOT use this function directly.

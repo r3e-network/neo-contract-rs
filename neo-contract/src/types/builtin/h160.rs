@@ -2,13 +2,11 @@
 // All Rights Reserved.
 
 #[allow(unused_imports)]
-use crate::{
-    env,
-    types::{placeholder::*, *},
-};
+use crate::{env, types::{placeholder::*, *}};
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
+#[derive(Hash)]
 pub struct H160([u8; 20]);
 
 #[cfg(target_family = "wasm")]

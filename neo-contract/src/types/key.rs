@@ -1,7 +1,8 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
-use crate::types::*;
+#[allow(unused_imports)]
+use crate::types::{placeholder::*, *};
 
 #[repr(C)]
 pub struct PublicKey(ByteString);
@@ -26,5 +27,21 @@ impl PartialEq for PublicKey {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl FromPlaceholder for PublicKey {
+    #[inline(always)]
+    fn from_placeholder(placeholder: Placeholder) -> Self {
+        Self(ByteString::from_placeholder(placeholder))
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl IntoPlaceholder for PublicKey {
+    #[inline(always)]
+    fn into_placeholder(self) -> Placeholder {
+        self.0.into_placeholder()
     }
 }

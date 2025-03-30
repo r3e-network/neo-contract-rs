@@ -43,6 +43,9 @@ extern "C" {
     /// syscall System.Runtime.GetAddressVersion
     pub(crate) fn system_runtime_address_version() -> u32;
 
+    /// syscall System.Runtime.Notify
+    pub(crate) fn system_runtime_notify(event_name: ByteString, args: Array<Any>);
+
     /// syscall System.Runtime.GetNotifications
     pub(crate) fn system_runtime_notifications() -> Array<Notification>;
 
@@ -81,7 +84,7 @@ extern "C" {
     /// System.Contract.GetCallFlags
     pub(crate) fn system_contract_get_call_flags() -> CallFlags;
 
-    /// System.Contract.CreateStandardAccount
+    /// System.Contract.CreateStandardAccount, i.e single sign account.
     pub(crate) fn system_contract_create_standard_account(public_key: PublicKey) -> H160;
 
     /// System.Contract.CreateMultisigAccount
@@ -108,7 +111,7 @@ extern "C" {
     pub(crate) fn system_storage_get_readonly_context() -> ReadOnlyStorageContext;
 
     /// System.Storage.AsReadOnly
-    pub(crate) fn system_storage_as_readonly(cx: StorageContext) -> ReadOnlyStorageContext;
+    pub(crate) fn system_storage_as_readonly(context: StorageContext) -> ReadOnlyStorageContext;
 
     /// System.Storage.Get
     pub(crate) fn system_storage_string_key_get(context: StorageContext, key: ByteString) -> Placeholder;
@@ -132,13 +135,13 @@ extern "C" {
     pub(crate) fn system_storage_string_key_scan_prefix(
         context: StorageContext,
         prefix: ByteString,
-        options: FindOptions,
+        options: u32,
     ) -> Placeholder;
 
     /// System.Storage.Find
     pub(crate) fn system_storage_bytes_key_scan_prefix(
         context: StorageContext,
         prefix: Bytes,
-        options: FindOptions,
+        options: u32,
     ) -> Placeholder;
 }

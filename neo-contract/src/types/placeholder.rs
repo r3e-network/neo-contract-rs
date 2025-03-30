@@ -1,6 +1,9 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+#[cfg(target_family = "wasm")]
+use crate::env::extension::*;
+
 #[repr(C)]
 pub struct Placeholder(i32);
 
@@ -50,16 +53,34 @@ macro_rules! impl_placeholder {
     };
 }
 
-impl FromPlaceholder for Placeholder {
-    #[inline(always)]
-    fn from_placeholder(placeholder: Placeholder) -> Self {
-        placeholder
-    }
+macro_rules! impl_placeholder_with {
+    ($type:ty, $from:expr, $into:expr) => {
+        #[cfg(target_family = "wasm")]
+        impl IntoPlaceholder for $type {
+            #[inline(always)]
+            fn into_placeholder(self) -> Placeholder {
+                unsafe { $from(self) }
+            }
+        }
+
+        #[cfg(target_family = "wasm")]
+        impl FromPlaceholder for $type {
+            #[inline(always)]
+            fn from_placeholder(placeholder: Placeholder) -> Self {
+                unsafe { $into(placeholder) }
+            }
+        }
+    };
 }
 
-impl IntoPlaceholder for Placeholder {
-    #[inline(always)]
-    fn into_placeholder(self) -> Placeholder {
-        self
-    }
-}
+impl_placeholder_with!(bool, placeholder_from_bool, placeholder_to_bool);
+impl_placeholder_with!(u8, placeholder_from_u8, placeholder_to_u8);
+impl_placeholder_with!(u16, placeholder_from_u16, placeholder_to_u16);
+impl_placeholder_with!(u32, placeholder_from_u32, placeholder_to_u32);
+impl_placeholder_with!(u64, placeholder_from_u64, placeholder_to_u64);
+impl_placeholder_with!(i8, placeholder_from_i8, placeholder_to_i8);
+impl_placeholder_with!(i16, placeholder_from_i16, placeholder_to_i16);
+impl_placeholder_with!(i32, placeholder_from_i32, placeholder_to_i32);
+impl_placeholder_with!(i64, placeholder_from_i64, placeholder_to_i64);
+impl_placeholder_with!(usize, placeholder_from_usize, placeholder_to_usize);
+impl_placeholder_with!(isize, placeholder_from_isize, placeholder_to_isize);

@@ -18,7 +18,7 @@ pub use {h160::*, h256::*, int256::*, nullable::*, string::*};
 
 pub trait Builtin: inner::Sealed {}
 
-pub trait Primitive: Builtin + Eq + PartialEq {}
+pub trait Primitive: Builtin + Eq + PartialEq + Clone {}
 
 // impl Primitive for a list of types
 macro_rules! impl_primitive {

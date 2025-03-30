@@ -18,10 +18,8 @@ pub struct Nullable<T> {
 }
 
 #[cfg(target_family = "wasm")]
-#[allow(private_bounds)]
 impl<T: FromPlaceholder + IntoPlaceholder> Nullable<T> {
     #[inline(always)]
-    #[rustfmt::skip]
     pub fn new(value: T) -> Self {
         Self { 
             value: value.into_placeholder(),
@@ -45,20 +43,16 @@ impl<T: FromPlaceholder + IntoPlaceholder> Nullable<T> {
     }
 
     #[inline(always)]
-    pub fn unwrap_or(self, default: T) -> T {
-        if self.is_null() {
-            default
-        } else {
-            T::from_placeholder(self.value)
-        }
-    }
-
-    #[inline(always)]
     #[rustfmt::skip]
     pub fn unwrap(self) -> T {
         if self.is_null() {
             unsafe { env::asm::abort() }
         }
+        T::from_placeholder(self.value)
+    }
+
+    #[inline(always)]
+    pub unsafe fn unwrap_unchecked(self) -> T {
         T::from_placeholder(self.value)
     }
 }
@@ -69,24 +63,24 @@ impl<T> Nullable<T> {
         Self { value: Some(value) }
     }
 
-    #[inline(always)]
+    pub(crate) fn option(value: Option<T>) -> Self {
+        Self { value }
+    }
+
     pub fn null() -> Self {
         Self { value: None }
     }
 
-    #[inline(always)]
     pub fn is_null(&self) -> bool {
         self.value.is_none()
     }
 
-    #[inline(always)]
-    pub fn unwrap_or(self, default: T) -> T {
-        self.value.unwrap_or(default)
-    }
-
-    #[inline(always)]
     pub fn unwrap(self) -> T {
         self.value.unwrap()
+    }
+
+    pub unsafe fn unwrap_unchecked(self) -> T {
+        self.value.unwrap_unchecked()
     }
 }
 
@@ -103,5 +97,35 @@ impl<T> Default for Nullable<T> {
     #[inline(always)]
     fn default() -> Self {
         Self::null()
+    }
+}
+
+impl<T: Clone> Clone for Nullable<T> {
+    #[inline(always)]
+    #[cfg(not(target_family = "wasm"))]
+    fn clone(&self) -> Self {
+        Self { value: self.value.clone() }
+    }
+
+    #[inline(always)]
+    #[cfg(target_family = "wasm")]
+    fn clone(&self) -> Self {
+        Self { value: self.value.clone(), _marker: core::marker::PhantomData }
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl<T: 'static> FromPlaceholder for Nullable<T> {
+    #[inline(always)]
+    fn from_placeholder(placeholder: Placeholder) -> Self {
+        Self { value: placeholder, _marker: core::marker::PhantomData }
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl<T: 'static> IntoPlaceholder for Nullable<T> {
+    #[inline(always)]
+    fn into_placeholder(self) -> Placeholder {
+        self.value
     }
 }

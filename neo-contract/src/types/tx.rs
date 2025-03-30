@@ -4,57 +4,34 @@
 use crate::types::*;
 
 #[repr(C)]
+#[crate::inner_structs]
 pub struct Tx {
+    #[get(pub)]
     hash: H256,
+
+    /// an u8 value
+    #[get(pub)]
     version: Int256,
+
+    /// an u32 value
+    #[get(pub)]
     nonce: Int256,
+
+    #[get(pub)]
     sender: H160,
+
+    /// an u64 value
+    #[get(pub)]
     system_fee: Int256,
+
+    /// an u64 value
+    #[get(pub)]
     network_fee: Int256,
+
+    /// a u32 value
+    #[get(pub)]
     valid_until_block: Int256,
+
+    #[get(pub)]
     script: ByteString,
-}
-
-/// all getters for Tx
-impl Tx {
-    #[inline(always)]
-    pub fn hash(&self) -> H256 {
-        self.hash
-    }
-
-    #[inline(always)]
-    pub fn version(&self) -> Int256 {
-        self.version
-    }
-
-    #[inline(always)]
-    pub fn nonce(&self) -> Int256 {
-        self.nonce
-    }
-
-    #[inline(always)]
-    pub fn sender(&self) -> H160 {
-        self.sender
-    }
-
-    #[inline(always)]
-    pub fn system_fee(&self) -> Int256 {
-        self.system_fee
-    }
-
-    #[inline(always)]
-    pub fn network_fee(&self) -> Int256 {
-        self.network_fee
-    }
-
-    #[inline(always)]
-    pub fn valid_until_block(&self) -> Int256 {
-        self.valid_until_block
-    }
-
-    /// TODO: reference issue in wasm-to-neo
-    #[inline(always)]
-    pub fn script(&self) -> &ByteString {
-        &self.script
-    }
 }

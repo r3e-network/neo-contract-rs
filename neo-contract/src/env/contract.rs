@@ -100,13 +100,13 @@ extern "C" {
 
     pub(crate) fn native_oracle_get_price() -> Int256;
 
-    pub(crate) fn native_oracle_response(
+    pub(crate) fn native_oracle_request(
         url: ByteString,
         filter: ByteString,
         callback: ByteString,
         user_data: Any,
         gas_for_response: Int256,
-    ) -> bool;
+    );
 
     pub(crate) fn native_role_management_contract_hash() -> H160;
 
@@ -119,9 +119,9 @@ extern "C" {
 
     pub(crate) fn native_contract_management_get_min_deployment_fee() -> Int256;
 
-    pub(crate) fn native_contract_management_contract_of_hash(hash: H160) -> Contract;
+    pub(crate) fn native_contract_management_contract_of_hash(hash: H160) -> Nullable<Contract>;
 
-    pub(crate) fn native_contract_management_contract_of_id(id: u32) -> Contract;
+    pub(crate) fn native_contract_management_contract_of_id(id: u32) -> Nullable<Contract>;
 
     pub(crate) fn native_contract_management_get_contracts_hashes() -> Placeholder;
 

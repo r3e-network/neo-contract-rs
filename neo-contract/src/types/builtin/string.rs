@@ -4,9 +4,10 @@
 #[allow(unused_imports)]
 use crate::{env, types::{placeholder::*, *}};
 
-/// ByteString is a non utf-8 string
+/// ByteString is NOT an utf-8 string
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
+#[derive(Hash)]
 pub struct ByteString(Vec<u8>);
 
 #[cfg(target_family = "wasm")]
@@ -18,6 +19,11 @@ impl ByteString {
     #[inline(always)]
     pub fn empty() -> Self {
         unsafe { env::asm::string_empty() }
+    }
+
+    #[inline(always)]
+    pub fn one_byte<const BYTE: u8>() -> Self {
+        unsafe { env::extension::byte_to_string(BYTE) }
     }
 
     #[inline(always)]
@@ -36,13 +42,63 @@ impl ByteString {
     }
 
     #[inline(always)]
-    pub fn concat(&self, other: &Self) -> Self {
-        unsafe { env::asm::string_concat(Self(self.0), Self(other.0)) }
+    pub fn concat(&self, other: Self) -> Self {
+        unsafe { env::asm::string_concat(Self(self.0), other) }
     }
 
     #[inline(always)]
     pub fn hex_encode(&self) -> Self {
         unsafe { env::stdlib::hex_encode(Self(self.0)) }
+    }
+
+    #[inline(always)]
+    pub fn hex_decode(&self) -> Self {
+        unsafe { env::stdlib::hex_decode(Self(self.0)) }
+    }
+
+    #[inline(always)]
+    pub fn base58_encode(&self) -> Self {
+        unsafe { env::stdlib::base58_encode(Self(self.0)) }
+    }
+
+    #[inline(always)]
+    pub fn base58_decode(&self) -> Self {
+        unsafe { env::stdlib::base58_decode(Self(self.0)) }
+    }
+
+    #[inline(always)]
+    pub fn base58check_encode(&self) -> Self {
+        unsafe { env::stdlib::base58check_encode(Self(self.0)) }
+    }
+
+    #[inline(always)]
+    pub fn base58check_decode(&self) -> Self {
+        unsafe { env::stdlib::base58check_decode(Self(self.0)) }
+    }
+
+    #[inline(always)]
+    pub fn base64_encode(&self) -> Self {
+        unsafe { env::stdlib::base64_encode(Self(self.0)) }
+    }
+
+    #[inline(always)]
+    pub fn base64_decode(&self) -> Self {
+        unsafe { env::stdlib::base64_decode(Self(self.0)) }
+    }
+
+    #[inline(always)]
+    pub fn sha256(&self) -> H256 {
+        unsafe { env::crypto::sha256(self.0) }
+    }
+
+    #[inline(always)]
+    pub fn ripemd160(&self) -> H160 {
+        unsafe { env::crypto::ripemd160(self.0) }
+    }
+
+    #[inline(always)]
+    pub fn keccak256(&self) -> H256 {
+        unsafe { env::crypto::keccak256(self.0) }
     }
 }
 
@@ -54,6 +110,10 @@ impl ByteString {
 
     pub fn empty() -> Self {
         Self(vec![])
+    }
+
+    pub fn one_byte<const BYTE: u8>() -> Self {
+        Self(vec![BYTE])
     }
 
     pub(crate) fn with_bytes(bytes: &[u8]) -> Self {
@@ -76,7 +136,7 @@ impl ByteString {
         Self(self.0[start_index..start_index + count].to_vec())
     }
 
-    pub fn concat(&self, other: &Self) -> Self {
+    pub fn concat(&self, other: Self) -> Self {
         let mut vec = self.0.clone();
         vec.extend(other.0.clone());
         Self(vec)
@@ -84,6 +144,10 @@ impl ByteString {
 
     pub fn hex_encode(&self) -> Self {
         Self(hex::encode(self.0.as_slice()).into_bytes())
+    }
+
+    pub fn hex_decode(&self) -> Self {
+        Self(hex::decode(self.0.as_slice()).unwrap())
     }
 
     pub(crate) fn to_string(self) -> String {
