@@ -6,8 +6,14 @@ pub struct Placeholder(i32);
 
 impl Placeholder {
     #[cfg(not(target_family = "wasm"))]
-    pub(crate) fn new(value: i32) -> Self {
-        Self(value)
+    pub(crate) fn new<T: Into<i32>>(value: T) -> Self {
+        Self(value.into())
+    }
+
+    #[inline(always)]
+    pub fn is_null(&self) -> bool {
+        // In Neo VM, a null value is represented by a placeholder with value 0
+        self.0 == 0
     }
 }
 

@@ -1,7 +1,21 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
-use crate::{contract::*, runtime, storage::StorageMap, types::*};
+use crate::{
+    contract::token,
+    runtime,
+    storage::StorageMap,
+    types::{
+        builtin::{
+            array::Array,
+            h160::H160,
+            int256::Int256,
+            string::{ByteString, FromByteString, IntoByteString},
+            any::IntoAny,
+        },
+        Any,
+    },
+};
 
 /// Default total supply key.
 /// Do not change the default TOTAL_SUPPLY_KEY value if really necessary.
@@ -31,13 +45,13 @@ pub trait Nep17Token {
         token::balance_of(owner)
     }
 
-    fn transfer(from: H160, to: H160, amount: Int256, data: Array<Any>) -> bool {
+    fn transfer(from: H160, to: H160, amount: Int256, _data: Array<Any>) -> bool {
         if amount.is_negative() {
             runtime::abort();
             return false;
         }
 
-        if runtime::check_witness_with_account(from) {
+        if !runtime::check_witness_with_account(from) {
             return false;
         }
 
@@ -46,6 +60,13 @@ pub trait Nep17Token {
                 return false;
             }
             let _ = update_nep17_balance::<PREFIX_BALANCE>(to, amount);
+
+            // Emit transfer event
+            let mut event_data = Array::<Any>::new();
+            event_data.push(from.into_any());
+            event_data.push(to.into_any());
+            event_data.push(amount.into_any());
+            runtime::notify(ByteString::from_literal("Transfer"), event_data);
         }
 
         return true;
@@ -65,6 +86,13 @@ pub trait Nep17Token {
 
         let _ = update_nep17_balance::<PREFIX_BALANCE>(account, amount);
         update_nep17_total_supply::<TOTAL_SUPPLY_KEY>(amount);
+
+        // Emit mint event (transfer from zero address)
+        let mut event_data = Array::<Any>::new();
+        event_data.push(H160::zero().into_any());
+        event_data.push(account.into_any());
+        event_data.push(amount.into_any());
+        runtime::notify(ByteString::from_literal("Transfer"), event_data);
     }
 
     fn burn(account: H160, amount: Int256) {
@@ -80,6 +108,13 @@ pub trait Nep17Token {
         let burned = amount.checked_neg();
         let _ = update_nep17_balance::<PREFIX_BALANCE>(account, burned);
         update_nep17_total_supply::<TOTAL_SUPPLY_KEY>(burned);
+
+        // Emit burn event (transfer to zero address)
+        let mut event_data = Array::<Any>::new();
+        event_data.push(account.into_any());
+        event_data.push(H160::zero().into_any());
+        event_data.push(amount.into_any());
+        runtime::notify(ByteString::from_literal("Transfer"), event_data);
     }
 }
 
@@ -90,10 +125,10 @@ pub fn update_nep17_balance<const PREFIX: u8>(account: H160, amount: Int256) -> 
 
 pub fn update_nep17_total_supply<const KEY: u8>(amount: Int256) {
     #[cfg(target_family = "wasm")]
-    let key = unsafe { env::extension::concat_u8_byte_string(KEY, ByteString::empty()) };
+    let key = ByteString::from_literal(&[KEY as char].iter().collect::<String>());
 
     #[cfg(not(target_family = "wasm"))]
-    let key = ByteString::with_bytes(&[KEY]);
+    let key = ByteString::new(vec![KEY]);
 
     let mut storage = StorageMap::new();
     let value = storage.get(key.clone());

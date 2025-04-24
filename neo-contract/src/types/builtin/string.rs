@@ -7,6 +7,7 @@ use crate::{env, types::{placeholder::*, *}};
 /// ByteString is a non utf-8 string
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ByteString(Vec<u8>);
 
 #[cfg(target_family = "wasm")]
@@ -53,7 +54,7 @@ impl ByteString {
 
 #[cfg(not(target_family = "wasm"))]
 impl ByteString {
-    pub(crate) fn new(value: String) -> Self {
+    pub fn new(value: impl Into<Vec<u8>>) -> Self {
         Self(value.into())
     }
 
@@ -98,6 +99,10 @@ impl ByteString {
     pub fn from_literal(literal: &str) -> Self {
         Self(literal.as_bytes().to_vec())
     }
+
+    pub fn extend(&mut self, other: ByteString) {
+        self.0.extend(other.0);
+    }
 }
 
 impl Default for ByteString {
@@ -107,21 +112,18 @@ impl Default for ByteString {
     }
 }
 
+#[cfg(target_family = "wasm")]
 impl PartialEq for ByteString {
     #[inline(always)]
-    #[cfg(target_family = "wasm")]
     fn eq(&self, other: &Self) -> bool {
         unsafe { env::asm::string_eq(Self(self.0), Self(other.0)) }
     }
-
-    #[cfg(not(target_family = "wasm"))]
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
 }
 
+#[cfg(target_family = "wasm")]
 impl Eq for ByteString {}
 
+#[cfg(target_family = "wasm")]
 impl Clone for ByteString {
     #[inline(always)]
     fn clone(&self) -> Self {
@@ -130,7 +132,46 @@ impl Clone for ByteString {
 }
 
 #[cfg(target_family = "wasm")]
+impl PartialOrd for ByteString {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl Ord for ByteString {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // Compare the actual string contents by comparing their bytes
+        let self_bytes = self.as_bytes();
+        let other_bytes = other.as_bytes();
+
+        // Compare byte by byte
+        let len = std::cmp::min(self_bytes.len(), other_bytes.len());
+        for i in 0..len {
+            let self_byte = self_bytes[i];
+            let other_byte = other_bytes[i];
+            if self_byte != other_byte {
+                return self_byte.cmp(&other_byte);
+            }
+        }
+
+        // If all bytes are equal up to the minimum length, compare lengths
+        self_bytes.len().cmp(&other_bytes.len())
+    }
+}
+
+#[cfg(target_family = "wasm")]
 crate::impl_placeholder!(ByteString);
+
+#[cfg(target_family = "wasm")]
+impl FromPlaceholder for ByteString {
+    #[inline(always)]
+    fn from_placeholder(placeholder: Placeholder) -> Self {
+        Self(placeholder)
+    }
+}
 
 /// convert the type as a ByteString
 /// like reinterpret cast
@@ -141,3 +182,6 @@ pub trait IntoByteString {
 pub trait FromByteString {
     fn from_byte_string(src: ByteString) -> Self;
 }
+
+// Implement Primitive trait for ByteString
+impl crate::types::builtin::primitive::Primitive for ByteString {}

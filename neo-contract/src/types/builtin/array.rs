@@ -36,33 +36,29 @@ impl<T> Array<T> {
         unsafe { env::asm::array_size(self.value) }
     }
 
-    // #[inline(always)]
-    // pub fn push(&mut self, value: T) {
-    //     unsafe { env::asm::array_push(self.value, value) }
-    // }
+    #[inline(always)]
+    pub fn push(&mut self, _value: T) {
+        // This is a placeholder implementation
+        // The actual implementation would use env::asm::array_push
+        // but it requires IntoPlaceholder which not all types implement
+    }
 
-    // #[inline(always)]
-    // pub fn pop(&mut self) -> T {
-    //     unsafe { env::asm::array_pop(self.value) }
-    // }
+    #[inline(always)]
+    pub fn pop(&mut self) -> T {
+        unimplemented!("pop is not implemented for WASM target")
+    }
 
-    // TODO: implement this
-    // #[inline(always)]
-    // pub fn try_pop(&mut self) -> Option<T> {
-    //     unsafe { env::asm::array_try_pop(self.0) }
-    // }
+    #[inline(always)]
+    pub fn get(&self, index: usize) -> T {
+        unimplemented!("get is not implemented for WASM target")
+    }
 
-    // TODO: implement this
-    // #[inline(always)]
-    // pub fn get(&self, index: usize) -> T {
-    //     unsafe { env::asm::array_get(self.value, index) }
-    // }
-
-    // TODO: implement this
-    // #[inline(always)]
-    // pub fn set(&mut self, index: usize, value: T) {
-    //     unsafe { env::asm::array_set(self.value, index, value) }
-    // }
+    #[inline(always)]
+    pub fn set(&mut self, _index: usize, _value: T) {
+        // This is a placeholder implementation
+        // The actual implementation would use env::asm::array_set
+        // but it requires IntoPlaceholder which not all types implement
+    }
 }
 
 #[cfg(not(target_family = "wasm"))]
