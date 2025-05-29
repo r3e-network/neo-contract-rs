@@ -1,6 +1,6 @@
-# Writing Efficient NEO Smart Contracts
+# Writing Efficient Neo N3 Smart Contracts
 
-This guide provides best practices for writing efficient smart contracts on the NEO blockchain using the neo-contract-rs framework.
+This guide provides best practices for writing efficient smart contracts on the Neo N3 blockchain using the **Neo N3 Rust Smart Contract Framework**.
 
 ## Storage Efficiency
 
@@ -18,32 +18,32 @@ Example of inefficient vs. efficient storage:
 // Inefficient - Multiple storage operations
 pub fn transfer(from: Address, to: Address, amount: u128) -> bool {
     let storage = Storage::new();
-    
+
     let from_balance = storage.get::<_, u128>(&from_key).unwrap_or(0);
     storage.put(&from_key, &(from_balance - amount)); // First storage operation
-    
+
     let to_balance = storage.get::<_, u128>(&to_key).unwrap_or(0);
     storage.put(&to_key, &(to_balance + amount)); // Second storage operation
-    
+
     true
 }
 
 // Efficient - Batched operations
 pub fn transfer(from: Address, to: Address, amount: u128) -> bool {
     let storage = Storage::new();
-    
+
     // Read all data first
     let from_balance = storage.get::<_, u128>(&from_key).unwrap_or(0);
     let to_balance = storage.get::<_, u128>(&to_key).unwrap_or(0);
-    
+
     // Perform computations
     let new_from_balance = from_balance - amount;
     let new_to_balance = to_balance + amount;
-    
+
     // Write all data at once
     storage.put(&from_key, &new_from_balance);
     storage.put(&to_key, &new_to_balance);
-    
+
     true
 }
 ```
@@ -73,7 +73,7 @@ Mark read-only methods appropriately to save gas:
 
 ```rust
 /// Returns the token balance for the specified account
-/// 
+///
 /// This method does not modify state and is marked as safe.
 /// @safe
 pub fn balanceOf(account: Address) -> u128 {
@@ -125,13 +125,13 @@ Design clear method interfaces:
 
 ```rust
 /// Transfers tokens from one account to another
-/// 
+///
 /// # Parameters
 /// * `from` - The account to transfer tokens from
 /// * `to` - The account to transfer tokens to
 /// * `amount` - The amount of tokens to transfer
 /// * `data` - Optional data to include with the transfer
-/// 
+///
 /// # Returns
 /// * `bool` - True if the transfer was successful, false otherwise
 pub fn transfer(from: Address, to: Address, amount: u128, data: ByteString) -> bool {
@@ -149,17 +149,17 @@ Always validate inputs:
 pub fn transfer(from: Address, to: Address, amount: u128) -> bool {
     // Verify sender
     assert!(Runtime::check_witness(&from), "No authorization");
-    
+
     // Check amount
     if amount == 0 {
         return true;
     }
-    
+
     // Check recipient is not null address
     if to == Address::from([0u8; 20]) {
         return false;
     }
-    
+
     // Further implementation
 }
 ```
@@ -190,7 +190,7 @@ fn test_transfer() {
     // Set up test environment
     let owner = Address::from([1u8; 20]);
     let recipient = Address::from([2u8; 20]);
-    
+
     // Mock Runtime.CheckWitness to return true for owner
     // Test the transfer functionality
     // Assert the expected state changes
@@ -212,10 +212,10 @@ Document methods comprehensively for better manifest generation:
 
 ```rust
 /// Returns the symbol of the token
-/// 
+///
 /// This method returns the token's symbol as a ByteString.
 /// The symbol is a short string like "NEO" that represents the token.
-/// 
+///
 /// # Returns
 /// A ByteString containing the token's symbol
 pub fn symbol() -> ByteString {
@@ -244,3 +244,52 @@ Efficient NEO smart contracts combine:
 5. **Good Documentation**: Enable accurate manifest generation
 
 By following these practices, your contracts will be more efficient, secure, and easier to maintain.
+
+## Working Examples
+
+The framework includes examples that demonstrate efficient contract patterns:
+
+### Efficient Token Implementation
+```bash
+cd examples/04-nep17-token
+cat src/lib.rs           # See efficient NEP-17 implementation
+make                     # Build optimized contract
+```
+
+### Optimized NFT Contract
+```bash
+cd examples/05-nep11-nft
+cat src/lib.rs           # See efficient NFT implementation
+make test               # Run performance tests
+```
+
+### Gas-Optimized DEX
+```bash
+cd examples/09-simple-dex
+cat src/lib.rs           # See efficient DEX implementation
+make                     # Build with optimizations
+```
+
+## Build Optimizations
+
+The framework includes build optimizations in all Makefiles:
+
+```makefile
+# Optimized build flags for production
+RUST_FLAGS = "-Ctarget-feature=+multivalue \
+    -Cllvm-args=--combiner-store-merging=false \
+    -Clink-arg=--initial-memory=262144 \
+    -Clink-arg=-zstack-size=131072"
+```
+
+These optimizations:
+- **Reduce WASM size** - Smaller contracts use less gas
+- **Optimize memory usage** - Efficient stack and heap management
+- **Enable WASM features** - Use advanced WASM capabilities
+
+## Related Documentation
+
+- **[Getting Started Guide](getting-started.md)** - Framework setup and basics
+- **[Contract Attributes](contract-attributes.md)** - Metadata and permissions
+- **[Safe Methods](safe-methods.md)** - Read-only method patterns
+- **[Testing Guide](testing-guide.md)** - Performance testing strategies

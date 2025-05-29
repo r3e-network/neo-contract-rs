@@ -5,3 +5,32 @@
 
 mod safe;
 pub use safe::safe;
+
+/// Macro to define a function that is only available in WASM target
+#[macro_export]
+macro_rules! wasm_func {
+    ($(#[$attr:meta])* pub fn $name:ident($($arg:ident: $type:ty),*) -> $ret:ty $body:block) => {
+        #[cfg(target_family = "wasm")]
+        $(#[$attr])*
+        pub fn $name($($arg: $type),*) -> $ret $body
+
+        #[cfg(not(target_family = "wasm"))]
+        #[allow(unused_variables)]
+        $(#[$attr])*
+        pub fn $name($($arg: $type),*) -> $ret {
+            unimplemented!("This function is only available in WASM target")
+        }
+    };
+    ($(#[$attr:meta])* pub fn $name:ident($($arg:ident: $type:ty),*) $body:block) => {
+        #[cfg(target_family = "wasm")]
+        $(#[$attr])*
+        pub fn $name($($arg: $type),*) $body
+
+        #[cfg(not(target_family = "wasm"))]
+        #[allow(unused_variables)]
+        $(#[$attr])*
+        pub fn $name($($arg: $type),*) {
+            unimplemented!("This function is only available in WASM target")
+        }
+    };
+}

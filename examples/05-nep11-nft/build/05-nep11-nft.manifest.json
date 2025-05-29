@@ -1,0 +1,262 @@
+{
+  "groups": [],
+  "supportedstandards": [
+    "NEP-11"
+  ],
+  "permissions": [
+    {
+      "methods": [
+        "*"
+      ],
+      "contract": "*"
+    }
+  ],
+  "trusts": [],
+  "name": "05-nep11-nft",
+  "features": {},
+  "abi": {
+    "methods": [
+      {
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          },
+          {
+            "name": "symbol",
+            "type": "ByteArray"
+          },
+          {
+            "name": "base_uri",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "deploy",
+        "offset": 481,
+        "returntype": "Boolean",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "symbol",
+        "offset": 659,
+        "returntype": "ByteArray",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "decimals",
+        "offset": 704,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "total_supply",
+        "offset": 726,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "name": "balance_of",
+        "offset": 773,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "owner_of",
+        "offset": 825,
+        "returntype": "Hash160",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "name": "tokens_of",
+        "offset": 875,
+        "returntype": "ByteArray",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          },
+          {
+            "name": "data",
+            "type": "Any"
+          }
+        ],
+        "name": "transfer",
+        "offset": 914,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "properties",
+        "offset": 1294,
+        "returntype": "ByteArray",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "approve",
+        "offset": 1331,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "get_approved",
+        "offset": 1480,
+        "returntype": "Hash160",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          },
+          {
+            "name": "properties",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "mint",
+        "offset": 1530,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "burn",
+        "offset": 1948,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get_owner",
+        "offset": 2236,
+        "returntype": "Hash160",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "minter",
+            "type": "Hash160"
+          }
+        ],
+        "name": "add_minter",
+        "offset": 2283,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "base_uri",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "set_base_uri",
+        "offset": 2400,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get_base_uri",
+        "offset": 2522,
+        "returntype": "ByteArray",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "token_uri",
+        "offset": 2561,
+        "returntype": "ByteArray",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "pause",
+        "offset": 2656,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "is_paused",
+        "offset": 2766,
+        "returntype": "Boolean",
+        "safe": true
+      }
+    ],
+    "events": []
+  },
+  "extra": {
+    "Author": "neo-contract-rs",
+    "Description": "NEP-11 compliant non-fungible token contract\n#[contract_author(\"Neo Rust Framework\", \"dev@neo.org\")]\n#[contract_version(\"1.0.0\")]\n#[contract_standards(\"NEP-11\")]\n#[contract_permission(\"*\", \"*\")]\n#[contract_meta(\"description\", \"Production-ready NEP-11 non-fungible token\")]\n#[contract_meta(\"website\", \"https://github.com/R3E-Network/neo-contract-rs\")]",
+    "Version": "1.0.0",
+    "description": "Production-ready NEP-11 non-fungible token",
+    "website": "https://github.com/R3E-Network/neo-contract-rs"
+  }
+}

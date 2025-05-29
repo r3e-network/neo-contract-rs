@@ -100,6 +100,24 @@ pub fn structs(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -
     structs::expand_structs_impl(input)
 }
 
+/// Marks an implementation block as a contract implementation
+///
+/// # Example
+///
+/// ```
+/// #[contract_impl]
+/// impl MyContract {
+///     pub fn deploy(owner: H160, total_supply: Int256) -> bool {
+///         // Implementation...
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn contract_impl(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // Use the same expansion logic as the #[contract] macro
+    contract::expand_contract_impl(input)
+}
+
 /// Marks a method to be exposed in the contract interface
 ///
 /// # Example
@@ -209,7 +227,7 @@ pub fn contract_standards(_args: proc_macro::TokenStream, input: proc_macro::Tok
 /// pub struct TokenContract;
 /// ```
 #[proc_macro_attribute]
-pub fn contract_version(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn contract_version(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // This attribute is only used as a marker for the manifest generator,
     // it does not modify the code itself
     input
@@ -228,4 +246,4 @@ pub fn contract_meta(_args: proc_macro::TokenStream, input: proc_macro::TokenStr
     // This attribute is only used as a marker for the manifest generator,
     // it does not modify the code itself
     input
-} 
+}

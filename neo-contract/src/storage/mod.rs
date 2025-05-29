@@ -3,16 +3,18 @@
 
 pub(crate) mod map;
 
-pub use map::*;
+// Export specific types from map module instead of using glob imports
+pub use map::{StorageMap};
+pub use crate::types::storage::StorageItem;
 
 #[allow(unused_imports)]
 use crate::{
     env,
-    types::{placeholder::*, *},
+    types::placeholder::{Placeholder, FromPlaceholder, IntoPlaceholder},
 };
 
 #[repr(C)]
-pub struct StorageContext(Placeholder);
+pub struct StorageContext(pub Placeholder);
 
 impl StorageContext {
     #[inline(always)]
@@ -71,9 +73,29 @@ pub struct Iter<T> {
     _marker: core::marker::PhantomData<T>,
 }
 
+impl<T> Iter<T> {
+    /// Create a new iterator (for non-WASM targets)
+    #[cfg(not(target_family = "wasm"))]
+    pub fn new() -> Self {
+        Self {
+            iter: Placeholder::new(0),
+            _marker: core::marker::PhantomData,
+        }
+    }
+
+    /// Create a new iterator from placeholder (for WASM targets)
+    #[cfg(target_family = "wasm")]
+    pub fn from_placeholder(iter: Placeholder) -> Self {
+        Self {
+            iter,
+            _marker: core::marker::PhantomData,
+        }
+    }
+}
+
 #[allow(private_bounds)]
 #[cfg(target_family = "wasm")]
-impl<T: FromPlaceholder> Iter<T> {
+impl<T: crate::types::placeholder::FromPlaceholder> Iter<T> {
     #[inline(always)]
     pub fn next(&mut self) -> bool {
         unsafe { env::syscall::system_iterator_next(self.iter) }

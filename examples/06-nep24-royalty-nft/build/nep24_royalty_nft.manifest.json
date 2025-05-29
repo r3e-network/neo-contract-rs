@@ -1,0 +1,268 @@
+{
+  "groups": [],
+  "supportedstandards": [
+    "NEP-11",
+    "NEP-24"
+  ],
+  "permissions": [
+    {
+      "methods": [
+        "*"
+      ],
+      "contract": "*"
+    }
+  ],
+  "trusts": [],
+  "name": "nep24_royalty_nft",
+  "features": {},
+  "abi": {
+    "methods": [
+      {
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          },
+          {
+            "name": "symbol",
+            "type": "ByteArray"
+          },
+          {
+            "name": "base_uri",
+            "type": "ByteArray"
+          },
+          {
+            "name": "default_royalty_percentage",
+            "type": "Integer"
+          }
+        ],
+        "name": "deploy",
+        "offset": 506,
+        "returntype": "Boolean",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "symbol",
+        "offset": 735,
+        "returntype": "ByteArray",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "decimals",
+        "offset": 778,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "total_supply",
+        "offset": 798,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "name": "balance_of",
+        "offset": 843,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "owner_of",
+        "offset": 893,
+        "returntype": "Hash160",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          },
+          {
+            "name": "data",
+            "type": "Any"
+          }
+        ],
+        "name": "transfer",
+        "offset": 941,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          },
+          {
+            "name": "royalty_token",
+            "type": "Hash160"
+          },
+          {
+            "name": "sale_price",
+            "type": "Integer"
+          }
+        ],
+        "name": "royalty_info",
+        "offset": 1135,
+        "returntype": "ByteArray",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          },
+          {
+            "name": "properties",
+            "type": "ByteArray"
+          },
+          {
+            "name": "royalty_recipients",
+            "type": "Hash160"
+          },
+          {
+            "name": "royalty_percentages",
+            "type": "Array"
+          }
+        ],
+        "name": "mint_with_royalty",
+        "offset": 1244,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "creator",
+            "type": "Hash160"
+          },
+          {
+            "name": "percentage",
+            "type": "Integer"
+          }
+        ],
+        "name": "set_creator_royalty",
+        "offset": 1810,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "marketplace",
+            "type": "Hash160"
+          }
+        ],
+        "name": "add_marketplace",
+        "offset": 1985,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          },
+          {
+            "name": "seller",
+            "type": "Hash160"
+          },
+          {
+            "name": "buyer",
+            "type": "Hash160"
+          },
+          {
+            "name": "sale_price",
+            "type": "Integer"
+          },
+          {
+            "name": "payment_token",
+            "type": "Hash160"
+          }
+        ],
+        "name": "marketplace_sale",
+        "offset": 2100,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "get_token_royalty_info",
+        "offset": 2308,
+        "returntype": "Array",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get_max_royalty",
+        "offset": 2356,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "marketplace",
+            "type": "Hash160"
+          }
+        ],
+        "name": "is_approved_marketplace",
+        "offset": 2387,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get_owner",
+        "offset": 2423,
+        "returntype": "Hash160",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "is_paused",
+        "offset": 2468,
+        "returntype": "Boolean",
+        "safe": true
+      }
+    ],
+    "events": []
+  },
+  "extra": {
+    "Author": "neo-contract-rs",
+    "Description": "Royalty information structure\n#[derive(Clone)]",
+    "Version": "1.0.0",
+    "category": "NFT",
+    "description": "NFT contract with creator royalty support"
+  }
+}

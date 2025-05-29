@@ -5,15 +5,25 @@
 
 #[cfg(target_family = "wasm")]
 use crate::{
-    storage::*,
-    types::{placeholder::*, *},
+    storage::{StorageContext, ReadOnlyStorageContext},
+    types::{
+        builtin::{
+            array::Array,
+            string::ByteString,
+            h160::H160,
+            int256::Int256,
+            bytes::Bytes,
+        },
+        placeholder::Placeholder,
+        Any, CallFlags, FindOptions, Notification, PublicKey, Signer, TriggerType, Tx,
+    },
 };
 
 #[link(wasm_import_module = "neo.syscall")]
 #[allow(improper_ctypes)]
 #[cfg(target_family = "wasm")]
 extern "C" {
-    /// syscall System.Runtime.Trigger
+    /// System.Runtime.GetTrigger
     pub(crate) fn system_runtime_trigger() -> TriggerType;
 
     /// syscall System.Runtime.Platform
@@ -46,6 +56,9 @@ extern "C" {
     /// syscall System.Runtime.GetNotifications
     pub(crate) fn system_runtime_notifications() -> Array<Notification>;
 
+    /// syscall System.Runtime.GetNotifications with script hash
+    pub(crate) fn system_runtime_get_notifications(script_hash: H160) -> Array<Notification>;
+
     /// System.Runtime.CheckWitness
     pub(crate) fn system_runtime_check_witness_with_account(account: H160) -> bool;
 
@@ -69,6 +82,9 @@ extern "C" {
 
     /// System.Runtime.CurrentSigners
     pub(crate) fn system_runtime_current_signers() -> Array<Signer>;
+
+    /// System.Runtime.Notify
+    pub(crate) fn system_runtime_notify(name: ByteString, data: Array<Any>);
 
     /// System.Contract.Call
     pub(crate) fn system_contract_call(

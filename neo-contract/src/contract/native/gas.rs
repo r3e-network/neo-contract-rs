@@ -24,12 +24,17 @@ impl Gas {
         unsafe { env::contract::native_gas_symbol() }
 
         #[cfg(not(target_family = "wasm"))]
-        ByteString::new("GAS".into())
+        ByteString::new("GAS".as_bytes().to_vec())
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
     pub fn total_supply() -> Int256 {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_gas_total_supply() }
+
+        #[cfg(not(target_family = "wasm"))]
+        Int256::new(100_000_000_00000000i64) // 100M GAS with 8 decimals
     }
 
     #[inline(always)]
@@ -37,18 +42,30 @@ impl Gas {
     pub fn decimals() -> u32 {
         #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_gas_decimals() }
-    
+
         #[cfg(not(target_family = "wasm"))]
         8
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
+    #[allow(unused_variables)]
     pub fn balance_of(account: H160) -> Int256 {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_gas_balance_of(account) }
+
+        #[cfg(not(target_family = "wasm"))]
+        Int256::new(0) // Mock implementation for non-WASM targets
     }
 
     #[inline(always)]
+    #[rustfmt::skip]
+    #[allow(unused_variables)]
     pub fn transfer(from: H160, to: H160, amount: Int256) -> bool {
+        #[cfg(target_family = "wasm")]
         unsafe { env::contract::native_gas_transfer(from, to, amount) }
+
+        #[cfg(not(target_family = "wasm"))]
+        false // Mock implementation for non-WASM targets
     }
 }

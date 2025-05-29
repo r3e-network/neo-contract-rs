@@ -1,0 +1,205 @@
+{
+  "groups": [],
+  "supportedstandards": [],
+  "permissions": [
+    {
+      "methods": [
+        "*"
+      ],
+      "contract": "*"
+    }
+  ],
+  "trusts": [],
+  "name": "03-counter",
+  "features": {},
+  "abi": {
+    "methods": [
+      {
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "name": "set_owner",
+        "offset": 250,
+        "returntype": "Boolean",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "get_owner",
+        "offset": 380,
+        "returntype": "Hash160",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "operator",
+            "type": "Hash160"
+          }
+        ],
+        "name": "add_operator",
+        "offset": 461,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "operator",
+            "type": "Hash160"
+          }
+        ],
+        "name": "remove_operator",
+        "offset": 609,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "address",
+            "type": "Hash160"
+          }
+        ],
+        "name": "is_operator",
+        "offset": 749,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get",
+        "offset": 825,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "get_counter",
+        "offset": 906,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "increment",
+        "offset": 1035,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "increment_counter",
+        "offset": 1194,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "decrement",
+        "offset": 1367,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "decrement_counter",
+        "offset": 1526,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "name": "add",
+        "offset": 1699,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "reset",
+        "offset": 1819,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "reset_counter",
+        "offset": 1972,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          },
+          {
+            "name": "initial_value",
+            "type": "Integer"
+          }
+        ],
+        "name": "create_counter",
+        "offset": 2159,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "delete_counter",
+        "offset": 2378,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get_stats",
+        "offset": 2618,
+        "returntype": "ByteArray",
+        "safe": true
+      }
+    ],
+    "events": []
+  },
+  "extra": {
+    "Author": "neo-contract-rs",
+    "Description": "Counter contract demonstrating advanced state management\n#[contract_author(\"Neo Rust Framework\", \"dev@neo.org\")]\n#[contract_version(\"1.0.0\")]\n#[contract_standards(\"\")]\n#[contract_permission(\"*\", \"*\")]\n#[contract_meta(\"description\", \"Advanced counter with multiple counters and access control\")]\n#[contract_meta(\"category\", \"State Management\")]",
+    "Version": "1.0.0",
+    "category": "State Management",
+    "description": "Advanced counter with multiple counters and access control"
+  }
+}

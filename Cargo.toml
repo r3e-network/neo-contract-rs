@@ -9,20 +9,20 @@ members = [
     "neo-contract-proc-macros",
     "neo-wasm/examples/hello-world",
     "neo-wasm/examples/syscall-test",
-    "examples/native-test",
-    # Commenting out one hello-world to avoid name conflict
-    # "examples/hello-world",
-    "examples/test-contract",
-    "examples/nep17-token",
-    "examples/nep11-token",
-    "examples/simple-example",
-    "examples/minimal-example",
-    "wasm-example",
-    # Temporarily commenting out examples that need API updates
-    # "examples/multisig-wallet",
-    # "examples/dex",
-    # "examples/crowdfunding",
-    # "examples/oracle-price-feed",
+    # New comprehensive examples
+    "examples/01-hello-world",
+    "examples/02-simple-storage",
+    "examples/03-counter",
+    "examples/04-nep17-token",
+    "examples/05-nep11-nft",
+    "examples/06-nep24-royalty-nft",
+    "examples/07-crowdfunding",
+    "examples/08-staking",
+    "examples/09-simple-dex",
+    "examples/10-multisig-wallet",
+    "examples/11-governance",
+    "examples/12-oracle-price-feed",
+    "examples/13-nft-marketplace",
 ]
 
 [profile.release]

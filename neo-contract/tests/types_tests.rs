@@ -202,10 +202,12 @@ fn test_int256_serialization() {
 #[test]
 fn test_array_creation() {
     // In the current API, we can only create a new Array
-    let array = Array::<i32>::new();
+    let mut array = Array::<i32>::new();
 
-    // We can't check the length directly, but we can check if it's empty
-    // by trying to get an element
+    // Add an element first before trying to get it
+    array.push(42);
+
+    // Now we can safely get the element
     let _result = array.get(0);
 }
 

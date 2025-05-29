@@ -1,6 +1,6 @@
-# Oracle Framework for neo-contract-rs
+# Oracle Framework for Neo N3 Rust Smart Contracts
 
-This document outlines the design, implementation, and usage patterns for the Oracle framework in neo-contract-rs.
+This document outlines the design, implementation, and usage patterns for the Oracle framework in the **Neo N3 Rust Smart Contract Framework**.
 
 ## Overview
 
@@ -23,19 +23,19 @@ The Oracle framework consists of several components:
 ```rust
 pub trait OracleRequest {
     type ResponseType;
-    
+
     /// URL where the oracle should fetch data from
     fn url(&self) -> ByteString;
-    
+
     /// Filter to apply to the response data
     fn filter(&self) -> Option<ByteString>;
-    
+
     /// Method to call the oracle service
     fn request(&self) -> bool;
-    
+
     /// Callback to handle the oracle response
     fn on_response(&self, response: Self::ResponseType);
-    
+
     /// Callback for when the oracle request fails
     fn on_error(&self, error: u32);
 }
@@ -57,10 +57,10 @@ pub enum OracleResponse<T> {
 pub mod oracle {
     /// Request data from an oracle
     pub fn request(url: ByteString, filter: ByteString) -> bool;
-    
+
     /// Get the current oracle request price in GAS
     pub fn get_price() -> u32;
-    
+
     /// Check if the current execution is a callback from an oracle
     pub fn is_oracle_response() -> bool;
 }
@@ -77,21 +77,21 @@ impl PriceOracle {
         let url = ByteString::from("https://api.example.com/prices/");
         let mut url_with_symbol = url.clone();
         url_with_symbol.concat(&symbol);
-        
+
         let filter = ByteString::from("$.price");
-        
+
         oracle::request(url_with_symbol, filter)
     }
-    
+
     pub fn on_price(symbol: ByteString, price: i64) {
         // Only callable by the oracle
         assert!(oracle::is_oracle_response());
-        
+
         // Store the price
         let mut storage = StorageMap::new();
         let key = symbol.clone();
         storage.put(key, Int256::from(price));
-        
+
         // Emit event with the new price
         emit_event!("PriceUpdate", (symbol, price));
     }
@@ -107,36 +107,36 @@ impl WeatherOracle {
         let url = ByteString::from("https://api.weather.com/current?city=");
         let mut url_with_city = url.clone();
         url_with_city.concat(&city);
-        
+
         let filter = ByteString::from("$.weather");
-        
+
         oracle::request(url_with_city, filter)
     }
-    
+
     pub fn on_weather(
-        city: ByteString, 
-        temperature: i32, 
+        city: ByteString,
+        temperature: i32,
         conditions: ByteString,
         humidity: u32
     ) {
         // Only callable by the oracle
         assert!(oracle::is_oracle_response());
-        
+
         // Parse the response and store components
         let mut storage = StorageMap::new();
-        
+
         let temp_key = city.clone();
         temp_key.concat(&ByteString::from("_temp"));
         storage.put(temp_key, Int256::from(temperature));
-        
+
         let cond_key = city.clone();
         cond_key.concat(&ByteString::from("_cond"));
         storage.put(cond_key, conditions);
-        
+
         let humid_key = city.clone();
         humid_key.concat(&ByteString::from("_humid"));
         storage.put(humid_key, Int256::from(humidity as i64));
-        
+
         // Emit weather update event
         emit_event!("WeatherUpdate", (city, temperature, conditions, humidity));
     }
@@ -186,9 +186,24 @@ The contract should implement proper error handling strategies for these cases.
 5. **Rate Limiting**: Implement rate limiting to prevent excessive oracle requests
 6. **Fallback Mechanisms**: Have fallback mechanisms for when oracle data is unavailable
 
-## Example Oracle Contract
+## Working Oracle Example
 
-A complete example of an oracle contract can be found in the `/examples/oracle-price-feed` directory.
+The framework includes a complete oracle implementation:
+
+```bash
+# Explore the oracle price feed example
+cd examples/12-oracle-price-feed
+cat src/lib.rs           # See oracle implementation
+make                     # Build the oracle contract
+make test               # Run oracle tests
+```
+
+This example demonstrates:
+- **Price Feed Oracle** - Fetches cryptocurrency prices
+- **External API Integration** - Connects to price APIs
+- **Response Handling** - Processes oracle responses
+- **Error Management** - Handles oracle failures
+- **Event Emission** - Notifies price updates
 
 ## Future Enhancements
 
@@ -198,7 +213,60 @@ A complete example of an oracle contract can be found in the `/examples/oracle-p
 4. **Oracle Request Batching**: Batch multiple requests for efficiency
 5. **Subscription Model**: Implement subscription-based oracle updates
 
+## Building Oracle Contracts
+
+### Development Workflow
+
+```bash
+# Create oracle contract based on example
+cp -r examples/12-oracle-price-feed my-oracle
+cd my-oracle
+
+# Modify the contract for your use case
+vim src/lib.rs
+
+# Build and test
+make                    # Build WASM → NEF + Manifest
+make test              # Run unit tests
+```
+
+### Deployment Process
+
+1. **Build Contract** - Generate NEF and manifest files
+2. **Deploy to Testnet** - Test with Neo N3 testnet
+3. **Configure Oracle Nodes** - Ensure oracle nodes are available
+4. **Test Oracle Requests** - Verify external data access
+5. **Deploy to Mainnet** - Production deployment
+
+### Testing Oracle Contracts
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use neo_contract::testing::*;
+
+    #[test]
+    fn test_oracle_request() {
+        let contract = OracleContract::init();
+        // Test oracle request logic
+    }
+
+    #[test]
+    fn test_response_handling() {
+        let contract = OracleContract::init();
+        // Test oracle response processing
+    }
+}
+```
+
+## Related Documentation
+
+- **[Getting Started Guide](getting-started.md)** - Framework setup and basics
+- **[Contract Attributes](contract-attributes.md)** - Metadata and permissions
+- **[Testing Guide](testing-guide.md)** - Testing strategies and patterns
+
 ## References
 
-1. [Neo N3 Oracle Service Documentation](https://docs.neo.org/docs/en-us/reference/oracle.html)
-2. [Oracle Design Patterns for Smart Contracts](https://medium.com/@chainlink/digital-agreements-powered-by-chainlink-smart-contracts-706e2d9a4fc0) 
+- **[Neo N3 Oracle Documentation](https://docs.neo.org/docs/en-us/reference/oracle.html)** - Official oracle service docs
+- **[Neo N3 Developer Guide](https://developers.neo.org/)** - Neo development resources

@@ -3,10 +3,32 @@
 
 #![allow(dead_code)]
 
-use crate::types::*;
+use crate::types::{consts::OracleResponseCode, *};
 
+/// NEP-24: Royalty Standard for Non-Fungible Tokens
+///
+/// This trait defines the interface for royalty information in NFT contracts.
+/// It allows creators to receive royalty payments when their NFTs are sold.
 pub trait Nep24 {
-    fn royalty_info(token_id: ByteString, royalty_token: Int256, sale_price: Int256) -> Map<ByteString, Any>;
+    /// Returns royalty information for a given token
+    ///
+    /// # Arguments
+    ///
+    /// * `token_id` - The unique identifier of the token
+    /// * `royalty_token` - The token contract hash used for royalty payment
+    /// * `sale_price` - The sale price of the token
+    ///
+    /// # Returns
+    ///
+    /// An array of maps containing royalty recipient and amount information.
+    /// Each map should contain:
+    /// - "royaltyRecipient": H160 address of the royalty recipient
+    /// - "royaltyAmount": Int256 amount to be paid as royalty
+    fn royalty_info(
+        token_id: ByteString,
+        royalty_token: H160,
+        sale_price: Int256
+    ) -> Array<Map<ByteString, Any>>;
 }
 
 pub trait Nep26 {

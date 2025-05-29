@@ -9,6 +9,7 @@ use crate::{
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
+#[derive(Debug, Default)]
 pub struct H160([u8; 20]);
 
 #[cfg(target_family = "wasm")]
@@ -49,6 +50,18 @@ impl H160 {
         buf.reverse();
         H160(buf)
     }
+
+    #[cfg(not(target_family = "wasm"))]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        let mut buf = [0u8; 20];
+        buf.copy_from_slice(bytes);
+        H160(buf)
+    }
 }
 
 impl PartialEq for H160 {
@@ -75,6 +88,20 @@ impl Eq for H160 {}
 impl Copy for H160 {}
 
 #[cfg(target_family = "wasm")]
+impl core::fmt::Debug for H160 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "H160(placeholder)")
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl Default for H160 {
+    fn default() -> Self {
+        Self(Placeholder::new(0))
+    }
+}
+
+#[cfg(target_family = "wasm")]
 crate::impl_placeholder!(H160);
 
 impl IntoByteString for H160 {
@@ -87,5 +114,22 @@ impl IntoByteString for H160 {
     #[cfg(not(target_family = "wasm"))]
     fn into_byte_string(self) -> ByteString {
         ByteString::with_bytes(self.0.as_slice())
+    }
+}
+
+impl FromByteString for H160 {
+    #[inline(always)]
+    #[cfg(target_family = "wasm")]
+    fn from_byte_string(src: ByteString) -> Self {
+        unsafe { env::extension::h160_from_byte_string(src) }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn from_byte_string(src: ByteString) -> Self {
+        let bytes = src.as_bytes();
+        let mut buf = [0u8; 20];
+        let len = core::cmp::min(bytes.len(), 20);
+        buf[..len].copy_from_slice(&bytes[..len]);
+        H160(buf)
     }
 }

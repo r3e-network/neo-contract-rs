@@ -7,13 +7,13 @@
 
 use neo_contract::types::*;
 mod mock_env;
-use mock_env::*;
+use mock_env::{MockNeoEnvironment, storage::MockStorageMap};
 
 #[test]
 fn test_storage_map_put_get() {
     // Create mock environment and storage
     let mut env = MockNeoEnvironment::new();
-    let mut storage = storage::MockStorageMap::new(&mut env);
+    let mut storage = MockStorageMap::new(&mut env);
 
     // Test data
     let key = ByteString::from_literal("test_key");
@@ -34,7 +34,7 @@ fn test_storage_map_put_get() {
 fn test_storage_map_delete() {
     // Create mock environment and storage
     let mut env = MockNeoEnvironment::new();
-    let mut storage = storage::MockStorageMap::new(&mut env);
+    let mut storage = MockStorageMap::new(&mut env);
 
     // Test data
     let key = ByteString::from_literal("test_key");
@@ -55,7 +55,7 @@ fn test_storage_map_delete() {
 fn test_storage_map_contains_key() {
     // Create mock environment and storage
     let mut env = MockNeoEnvironment::new();
-    let mut storage = storage::MockStorageMap::new(&mut env);
+    let mut storage = MockStorageMap::new(&mut env);
 
     // Test data
     let key = ByteString::from_literal("test_key");
@@ -79,7 +79,7 @@ fn test_storage_map_contains_key() {
 fn test_storage_map_multiple_operations() {
     // Create mock environment and storage
     let mut env = MockNeoEnvironment::new();
-    let mut storage = storage::MockStorageMap::new(&mut env);
+    let mut storage = MockStorageMap::new(&mut env);
 
     // Test data
     let keys = [
@@ -132,7 +132,7 @@ fn test_storage_map_multiple_operations() {
 fn test_storage_map_empty_key_value() {
     // Create mock environment and storage
     let mut env = MockNeoEnvironment::new();
-    let mut storage = storage::MockStorageMap::new(&mut env);
+    let mut storage = MockStorageMap::new(&mut env);
 
     // Test with empty key
     let empty_key = ByteString::empty();
@@ -165,7 +165,7 @@ fn test_storage_map_empty_key_value() {
 fn test_storage_map_special_characters() {
     // Create mock environment and storage
     let mut env = MockNeoEnvironment::new();
-    let mut storage = storage::MockStorageMap::new(&mut env);
+    let mut storage = MockStorageMap::new(&mut env);
 
     // Test with special character key
     let special_key = ByteString::from_literal("!@#$%^&*()_+");
@@ -198,7 +198,7 @@ fn test_storage_map_special_characters() {
 fn test_storage_map_overwrite() {
     // Create mock environment and storage
     let mut env = MockNeoEnvironment::new();
-    let mut storage = storage::MockStorageMap::new(&mut env);
+    let mut storage = MockStorageMap::new(&mut env);
 
     // Test data
     let key = ByteString::from_literal("overwrite_key");

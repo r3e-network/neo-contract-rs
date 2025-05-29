@@ -75,9 +75,9 @@ for module, imports := range module.Import.GroupByModule() {
         if entry.Kind != wasm.ImportFunctionKind {
             continue
         }
-        
+
         importName := entry.Field
-        
+
         // Handle syscall module imports
         if builtin.IsSyscallModule(module) {
             // Create a translation for the syscall function
@@ -101,13 +101,19 @@ func (s *SyscallTranslation) Translate(reader *op.OpsReader, importName string) 
         return nil, fmt.Errorf("unknown syscall: %s", importName)
     }
 
+    // Calculate the syscall hash (first 4 bytes of SHA256 hash of the syscall name)
+    syscallNameBytes := []byte(syscall.Name)
+    syscallHash := sha256Hash(syscallNameBytes)[:4]
+
+    s.logVerbose("Syscall hash for '%s': %x", syscall.Name, syscallHash)
+
     // Create a translation with SYSCALL operation
     translation := &Translation{
-        Sources: []Source{},
+        Sources: []WasmOp{},
         Targets: []neo.VmOp{
             {
                 OpCode: neo.OpSyscall,
-                First:  []byte(syscall.Name),
+                First:  syscallHash, // Use the first 4 bytes of the SHA256 hash
             },
         },
     }

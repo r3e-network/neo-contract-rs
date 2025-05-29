@@ -40,6 +40,42 @@ impl Contract {
     }
 }
 
+impl Default for Contract {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            update_counter: 0,
+            hash: H160::zero(),
+            nef: ByteString::empty(),
+            manifest: ContractManifest::default(),
+        }
+    }
+}
+
+impl Default for ContractManifest {
+    fn default() -> Self {
+        Self {
+            name: ByteString::empty(),
+            groups: Array::new(),
+            _reserved: Any::default(),
+            supported_standards: Array::new(),
+            abi: ContractAbi::default(),
+            permissions: Array::new(),
+            trusts: Array::new(),
+            extra: ByteString::empty(),
+        }
+    }
+}
+
+impl Default for ContractAbi {
+    fn default() -> Self {
+        Self {
+            methods: Array::new(),
+            events: Array::new(),
+        }
+    }
+}
+
 #[repr(C)]
 pub struct ContractManifest {
     name: ByteString,
@@ -130,5 +166,15 @@ impl NeoAccountState {
     #[inline(always)]
     pub fn vote_to(&self) -> PublicKey {
         self.vote_to.clone()
+    }
+}
+
+impl Default for NeoAccountState {
+    fn default() -> Self {
+        Self {
+            balance: Int256::zero(),
+            height: Int256::zero(),
+            vote_to: PublicKey::default(),
+        }
     }
 }

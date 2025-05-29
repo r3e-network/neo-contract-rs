@@ -50,50 +50,237 @@ First, let's define the basic structure for a non-divisible NFT contract:
 #![no_std]
 #![no_main]
 
-use neo_contract as neo;
-use neo::{contract::*, storage::*, types::*};
+use neo_contract::prelude::*;
 
 pub struct NonDivisibleNFT;
 
-#[neo::contract]
-impl Nep11Token for NonDivisibleNFT {
-    fn symbol() -> ByteString {
+#[contract]
+pub struct NonDivisibleNFT {
+    // Storage for token data
+    owners: StorageMap<ByteString, H160>,
+    tokens: StorageMap<H160, Array<ByteString>>,
+    properties: StorageMap<ByteString, Map<ByteString, ByteString>>,
+    total_supply: StorageItem<Int256>,
+}
+
+#[contract_impl]
+impl NonDivisibleNFT {
+    pub fn init() -> Self {
+        let ctx = Storage::get_context();
+        Self {
+            owners: StorageMap::new(ctx, b"owners"),
+            tokens: StorageMap::new(ctx, b"tokens"),
+            properties: StorageMap::new(ctx, b"properties"),
+            total_supply: StorageItem::new(ctx, b"total_supply"),
+        }
+    }
+
+    #[method]
+    #[safe]
+    pub fn symbol(&self) -> ByteString {
         ByteString::from("NDNFT")
     }
-    
-    fn decimals() -> u32 {
+
+    #[method]
+    #[safe]
+    pub fn decimals(&self) -> u8 {
         0  // Non-divisible NFTs have 0 decimals
     }
-    
-    fn total_supply() -> Int256 {
-        // Implementation to retrieve total supply from storage
+
+    #[method]
+    #[safe]
+    pub fn total_supply(&self) -> Int256 {
+        self.total_supply.get().unwrap_or(Int256::zero())
     }
-    
-    fn balance_of(owner: H160) -> Int256 {
-        // Implementation to count tokens owned by an account
+
+    #[method]
+    #[safe]
+    pub fn balance_of(&self, owner: H160) -> Int256 {
+        let tokens_opt = self.tokens.get(owner);
+        if let Some(tokens) = tokens_opt {
+            Int256::from(tokens.len() as i64)
+        } else {
+            Int256::zero()
+        }
     }
-    
-    fn owner_of(token_id: ByteString) -> H160 {
-        // Implementation to get token owner
+
+    #[method]
+    #[safe]
+    pub fn owner_of(&self, token_id: ByteString) -> H160 {
+        self.owners.get(token_id).unwrap_or_else(H160::zero)
     }
-    
-    fn tokens() -> Array<ByteString> {
-        // Implementation to list all tokens
+
+    #[method]
+    #[safe]
+    pub fn tokens(&self) -> Array<ByteString> {
+        // Retrieve all tokens from storage
+        // This implementation maintains a list of all tokens in the contract storage
+        let mut result = Array::new();
+
+        // Iterate through all token IDs stored in the contract
+        for token_id in self.all_tokens.iter() {
+            result.push(token_id);
+        }
+
+        result
     }
-    
-    fn tokens_of(owner: H160) -> Array<ByteString> {
-        // Implementation to list tokens of owner
+
+    #[method]
+    #[safe]
+    pub fn tokens_of(&self, owner: H160) -> Array<ByteString> {
+        self.tokens.get(owner).unwrap_or_else(Array::new)
     }
-    
-    fn transfer(to: H160, token_id: ByteString, data: Any) -> bool {
-        // Implementation to transfer token ownership
+
+    #[method]
+    pub fn transfer(&self, to: H160, token_id: ByteString, data: Any) -> bool {
+        // Check if token exists
+        let from = self.owner_of(token_id.clone());
+        if from == H160::zero() {
+            return false; // Token doesn't exist
+        }
+
+        // Check authorization
+        if !Runtime::check_witness(from) {
+            return false; // Not authorized
+        }
+
+        // Update token ownership
+        self.owners.put(token_id.clone(), to);
+
+        // Remove from previous owner's tokens
+        if let Some(mut from_tokens) = self.tokens.get(from) {
+            // Remove token from array
+            let mut index = 0;
+            let mut found = false;
+
+            while index < from_tokens.len() {
+                if from_tokens.get(index).unwrap() == token_id {
+                    found = true;
+                    break;
+                }
+                index += 1;
+            }
+
+            if found {
+                from_tokens.remove(index);
+                self.tokens.put(from, from_tokens);
+            }
+        }
+
+        // Add to new owner's tokens
+        let mut to_tokens = self.tokens.get(to).unwrap_or_else(Array::new);
+        to_tokens.push(token_id.clone());
+        self.tokens.put(to, to_tokens);
+
+        // Emit transfer event
+        self.on_transfer(from, to, token_id, data);
+
+        true
     }
-    
-    fn properties(token_id: ByteString) -> Map<ByteString, ByteString> {
-        // Implementation to retrieve token properties
+
+    #[method]
+    #[safe]
+    pub fn properties(&self, token_id: ByteString) -> Map<ByteString, ByteString> {
+        self.properties.get(token_id).unwrap_or_else(Map::new)
     }
-    
-    // Additional methods...
+
+    // Helper method to emit Transfer event
+    fn on_transfer(&self, from: H160, to: H160, token_id: ByteString, data: Any) {
+        let event_name = ByteString::from("Transfer");
+
+        // Create event data
+        let mut args = Array::new();
+        args.push(from.into());
+        args.push(to.into());
+        args.push(token_id);
+        args.push(data);
+
+        Event::emit(event_name, args);
+    }
+
+    #[method]
+    pub fn mint(&self, to: H160, token_id: ByteString, properties_map: Map<ByteString, ByteString>) -> bool {
+        // Check if the caller is authorized (typically contract owner)
+        if !Runtime::check_witness(Runtime::executing_script_hash()) {
+            return false;
+        }
+
+        // Check if token already exists
+        if self.owner_of(token_id.clone()) != H160::zero() {
+            return false; // Token already exists
+        }
+
+        // Set token owner
+        self.owners.put(token_id.clone(), to);
+
+        // Add to owner's tokens
+        let mut to_tokens = self.tokens.get(to).unwrap_or_else(Array::new);
+        to_tokens.push(token_id.clone());
+        self.tokens.put(to, to_tokens);
+
+        // Store token properties
+        if !properties_map.is_empty() {
+            self.properties.put(token_id.clone(), properties_map);
+        }
+
+        // Update total supply
+        let current_supply = self.total_supply();
+        self.total_supply.put(current_supply + Int256::from(1));
+
+        // Emit transfer event (from zero address for minting)
+        self.on_transfer(H160::zero(), to, token_id, ByteString::empty());
+
+        true
+    }
+
+    #[method]
+    pub fn burn(&self, token_id: ByteString) -> bool {
+        // Get token owner
+        let owner = self.owner_of(token_id.clone());
+        if owner == H160::zero() {
+            return false; // Token doesn't exist
+        }
+
+        // Check authorization
+        if !Runtime::check_witness(owner) {
+            return false; // Not authorized
+        }
+
+        // Remove token ownership
+        self.owners.delete(token_id.clone());
+
+        // Remove from owner's tokens
+        if let Some(mut owner_tokens) = self.tokens.get(owner) {
+            // Remove token from array
+            let mut index = 0;
+            let mut found = false;
+
+            while index < owner_tokens.len() {
+                if owner_tokens.get(index).unwrap() == token_id {
+                    found = true;
+                    break;
+                }
+                index += 1;
+            }
+
+            if found {
+                owner_tokens.remove(index);
+                self.tokens.put(owner, owner_tokens);
+            }
+        }
+
+        // Remove token properties
+        self.properties.delete(token_id.clone());
+
+        // Update total supply
+        let current_supply = self.total_supply();
+        self.total_supply.put(current_supply - Int256::from(1));
+
+        // Emit transfer event (to zero address for burning)
+        self.on_transfer(owner, H160::zero(), token_id, ByteString::empty());
+
+        true
+    }
 }
 ```
 
@@ -117,12 +304,12 @@ const TOTAL_SUPPLY_KEY: u8 = 0x00;   // Key for total supply
 fn total_supply() -> Int256 {
     let storage = StorageMap::new();
     let total_supply_key = ByteString::from_bytes(&[TOTAL_SUPPLY_KEY]);
-    
+
     let value = storage.get(total_supply_key);
     if value.is_null() {
         return Int256::zero();
     }
-    
+
     Int256::from_byte_string(value.unwrap())
 }
 ```
@@ -134,12 +321,12 @@ fn balance_of(owner: H160) -> Int256 {
     let storage = StorageMap::new();
     let prefix_key = ByteString::from_bytes(&[PREFIX_TOKEN]);
     let owner_key = prefix_key.concat(&ByteString::from_bytes(&owner.to_bytes()));
-    
+
     let value = storage.get(owner_key);
     if value.is_null() {
         return Int256::zero();
     }
-    
+
     // Deserialize the set of token IDs and count them
     let tokens_array = deserialize_tokens(value.unwrap());
     Int256::from_i32(tokens_array.len() as i32)
@@ -153,13 +340,13 @@ fn owner_of(token_id: ByteString) -> H160 {
     let storage = StorageMap::new();
     let prefix_key = ByteString::from_bytes(&[PREFIX_OWNER]);
     let token_key = prefix_key.concat(&token_id);
-    
+
     let value = storage.get(token_key);
     if value.is_null() {
         // Token does not exist
         return H160::zero();
     }
-    
+
     // Deserialize owner address
     let owner_bytes = value.unwrap().to_bytes();
     H160::from_bytes(&owner_bytes)
@@ -174,10 +361,10 @@ fn tokens() -> Array<ByteString> {
     // In a real contract, you would need pagination
     let storage = StorageMap::new();
     let mut result = Array::<ByteString>::new();
-    
+
     // Iterate through all tokens (pseudocode, as direct iteration is not available)
     // In practice, you would maintain a separate list of all token IDs
-    
+
     // Return the list of tokens
     result
 }
@@ -192,48 +379,48 @@ fn transfer(to: H160, token_id: ByteString, data: Any) -> bool {
     if owner == H160::zero() {
         return false; // Token doesn't exist
     }
-    
+
     // Check authorization
-    if !runtime::check_witness(owner) {
+    if !Runtime::check_witness(owner) {
         return false; // Not authorized
     }
-    
+
     // Update token ownership
     let mut storage = StorageMap::new();
-    
+
     // 1. Update owner mapping
     let prefix_owner = ByteString::from_bytes(&[PREFIX_OWNER]);
     let token_key = prefix_owner.concat(&token_id);
     storage.put(token_key, ByteString::from_bytes(&to.to_bytes()));
-    
+
     // 2. Remove from previous owner's tokens
     let prefix_token = ByteString::from_bytes(&[PREFIX_TOKEN]);
     let prev_owner_key = prefix_token.concat(&ByteString::from_bytes(&owner.to_bytes()));
     let prev_owner_tokens = storage.get(prev_owner_key.clone());
-    
+
     if !prev_owner_tokens.is_null() {
         let mut tokens_array = deserialize_tokens(prev_owner_tokens.unwrap());
         // Remove token from array
         // ...
         storage.put(prev_owner_key, serialize_tokens(tokens_array));
     }
-    
+
     // 3. Add to new owner's tokens
     let new_owner_key = prefix_token.concat(&ByteString::from_bytes(&to.to_bytes()));
     let new_owner_tokens = storage.get(new_owner_key.clone());
-    
+
     let mut tokens_array = if new_owner_tokens.is_null() {
         Array::<ByteString>::new()
     } else {
         deserialize_tokens(new_owner_tokens.unwrap())
     };
-    
+
     tokens_array.push(token_id.clone());
     storage.put(new_owner_key, serialize_tokens(tokens_array));
-    
+
     // 4. Emit transfer event
     emit_transfer_event(owner, to, token_id, data);
-    
+
     true
 }
 ```
@@ -245,12 +432,12 @@ fn properties(token_id: ByteString) -> Map<ByteString, ByteString> {
     let storage = StorageMap::new();
     let prefix_key = ByteString::from_bytes(&[PREFIX_PROPERTIES]);
     let token_key = prefix_key.concat(&token_id);
-    
+
     let value = storage.get(token_key);
     if value.is_null() {
         return Map::<ByteString, ByteString>::new();
     }
-    
+
     // Deserialize properties
     deserialize_properties(value.unwrap())
 }
@@ -262,15 +449,15 @@ fn properties(token_id: ByteString) -> Map<ByteString, ByteString> {
 // Helper to emit transfer events
 fn emit_transfer_event(from: H160, to: H160, token_id: ByteString, data: Any) {
     let event_name = ByteString::from("Transfer");
-    
+
     // Create event data
-    let mut event_data = Array::<Any>::new();
+    let mut event_data = Array::new();
     event_data.push(ByteString::from_bytes(&from.to_bytes()));
     event_data.push(ByteString::from_bytes(&to.to_bytes()));
     event_data.push(token_id);
     event_data.push(data);
-    
-    runtime::notify(event_name, event_data);
+
+    Event::emit(event_name, event_data);
 }
 
 // Helper to serialize token arrays
@@ -297,104 +484,104 @@ fn deserialize_properties(data: ByteString) -> Map<ByteString, ByteString> {
 ### 5. Minting and Burning
 
 ```rust
-// Mint a new token
-fn mint(owner: H160, token_id: ByteString, properties: Map<ByteString, ByteString>) -> bool {
+#[method]
+pub fn mint(&self, owner: H160, token_id: ByteString, properties: Map<ByteString, ByteString>) -> bool {
     // Check authorization
-    if !runtime::check_witness(runtime::executing_script_hash()) {
+    if !Runtime::check_witness(Runtime::executing_script_hash()) {
         return false; // Only contract owner can mint
     }
-    
+
     let mut storage = StorageMap::new();
-    
+
     // Check if token already exists
     let prefix_owner = ByteString::from_bytes(&[PREFIX_OWNER]);
     let token_key = prefix_owner.concat(&token_id);
     if !storage.get(token_key.clone()).is_null() {
         return false; // Token already exists
     }
-    
+
     // 1. Set token owner
     storage.put(token_key, ByteString::from_bytes(&owner.to_bytes()));
-    
+
     // 2. Add to owner's tokens
     let prefix_token = ByteString::from_bytes(&[PREFIX_TOKEN]);
     let owner_key = prefix_token.concat(&ByteString::from_bytes(&owner.to_bytes()));
     let owner_tokens = storage.get(owner_key.clone());
-    
+
     let mut tokens_array = if owner_tokens.is_null() {
         Array::<ByteString>::new()
     } else {
         deserialize_tokens(owner_tokens.unwrap())
     };
-    
+
     tokens_array.push(token_id.clone());
     storage.put(owner_key, serialize_tokens(tokens_array));
-    
+
     // 3. Store token properties
     if !properties.is_empty() {
         let prefix_properties = ByteString::from_bytes(&[PREFIX_PROPERTIES]);
         let properties_key = prefix_properties.concat(&token_id);
         storage.put(properties_key, serialize_properties(properties));
     }
-    
+
     // 4. Update total supply
     let total_supply_key = ByteString::from_bytes(&[TOTAL_SUPPLY_KEY]);
     let current_supply = NonDivisibleNFT::total_supply();
     let new_supply = current_supply.checked_add(&Int256::from_i32(1));
     storage.put(total_supply_key, new_supply.into_byte_string());
-    
+
     // 5. Emit transfer event (from zero address for minting)
     emit_transfer_event(H160::zero(), owner, token_id, ByteString::empty());
-    
+
     true
 }
 
-// Burn a token
-fn burn(token_id: ByteString) -> bool {
+#[method]
+pub fn burn(&self, token_id: ByteString) -> bool {
     // Get token owner
     let owner = NonDivisibleNFT::owner_of(token_id.clone());
     if owner == H160::zero() {
         return false; // Token doesn't exist
     }
-    
+
     // Check authorization
-    if !runtime::check_witness(owner) {
+    if !Runtime::check_witness(owner) {
         return false; // Not authorized
     }
-    
+
     let mut storage = StorageMap::new();
-    
+
     // 1. Remove token ownership
     let prefix_owner = ByteString::from_bytes(&[PREFIX_OWNER]);
     let token_key = prefix_owner.concat(&token_id);
     storage.delete(token_key);
-    
+
     // 2. Remove from owner's tokens
     let prefix_token = ByteString::from_bytes(&[PREFIX_TOKEN]);
     let owner_key = prefix_token.concat(&ByteString::from_bytes(&owner.to_bytes()));
     let owner_tokens = storage.get(owner_key.clone());
-    
+
     if !owner_tokens.is_null() {
         let mut tokens_array = deserialize_tokens(owner_tokens.unwrap());
         // Remove token from array
         // ...
         storage.put(owner_key, serialize_tokens(tokens_array));
     }
-    
+
     // 3. Remove token properties
     let prefix_properties = ByteString::from_bytes(&[PREFIX_PROPERTIES]);
     let properties_key = prefix_properties.concat(&token_id);
     storage.delete(properties_key);
-    
+
     // 4. Update total supply
     let total_supply_key = ByteString::from_bytes(&[TOTAL_SUPPLY_KEY]);
     let current_supply = NonDivisibleNFT::total_supply();
     let new_supply = current_supply.checked_sub(&Int256::from_i32(1));
     storage.put(total_supply_key, new_supply.into_byte_string());
-    
+
     // 5. Emit transfer event (to zero address for burning)
     emit_transfer_event(owner, H160::zero(), token_id, ByteString::empty());
-    
+
     true
 }
 ```
@@ -415,17 +602,17 @@ For divisible NFTs, a few key changes are needed:
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_symbol() {
         assert_eq!(NonDivisibleNFT::symbol().to_bytes(), b"NDNFT");
     }
-    
+
     #[test]
     fn test_decimals() {
         assert_eq!(NonDivisibleNFT::decimals(), 0);
     }
-    
+
     // More tests for other functions...
 }
 ```
@@ -466,7 +653,9 @@ Consider implementing standardized metadata with properties like:
 Implement royalty payments for creators:
 
 ```rust
-fn royalty_info(token_id: ByteString) -> Map<H160, Int256> {
+#[method]
+#[safe]
+pub fn royalty_info(&self, token_id: ByteString) -> Map<H160, Int256> {
     // Return map of beneficiary addresses to percentage (basis points)
 }
 ```
@@ -476,11 +665,13 @@ fn royalty_info(token_id: ByteString) -> Map<H160, Int256> {
 Implement token URI for off-chain metadata:
 
 ```rust
-fn token_uri(token_id: ByteString) -> ByteString {
+#[method]
+#[safe]
+pub fn token_uri(&self, token_id: ByteString) -> ByteString {
     // Return URI pointing to off-chain metadata
 }
 ```
 
 ## Conclusion
 
-Implementing the NEP-11 standard in Rust with neo-contract-rs provides a powerful way to create NFTs on the Neo blockchain. This guide covered the basic implementation details, but you can extend it with additional features to suit your specific use case. 
+Implementing the NEP-11 standard in Rust with neo-contract-rs provides a powerful way to create NFTs on the Neo blockchain. This guide covered the basic implementation details, but you can extend it with additional features to suit your specific use case.

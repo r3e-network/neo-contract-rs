@@ -1,43 +1,69 @@
-# NEO Contract Manifest Generation
+# Neo N3 Contract Manifest Generation
 
-This document describes how the manifest generation works in the neo-contract-rs framework.
+This document describes how manifest generation works in the **Neo N3 Rust Smart Contract Framework** using the neo-wasm compiler.
 
 ## Overview
 
-The NEO blockchain requires each smart contract to have an accompanying manifest file that defines the contract's metadata, permissions, and interface. This manifest is crucial for the NEO virtual machine to properly interact with the contract.
+Neo N3 smart contracts require a **manifest file** that defines the contract's metadata, permissions, and Application Binary Interface (ABI). This manifest is essential for the Neo VM to properly interact with the contract and for external applications to understand the contract's interface.
 
-In neo-contract-rs, we automatically generate this manifest from:
-1. The compiled WebAssembly (WASM) contract file
-2. The Rust source code that defines the contract
-3. The doc comments in the Rust code
+The framework **automatically generates** manifests using the **neo-wasm compiler** from:
+1. **Compiled WASM file** - Contract bytecode analysis
+2. **Rust source code** - Method signatures and documentation
+3. **Contract attributes** - Metadata and permissions
 
-## Manifest Generation Process
+## Build System Integration
 
-### 1. Internal Manifest Creation
+### Automatic Generation with Makefiles
 
-First, an internal manifest is created during the compilation process by analyzing the WASM module:
+Every example includes manifest generation in the build process:
 
-- Exported functions are identified
-- Parameter and return types are extracted
-- Function names are processed
+```bash
+# Generate manifest using neo-wasm compiler
+make manifest
 
-### 2. Rust Source Analysis
+# Or build everything (WASM → NEF + Manifest)
+make
+```
 
-To enhance the manifest with human-readable documentation:
+### Neo-WASM Compiler Commands
 
-- The system locates the Rust source file associated with the contract
-- Documentation comments are extracted for contract methods
-- The contract's overall description is identified
-- Safety annotations (`@safe`) are detected
+The manifest generation uses these neo-wasm commands:
 
-### 3. NEO Manifest Transformation
+```bash
+# Generate manifest with source code integration
+neo-wasm translate --input contract.wasm --manifest contract.manifest.json --source-code src/lib.rs
 
-The internal manifest is then transformed into the standard NEO manifest format:
+# Generate manifest from WASM only
+neo-wasm translate --input contract.wasm --manifest contract.manifest.json
+```
 
-- Methods are converted with appropriate parameter and return types
-- Method safety (read-only status) is determined based on `@safe` annotations and naming conventions
-- Standard detection identifies if the contract implements NEP-17 (fungible token) or NEP-11 (non-fungible token) standards
-- Documentation is added to the manifest's "Extra" field
+## Generation Process
+
+### 1. WASM Analysis
+
+The neo-wasm compiler analyzes the compiled WASM file to extract:
+
+- **Exported functions** - Public contract methods
+- **Function signatures** - Parameter types and return types
+- **Method offsets** - Bytecode positions for each method
+
+### 2. Source Code Integration
+
+When source code is provided, the compiler enhances the manifest with:
+
+- **Method documentation** - From Rust doc comments
+- **Parameter names** - From function signatures
+- **Contract metadata** - From contract attributes
+- **Safety annotations** - Read-only method detection
+
+### 3. Manifest Structure Creation
+
+The compiler generates a complete Neo N3 manifest with:
+
+- **ABI definition** - Methods, parameters, return types
+- **Contract metadata** - Name, author, version, description
+- **Permissions** - Contract call permissions
+- **Standards detection** - NEP-17, NEP-11 compliance
 
 ## Documentation Extraction
 
@@ -62,7 +88,7 @@ Example of a safe method with annotation:
 
 ```rust
 /// Returns the token symbol
-/// 
+///
 /// @safe
 pub fn symbol() -> String {
     "TOKEN".to_string()
@@ -107,9 +133,99 @@ For optimal manifest generation:
 5. Review the generated manifest file before deployment
 6. Follow the [Code Documentation Style Guide](code-documentation-style.md) for consistent documentation
 
+## Example Generated Manifest
+
+Here's an example of a generated manifest for a NEP-17 token:
+
+```json
+{
+  "name": "04-nep17-token",
+  "groups": [],
+  "features": {},
+  "supportedstandards": ["NEP-17"],
+  "abi": {
+    "methods": [
+      {
+        "name": "symbol",
+        "parameters": [],
+        "returntype": "String",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "decimals",
+        "parameters": [],
+        "returntype": "Integer",
+        "offset": 10,
+        "safe": true
+      },
+      {
+        "name": "transfer",
+        "parameters": [
+          {"name": "from", "type": "Hash160"},
+          {"name": "to", "type": "Hash160"},
+          {"name": "amount", "type": "Integer"},
+          {"name": "data", "type": "Any"}
+        ],
+        "returntype": "Boolean",
+        "offset": 20,
+        "safe": false
+      }
+    ],
+    "events": [
+      {
+        "name": "Transfer",
+        "parameters": [
+          {"name": "from", "type": "Hash160"},
+          {"name": "to", "type": "Hash160"},
+          {"name": "amount", "type": "Integer"}
+        ]
+      }
+    ]
+  },
+  "permissions": [
+    {"contract": "*", "methods": "*"}
+  ],
+  "trusts": [],
+  "extra": {
+    "Author": "Neo N3 Rust Framework",
+    "Description": "NEP-17 fungible token implementation",
+    "Version": "1.0.0"
+  }
+}
+```
+
+## Best Practices
+
+For optimal manifest generation:
+
+1. **Use Contract Attributes** - Add metadata using `#[contract_author]`, `#[contract_version]`, etc.
+2. **Document Methods** - Add comprehensive doc comments to all public methods
+3. **Mark Safe Methods** - Use `#[safe]` attribute for read-only methods
+4. **Follow Naming Conventions** - Use standard method names for token contracts
+5. **Review Generated Manifest** - Always check the generated manifest before deployment
+
+## Troubleshooting
+
+### Common Issues
+
+**Manifest generation fails:**
+- Ensure WASM file exists and is valid
+- Check that neo-wasm compiler is available
+- Verify source file path is correct
+
+**Missing method documentation:**
+- Add doc comments to Rust methods
+- Use `--source-code` parameter with neo-wasm
+- Check that source file is accessible
+
+**Incorrect method safety:**
+- Use `#[safe]` attribute for read-only methods
+- Follow naming conventions (get_, query_, etc.)
+- Review generated ABI for accuracy
+
 ## Related Documentation
 
-- [Documentation Best Practices](documentation-best-practices.md)
-- [Understanding NEO Manifests](understanding-neo-manifests.md)
-- [Code Documentation Style](code-documentation-style.md)
-- [Efficient Smart Contracts](efficient-contracts.md)
+- **[Understanding Neo Manifests](understanding-neo-manifests.md)** - Manifest structure details
+- **[Contract Attributes](contract-attributes.md)** - Metadata and permission attributes
+- **[Code Documentation Style](code-documentation-style.md)** - Documentation standards

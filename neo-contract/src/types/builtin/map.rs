@@ -42,8 +42,11 @@ impl<K: Primitive + IntoPlaceholder, V: IntoPlaceholder + FromPlaceholder> Map<K
     }
 
     #[inline(always)]
-    pub fn get(&self, key: &K) -> Option<V> {
-        let placeholder = unsafe { env::asm::map_get(self.value, key.into_placeholder()) };
+    pub fn get(&self, key: &K) -> Option<V>
+    where
+        K: Clone,
+    {
+        let placeholder = unsafe { env::asm::map_get(self.value, key.clone().into_placeholder()) };
         if placeholder.is_null() {
             None
         } else {

@@ -10,8 +10,10 @@ pub mod int256;
 pub mod interop;
 pub mod map;
 pub mod nullable;
+pub mod primitive;
 pub mod string;
 pub mod structs;
+pub mod bytes;
 
 pub use {any::*, array::*, buffer::*, interop::*, map::*};
 pub use {h160::*, h256::*, int256::*, nullable::*, string::*};
@@ -41,8 +43,8 @@ impl<T> inner::Sealed for Array<T> {}
 impl Builtin for Buffer {}
 impl inner::Sealed for Buffer {}
 
-impl<K: Primitive, V> Builtin for Map<K, V> {}
-impl<K: Primitive, V> inner::Sealed for Map<K, V> {}
+impl<K: Primitive + primitive::Primitive + std::hash::Hash + Eq, V> Builtin for Map<K, V> {}
+impl<K: Primitive + primitive::Primitive + std::hash::Hash + Eq, V> inner::Sealed for Map<K, V> {}
 
 pub(crate) mod inner {
     pub trait Sealed {}

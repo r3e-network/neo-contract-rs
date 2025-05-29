@@ -9,6 +9,7 @@ use crate::{
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
+#[derive(Debug, Default)]
 pub struct H256([u8; 32]);
 
 #[cfg(target_family = "wasm")]
@@ -50,6 +51,19 @@ impl H256 {
         buf.reverse();
         H256(buf)
     }
+
+    #[cfg(not(target_family = "wasm"))]
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        let mut buf = [0u8; 32];
+        let len = core::cmp::min(bytes.len(), 32);
+        buf[..len].copy_from_slice(&bytes[..len]);
+        H256(buf)
+    }
 }
 
 impl PartialEq for H256 {
@@ -74,6 +88,20 @@ impl Clone for H256 {
 
 impl Eq for H256 {}
 impl Copy for H256 {}
+
+#[cfg(target_family = "wasm")]
+impl core::fmt::Debug for H256 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "H256(placeholder)")
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl Default for H256 {
+    fn default() -> Self {
+        Self(Placeholder::new(0))
+    }
+}
 
 #[cfg(target_family = "wasm")]
 crate::impl_placeholder!(H256);

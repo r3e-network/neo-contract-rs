@@ -13,3 +13,4 @@ neo-contract-proc-macros = { path = "../neo-contract-proc-macros" }
 num256     = { version = "0.6" }
 num-traits = { version = "0.2" }
 hex        = { version = "0.4" }
+lazy_static = { version = "1.4" }

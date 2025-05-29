@@ -8,3 +8,6 @@ pub(crate) mod extension;
 pub(crate) mod numeric;
 pub(crate) mod stdlib;
 pub(crate) mod syscall;
+
+// native module defines all native contract calls
+pub mod native;

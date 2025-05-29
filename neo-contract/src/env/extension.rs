@@ -48,4 +48,7 @@ extern "C" {
 
     /// `int256_from_byte_string` converts a `ByteString` to a `Int256`.
     pub(crate) fn int256_from_byte_string(src: ByteString) -> Int256;
+
+    /// `int256_from_i64` converts an `i64` to a `Int256`.
+    pub(crate) fn int256_from_i64(src: i64) -> Int256;
 }

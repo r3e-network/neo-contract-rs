@@ -16,3 +16,20 @@ pub struct Block {
     next_consensus: H160,
     tx_count: u32,
 }
+
+impl Default for Block {
+    fn default() -> Self {
+        Self {
+            hash: H256::zero(),
+            version: 0,
+            prev_hash: H256::zero(),
+            merkle_root: H256::zero(),
+            timestamp: 0,
+            nonce: 0,
+            index: 0,
+            primary_index: 0,
+            next_consensus: H160::zero(),
+            tx_count: 0,
+        }
+    }
+}

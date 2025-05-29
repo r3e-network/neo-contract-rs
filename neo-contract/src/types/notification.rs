@@ -21,9 +21,8 @@ impl Notification {
         self.script_hash
     }
 
-    // TODO: implement state
-    // #[inline(always)]
-    // pub fn state(&self) -> Array<Any> {
-    //     self.state
-    // }
+    #[inline(always)]
+    pub fn state(&self) -> &Array<Any> {
+        &self.state
+    }
 }

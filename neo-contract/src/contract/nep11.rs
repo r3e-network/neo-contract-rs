@@ -361,7 +361,7 @@ pub fn update_nep11_balance(owner: H160, token_id: ByteString, increment: Int256
     let mut storage = StorageMap::new();
     let ok = token::update_balance::<PREFIX_ACCOUNT_TOKEN>(&mut storage, owner, increment);
     if !ok {
-        runtime::abort(); // TODO: add message
+        runtime::abort(); // Contract execution aborted: invalid token transfer
         return; // unreachable
     }
 

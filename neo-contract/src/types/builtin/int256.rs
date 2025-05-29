@@ -9,6 +9,7 @@ use crate::{
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
+#[derive(Debug, PartialOrd, Ord)]
 pub struct Int256(num256::Int256);
 
 #[cfg(target_family = "wasm")]
@@ -21,6 +22,11 @@ impl Int256 {
 
 #[cfg(target_family = "wasm")]
 impl Int256 {
+    #[inline(always)]
+    pub fn new(n: i64) -> Self {
+        unsafe { env::extension::int256_from_i64(n) }
+    }
+
     #[inline(always)]
     pub fn zero() -> Self {
         unsafe { env::numeric::int256_zero() }
@@ -162,7 +168,7 @@ impl Int256 {
 
 #[cfg(not(target_family = "wasm"))]
 impl Int256 {
-    pub(crate) fn new(n: i64) -> Self {
+    pub fn new(n: i64) -> Self {
         Int256(num256::Int256::from(n))
     }
 
@@ -301,6 +307,14 @@ impl Int256 {
         let unsigned = num256::Uint256::from_le_bytes(&self.0.to_le_bytes());
         Self(num256::Int256::from_le_bytes(&(unsigned << shift.into()).to_le_bytes()))
     }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_le_bytes().to_vec()
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        Self(num256::Int256::from_le_bytes(bytes))
+    }
 }
 
 impl Default for Int256 {
@@ -332,6 +346,29 @@ impl Clone for Int256 {
 
 impl Eq for Int256 {}
 impl Copy for Int256 {}
+
+#[cfg(target_family = "wasm")]
+impl core::fmt::Debug for Int256 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Int256(placeholder)")
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl PartialOrd for Int256 {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl Ord for Int256 {
+    fn cmp(&self, _other: &Self) -> core::cmp::Ordering {
+        // For WASM target, we can't actually compare placeholders
+        // This is a placeholder implementation
+        core::cmp::Ordering::Equal
+    }
+}
 
 #[cfg(target_family = "wasm")]
 crate::impl_placeholder!(Int256);

@@ -4,7 +4,15 @@
 #![allow(unused)]
 
 #[cfg(target_family = "wasm")]
-use crate::types::{placeholder::*, *};
+use crate::types::{
+    placeholder::Placeholder,
+    builtin::{string::ByteString, h160::H160, h256::H256, int256::Int256, array::Array, any::Any},
+    Block, Contract, PublicKey, Signer, Tx, VmState, Role,
+    consts::TxAttrType,
+};
+
+#[cfg(target_family = "wasm")]
+use crate::types::contract::{NeoCandidate, NeoAccountState};
 
 #[link(wasm_import_module = "neo.contract")]
 #[allow(improper_ctypes)]
@@ -52,13 +60,15 @@ extern "C" {
 
     pub(crate) fn native_neo_get_candidates() -> Array<NeoCandidate>;
 
-    // pub(crate) fn native_neo_get_all_candidates() -> Placeholder;
-
     pub(crate) fn native_neo_get_committee() -> Array<PublicKey>;
 
-    pub(crate) fn native_neo_get_committee_address() -> H160;
-
     pub(crate) fn native_neo_get_next_block_validators() -> Array<PublicKey>;
+
+    pub(crate) fn native_neo_get_account_state(account: H160) -> NeoAccountState;
+
+    // pub(crate) fn native_neo_get_all_candidates() -> Placeholder;
+
+    pub(crate) fn native_neo_get_committee_address() -> H160;
 
     pub(crate) fn native_ledger_contract_hash() -> H160;
 

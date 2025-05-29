@@ -4,7 +4,12 @@
 #![allow(unused)]
 
 #[cfg(target_family = "wasm")]
-use crate::types::{placeholder::*, *};
+use crate::types::{
+    builtin::{string::ByteString, h160::H160, h256::H256},
+    key::PublicKey,
+    consts::NamedCurveHash,
+    placeholder::Placeholder,
+};
 
 #[link(wasm_import_module = "neo.crypto")]
 #[allow(improper_ctypes)]

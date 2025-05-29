@@ -4,7 +4,17 @@
 use crate::contract::{PREFIX_BALANCE, TOTAL_SUPPLY_KEY};
 
 #[allow(unused_imports)]
-use crate::{env, storage::StorageMap, types::*};
+use crate::{
+    env,
+    storage::StorageMap,
+    types::{
+        builtin::{
+            h160::H160,
+            int256::Int256,
+            string::{ByteString, IntoByteString, FromByteString},
+        },
+    },
+};
 
 pub(crate) fn total_supply() -> Int256 {
     #[cfg(target_family = "wasm")]

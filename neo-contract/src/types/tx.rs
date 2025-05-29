@@ -4,6 +4,7 @@
 use crate::types::*;
 
 #[repr(C)]
+#[derive(Default)]
 pub struct Tx {
     hash: H256,
     version: u32,
@@ -52,9 +53,9 @@ impl Tx {
         self.valid_until_block
     }
 
-    /// TODO: reference issue in wasm-to-neo
+    /// Returns a clone of the script to avoid reference issues in wasm-to-neo compilation
     #[inline(always)]
-    pub fn script(&self) -> &ByteString {
-        &self.script
+    pub fn script(&self) -> ByteString {
+        self.script.clone()
     }
 }

@@ -21,6 +21,41 @@ impl ByteString {
         unsafe { env::asm::string_empty() }
     }
 
+    /// Creates a ByteString from a byte slice (WASM version)
+    /// Note: For WASM target, this creates from literal for now
+    /// In a full implementation, this would use proper byte conversion
+    #[inline(always)]
+    pub fn from_bytes(_bytes: &[u8]) -> Self {
+        // For WASM target, we'll need to implement this properly
+        // For now, return empty string as placeholder
+        Self::empty()
+    }
+
+    /// Returns the underlying bytes as a vector (WASM version)
+    /// Note: For WASM target, this is a placeholder implementation
+    /// In a full implementation, this would extract actual bytes
+    #[inline(always)]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        // For WASM target, we'll need to implement this properly
+        // For now, return empty vector as placeholder
+        vec![]
+    }
+
+    /// Returns the underlying bytes as a slice (WASM version)
+    /// Note: For WASM target, this is a placeholder implementation
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8] {
+        // For WASM target, we'll need to implement this properly
+        // For now, return empty slice as placeholder
+        &[]
+    }
+
+    /// Creates a ByteString from a byte slice (WASM version)
+    #[inline(always)]
+    pub fn from_slice(bytes: &[u8]) -> Self {
+        Self::from_bytes(bytes)
+    }
+
     #[inline(always)]
     pub fn len(&self) -> usize {
         unsafe { env::asm::string_len(Self(self.0)) }
@@ -50,6 +85,12 @@ impl ByteString {
     pub fn from_literal(literal: &str) -> Self {
         unsafe { env::asm::string_from_literal(literal) }
     }
+
+    /// Extend this ByteString with another ByteString (WASM version)
+    #[inline(always)]
+    pub fn extend(&mut self, other: ByteString) {
+        *self = self.concat(&other);
+    }
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -66,8 +107,23 @@ impl ByteString {
         Self(bytes.to_vec())
     }
 
+    /// Creates a ByteString from a byte slice
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        Self(bytes.to_vec())
+    }
+
+    /// Creates a ByteString from a byte slice (alias for from_bytes)
+    pub fn from_slice(bytes: &[u8]) -> Self {
+        Self::from_bytes(bytes)
+    }
+
     pub(crate) fn as_bytes(&self) -> &[u8] {
         &self.0
+    }
+
+    /// Returns the underlying bytes as a vector
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.0.clone()
     }
 
     pub fn len(&self) -> usize {
@@ -132,6 +188,13 @@ impl Clone for ByteString {
 }
 
 #[cfg(target_family = "wasm")]
+impl core::fmt::Debug for ByteString {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "ByteString(placeholder)")
+    }
+}
+
+#[cfg(target_family = "wasm")]
 impl PartialOrd for ByteString {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -163,13 +226,18 @@ impl Ord for ByteString {
 }
 
 #[cfg(target_family = "wasm")]
-crate::impl_placeholder!(ByteString);
-
-#[cfg(target_family = "wasm")]
 impl FromPlaceholder for ByteString {
     #[inline(always)]
     fn from_placeholder(placeholder: Placeholder) -> Self {
         Self(placeholder)
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl IntoPlaceholder for ByteString {
+    #[inline(always)]
+    fn into_placeholder(self) -> Placeholder {
+        self.0
     }
 }
 

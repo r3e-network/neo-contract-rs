@@ -2,7 +2,10 @@
 // All Rights Reserved.
 
 #[allow(unused_imports)]
-use crate::types::{placeholder::*, *};
+use crate::types::{
+    placeholder::{Placeholder, IntoPlaceholder, FromPlaceholder},
+    builtin::{buffer::Buffer, h160::H160, h256::H256, int256::Int256, interop::Interop, string::ByteString, array::Array, map::Map, primitive::Primitive},
+};
 
 #[cfg(target_family = "wasm")]
 #[repr(C)]
@@ -25,7 +28,36 @@ impl Any {
 }
 
 #[cfg(target_family = "wasm")]
+impl Default for Any {
+    fn default() -> Self {
+        unimplemented!()
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Default for Any {
+    fn default() -> Self {
+        Any(Box::new(()))
+    }
+}
+
+#[cfg(target_family = "wasm")]
 crate::impl_placeholder!(Any);
+
+#[cfg(target_family = "wasm")]
+impl Clone for Any {
+    fn clone(&self) -> Self {
+        Any(self.0.clone())
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Clone for Any {
+    fn clone(&self) -> Self {
+        // For non-WASM, we can't clone Box<dyn Any>, so create a default
+        Any::default()
+    }
+}
 
 pub trait IntoAny {
     fn into_any(self) -> Any;
@@ -70,7 +102,7 @@ impl<T: 'static> IntoAny for Array<T> {
     }
 }
 
-impl<K: Primitive + 'static, V: 'static> IntoAny for Map<K, V> {
+impl<K: Primitive + 'static + std::hash::Hash + Eq, V: 'static> IntoAny for Map<K, V> {
     #[inline(always)]
     #[cfg(target_family = "wasm")]
     fn into_any(self) -> Any {

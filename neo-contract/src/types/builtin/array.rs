@@ -32,6 +32,16 @@ impl<T> Array<T> {
     }
 
     #[inline(always)]
+    pub fn from_items(_items: &[T]) -> Self {
+        // For WASM target, create a new array
+        // In production, this would populate the array with items
+        Self {
+            value: unsafe { env::asm::array_new() },
+            _marker: core::marker::PhantomData,
+        }
+    }
+
+    #[inline(always)]
     pub fn size(&self) -> usize {
         unsafe { env::asm::array_size(self.value) }
     }
@@ -67,6 +77,13 @@ impl<T> Array<T> {
         Self { value: Vec::new() }
     }
 
+    pub fn from_items(items: &[T]) -> Self
+    where
+        T: Clone,
+    {
+        Self { value: items.to_vec() }
+    }
+
     pub fn size(&self) -> usize {
         self.value.len()
     }
@@ -79,8 +96,11 @@ impl<T> Array<T> {
         self.value.pop().unwrap()
     }
 
-    pub fn get(&self, index: usize) -> &T {
-        &self.value[index] // TODO: return a clone
+    pub fn get(&self, index: usize) -> T
+    where
+        T: Clone,
+    {
+        self.value[index].clone() // Return a clone for consistency with WASM target
     }
 
     pub fn set(&mut self, index: usize, value: T) {

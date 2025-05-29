@@ -31,26 +31,49 @@ fn expand_impl_item(item: &syn::ItemImpl) -> TokenStream {
             syn::ImplItem::Fn(method) => Some(method),
             _ => None,
         })
+        .filter(|method| {
+            // Only process methods marked with #[method] attribute
+            has_method_attribute(method)
+        })
         .map(|method| {
             let name = &method.sig.ident;
-            let args = &method.sig.inputs;
             let returns = &method.sig.output;
-            
+
             // Check if the method has a #[safe] attribute
             let is_safe = has_safe_attribute(method);
-            
+
             // If the method is marked as safe, add a comment that can be parsed by the WASM to NEF converter
             let safe_comment = if is_safe {
                 quote::quote! { /* @safe */ }
             } else {
                 quote::quote! {}
             };
-            
+
+            // Extract parameters excluding &self
+            let params: Vec<_> = method.sig.inputs
+                .iter()
+                .filter_map(|arg| match arg {
+                    syn::FnArg::Typed(pat_type) => Some(pat_type),
+                    syn::FnArg::Receiver(_) => None, // Skip &self
+                })
+                .collect();
+
+            // Create parameter list for function signature
+            let param_list = params.iter().map(|p| {
+                let pat = &p.pat;
+                let ty = &p.ty;
+                quote::quote! { #pat: #ty }
+            });
+
+            // Create argument list for method call (just parameter names)
+            let arg_list = params.iter().map(|p| &p.pat);
+
             quote::quote! {
                 #[no_mangle]
                 #safe_comment
-                pub fn #name(#args) #returns {
-                    #self_type::#name(#args)
+                pub fn #name(#(#param_list),*) #returns {
+                    let contract = #self_type::init();
+                    contract.#name(#(#arg_list),*)
                 }
             }
         })
@@ -68,6 +91,17 @@ fn expand_impl_item(item: &syn::ItemImpl) -> TokenStream {
     }
 
     methods
+}
+
+// Check if the method has a #[method] attribute
+fn has_method_attribute(method: &syn::ImplItemFn) -> bool {
+    method.attrs.iter().any(|attr| {
+        if let Some(ident) = attr.path().get_ident() {
+            ident.to_string() == "method"
+        } else {
+            false
+        }
+    })
 }
 
 // Check if the method has a #[safe] attribute

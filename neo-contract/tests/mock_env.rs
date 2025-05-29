@@ -52,112 +52,112 @@ impl MockNeoEnvironment {
             entry_script_hash: H160::zero(),
         }
     }
-    
+
     /// Create a new mock environment with a specific executing script hash
     pub fn with_executing_script_hash(mut self, script_hash: H160) -> Self {
         self.executing_script_hash = script_hash;
         self
     }
-    
+
     /// Create a new mock environment with a specific calling script hash
     pub fn with_calling_script_hash(mut self, script_hash: H160) -> Self {
         self.calling_script_hash = script_hash;
         self
     }
-    
+
     /// Create a new mock environment with a specific entry script hash
     pub fn with_entry_script_hash(mut self, script_hash: H160) -> Self {
         self.entry_script_hash = script_hash;
         self
     }
-    
+
     /// Get the executing script hash
     pub fn executing_script_hash(&self) -> H160 {
         self.executing_script_hash.clone()
     }
-    
+
     /// Get the calling script hash
     pub fn calling_script_hash(&self) -> H160 {
         self.calling_script_hash.clone()
     }
-    
+
     /// Get the entry script hash
     pub fn entry_script_hash(&self) -> H160 {
         self.entry_script_hash.clone()
     }
-    
+
     // Storage operations
-    
+
     /// Put a value in storage
     pub fn storage_put(&mut self, key: &[u8], value: &[u8]) {
         self.storage.insert(key.to_vec(), value.to_vec());
     }
-    
+
     /// Get a value from storage
     pub fn storage_get(&self, key: &[u8]) -> Option<Vec<u8>> {
         self.storage.get(key).cloned()
     }
-    
+
     /// Delete a value from storage
     pub fn storage_delete(&mut self, key: &[u8]) {
         self.storage.remove(key);
     }
-    
+
     /// Check if a key exists in storage
     pub fn storage_contains(&self, key: &[u8]) -> bool {
         self.storage.contains_key(key)
     }
-    
+
     // Witness operations
-    
+
     /// Add a witness account
     pub fn add_witness(&mut self, account: H160) {
         if !self.witnesses.contains(&account) {
             self.witnesses.push(account);
         }
     }
-    
+
     /// Check if an account is a witness
     pub fn has_witness(&self, account: H160) -> bool {
         self.witnesses.contains(&account)
     }
-    
+
     // Time operations
-    
+
     /// Set the current timestamp
     pub fn set_timestamp(&mut self, timestamp: u64) {
         self.timestamp = timestamp;
     }
-    
+
     /// Get the current timestamp
     pub fn get_timestamp(&self) -> u64 {
         self.timestamp
     }
-    
+
     // Gas operations
-    
+
     /// Set the remaining gas
     pub fn set_gas_left(&mut self, gas: u64) {
         self.gas_left = gas;
     }
-    
+
     /// Get the remaining gas
     pub fn get_gas_left(&self) -> u64 {
         self.gas_left
     }
-    
+
     // Notification operations
-    
+
     /// Add a notification
     pub fn add_notification(&mut self, name: ByteString, data: Any) {
         self.notifications.push(Notification { name, data });
     }
-    
+
     /// Get all notifications
     pub fn get_notifications(&self) -> &[Notification] {
         &self.notifications
     }
-    
+
     /// Clear all notifications
     pub fn clear_notifications(&mut self) {
         self.notifications.clear();
@@ -175,37 +175,37 @@ pub trait WithMockEnv {
 // Mock implementation of runtime functions that use the mock environment
 pub mod runtime {
     use super::*;
-    
+
     /// Check if an account is a witness (authorized)
     pub fn check_witness_with_env(env: &MockNeoEnvironment, account: H160) -> bool {
         env.has_witness(account)
     }
-    
+
     /// Emit a notification event
     pub fn notify_with_env(env: &mut MockNeoEnvironment, name: ByteString, data: Any) {
         env.add_notification(name, data);
     }
-    
+
     /// Get the current timestamp
     pub fn get_timestamp_with_env(env: &MockNeoEnvironment) -> u64 {
         env.get_timestamp()
     }
-    
+
     /// Get the remaining gas
     pub fn gas_left_with_env(env: &MockNeoEnvironment) -> u64 {
         env.get_gas_left()
     }
-    
+
     /// Get the executing script hash
     pub fn executing_script_hash_with_env(env: &MockNeoEnvironment) -> H160 {
         env.executing_script_hash()
     }
-    
+
     /// Get the calling script hash
     pub fn calling_script_hash_with_env(env: &MockNeoEnvironment) -> H160 {
         env.calling_script_hash()
     }
-    
+
     /// Get the entry script hash
     pub fn entry_script_hash_with_env(env: &MockNeoEnvironment) -> H160 {
         env.entry_script_hash()
@@ -215,19 +215,18 @@ pub mod runtime {
 // Mock implementation of storage operations
 pub mod storage {
     use super::*;
-    use neo_contract::types::*;
-    
+
     /// A storage map that uses the mock environment
     pub struct MockStorageMap<'a> {
         env: &'a mut MockNeoEnvironment,
     }
-    
+
     impl<'a> MockStorageMap<'a> {
         /// Create a new storage map with the given environment
         pub fn new(env: &'a mut MockNeoEnvironment) -> Self {
             Self { env }
         }
-        
+
         /// Put a value in storage
         pub fn put(&mut self, key: ByteString, value: ByteString) {
             // Convert ByteString to Vec<u8> for storage
@@ -235,24 +234,24 @@ pub mod storage {
             let value_bytes = value.to_bytes().to_vec();
             self.env.storage_put(&key_bytes, &value_bytes);
         }
-        
+
         /// Get a value from storage
         pub fn get(&self, key: ByteString) -> Option<ByteString> {
             let key_bytes = key.to_bytes().to_vec();
             self.env.storage_get(&key_bytes)
                 .map(|bytes| ByteString::from_bytes(&bytes))
         }
-        
+
         /// Delete a value from storage
         pub fn delete(&mut self, key: ByteString) {
             let key_bytes = key.to_bytes().to_vec();
             self.env.storage_delete(&key_bytes);
         }
-        
+
         /// Check if a key exists in storage
         pub fn contains_key(&self, key: ByteString) -> bool {
             let key_bytes = key.to_bytes().to_vec();
             self.env.storage_contains(&key_bytes)
         }
     }
-} 
+}
