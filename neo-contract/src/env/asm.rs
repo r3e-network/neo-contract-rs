@@ -74,7 +74,10 @@ extern "C" {
     pub(crate) fn map_get(map: Placeholder, key: Placeholder) -> Placeholder;
 
     /// `map_remove` removes a key from the map.
-    pub(crate) fn map_remove(map: Placeholder, key: Placeholder);
+    pub(crate) fn map_remove(map: Placeholder, key: Placeholder) -> Placeholder;
+
+    /// `map_has_key` checks if the map contains the given key.
+    pub(crate) fn map_has_key(map: Placeholder, key: Placeholder) -> bool;
 
     /// `map_clear` clears the map, the map will be empty after this call.
     pub(crate) fn map_clear(map: Placeholder);

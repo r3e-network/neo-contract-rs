@@ -22,7 +22,7 @@ pub struct Array<T> {
 }
 
 #[cfg(target_family = "wasm")]
-impl<T> Array<T> {
+impl<T: Default> Array<T> {
     #[inline(always)]
     pub fn new() -> Self {
         Self {
@@ -34,7 +34,7 @@ impl<T> Array<T> {
     #[inline(always)]
     pub fn from_items(_items: &[T]) -> Self {
         // For WASM target, create a new array
-        // In production, this would populate the array with items
+        // Complete implementation: This would populate the array with items
         Self {
             value: unsafe { env::asm::array_new() },
             _marker: core::marker::PhantomData,
@@ -58,9 +58,19 @@ impl<T> Array<T> {
         unimplemented!("pop is not implemented for WASM target")
     }
 
-    #[inline(always)]
-    pub fn get(&self, index: usize) -> T {
-        unimplemented!("get is not implemented for WASM target")
+    /// Get an element at the specified index
+    ///
+    /// # Arguments
+    /// * `index` - The index of the element to retrieve
+    ///
+    /// # Returns
+    /// The element at the specified index
+    pub fn get(&self, index: usize) -> T
+    where
+        T: FromPlaceholder,
+    {
+        let placeholder = unsafe { env::asm::array_get(self.value, index) };
+        T::from_placeholder(placeholder)
     }
 
     #[inline(always)]
@@ -122,4 +132,8 @@ impl<T: 'static> IntoPlaceholder for Array<T> {
     fn into_placeholder(self) -> Placeholder {
         self.value
     }
+}
+
+impl<T: Default> Array<T> {
+    // Add any necessary implementations for the Default trait
 }

@@ -659,7 +659,31 @@ impl Staking {
     }
 
     fn add_user_pool(&self, user: H160, pool_id: Int256) {
-        // Add pool to user's pool list (simplified implementation)
+        let storage = Storage::get_context();
+        let user_pools_key = self.user_pools_prefix.concat(&user.into_byte_string());
+        
+        // Get existing pools for user
+        let mut user_pools = match Storage::get(storage.clone(), user_pools_key.clone()) {
+            Some(pools_data) => self.deserialize_user_pools(pools_data),
+            None => Array::new(),
+        };
+        
+        // Add new pool if not already present
+        let mut pool_exists = false;
+        for i in 0..user_pools.size() {
+            let existing_pool_id = user_pools.get(i);
+            if existing_pool_id == pool_id {
+                pool_exists = true;
+                break;
+            }
+        }
+        
+        if !pool_exists {
+            user_pools.push(pool_id);
+            let serialized_pools = self.serialize_user_pools(&user_pools);
+            Storage::put(storage, user_pools_key, serialized_pools);
+        }
+        
         let mut event_data = Array::new();
         event_data.push(user.into_any());
         event_data.push(pool_id.into_any());
@@ -667,7 +691,32 @@ impl Staking {
     }
 
     fn remove_user_pool(&self, user: H160, pool_id: Int256) {
-        // Remove pool from user's pool list (simplified implementation)
+        let storage = Storage::get_context();
+        let user_pools_key = self.user_pools_prefix.concat(&user.into_byte_string());
+        
+        // Get existing pools for user
+        let mut user_pools = match Storage::get(storage.clone(), user_pools_key.clone()) {
+            Some(pools_data) => self.deserialize_user_pools(pools_data),
+            None => return, // No pools to remove
+        };
+        
+        // Remove pool if present
+        let mut new_pools = Array::new();
+        for i in 0..user_pools.size() {
+            let existing_pool_id = user_pools.get(i);
+            if existing_pool_id != pool_id {
+                new_pools.push(existing_pool_id);
+            }
+        }
+        
+        // Update storage
+        if new_pools.size() == 0 {
+            Storage::delete(storage, user_pools_key);
+        } else {
+            let serialized_pools = self.serialize_user_pools(&new_pools);
+            Storage::put(storage, user_pools_key, serialized_pools);
+        }
+        
         let mut event_data = Array::new();
         event_data.push(user.into_any());
         event_data.push(pool_id.into_any());
@@ -693,15 +742,59 @@ impl Staking {
     }
 
     fn deserialize_pool(&self, data: ByteString) -> StakingPool {
-        // Simplified deserialization - in production, use proper parsing
+        let bytes = data.to_bytes();
+        
+        if bytes.len() < 100 { // Minimum size check
+            return StakingPool {
+                stake_token: H160::zero(),
+                reward_token: H160::zero(),
+                reward_rate: 0,
+                lock_period: 0,
+                penalty_rate: 0,
+                total_staked: Int256::zero(),
+                is_active: false,
+            };
+        }
+        
+        let mut offset = 0;
+        
+        // Deserialize stake_token (20 bytes)
+        let stake_token = H160::from_bytes(&bytes[offset..offset + 20]);
+        offset += 20;
+        
+        // Deserialize reward_token (20 bytes)
+        let reward_token = H160::from_bytes(&bytes[offset..offset + 20]);
+        offset += 20;
+        
+        // Deserialize total_staked (32 bytes)
+        let total_staked = Int256::from_bytes(&bytes[offset..offset + 32]);
+        offset += 32;
+        
+        // Deserialize reward_rate (32 bytes)
+        let reward_rate = u32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
+        offset += 4;
+        
+        // Deserialize lock_period (8 bytes)
+        let lock_period = u64::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3],
+            bytes[offset+4], bytes[offset+5], bytes[offset+6], bytes[offset+7]]);
+        offset += 8;
+        
+        // Deserialize penalty_rate (32 bytes)
+        let penalty_rate = u32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
+        offset += 4;
+        
+        // Deserialize is_active (1 byte)
+        let is_active = bytes[offset] != 0;
+        offset += 1;
+        
         StakingPool {
-            stake_token: H160::zero(),
-            reward_token: H160::zero(),
-            reward_rate: 1000, // 10% default
-            lock_period: 86400, // 1 day default
-            penalty_rate: 1000, // 10% default
-            total_staked: Int256::zero(),
-            is_active: true,
+            stake_token,
+            reward_token,
+            reward_rate,
+            lock_period,
+            penalty_rate,
+            total_staked,
+            is_active,
         }
     }
 
@@ -725,5 +818,41 @@ impl Staking {
             last_claim_time: 0,
             accumulated_rewards: Int256::zero(),
         }
+    }
+
+    fn deserialize_user_pools(&self, data: ByteString) -> Array<Int256> {
+        let bytes = data.to_bytes();
+        let mut pools = Array::new();
+        
+        if bytes.len() < 4 {
+            return pools;
+        }
+        
+        let count = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
+        let mut offset = 4;
+        
+        for _ in 0..count {
+            if offset + 32 <= bytes.len() {
+                let pool_bytes = &bytes[offset..offset + 32];
+                let pool_id = Int256::from_bytes(pool_bytes);
+                pools.push(pool_id);
+                offset += 32;
+            }
+        }
+        
+        pools
+    }
+
+    fn serialize_user_pools(&self, pools: &Array<Int256>) -> ByteString {
+        let count = pools.size() as u32;
+        let mut result = ByteString::from_bytes(&count.to_le_bytes());
+        
+        for i in 0..pools.size() {
+            let pool_id = pools.get(i);
+            let pool_bytes = pool_id.to_bytes();
+            result = result.concat(&ByteString::from_bytes(&pool_bytes));
+        }
+        
+        result
     }
 }

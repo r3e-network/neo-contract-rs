@@ -102,7 +102,7 @@ impl<T: 'static> IntoAny for Array<T> {
     }
 }
 
-impl<K: Primitive + 'static + std::hash::Hash + Eq, V: 'static> IntoAny for Map<K, V> {
+impl<K: Primitive + 'static + std::hash::Hash + Eq + Clone, V: 'static + Clone> IntoAny for Map<K, V> {
     #[inline(always)]
     #[cfg(target_family = "wasm")]
     fn into_any(self) -> Any {

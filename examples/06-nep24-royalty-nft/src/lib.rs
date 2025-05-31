@@ -24,6 +24,158 @@ pub struct RoyaltyInfo {
     pub percentage: u32, // Basis points (100 = 1%)
 }
 
+impl RoyaltyInfo {
+    pub fn new(recipient: H160, percentage: u32) -> Self {
+        Self { recipient, percentage }
+    }
+
+    pub fn serialize(&self) -> ByteString {
+        let mut result = ByteString::empty();
+        result = result.concat(&self.recipient.into_byte_string());
+        result = result.concat(&ByteString::from_bytes(&self.percentage.to_le_bytes()));
+        result
+    }
+
+    pub fn deserialize(data: &[u8]) -> Option<Self> {
+        if data.len() < 24 { // 20 bytes for H160 + 4 bytes for u32
+            return None;
+        }
+        
+        let recipient = H160::from_bytes(&data[0..20]);
+        let percentage = u32::from_le_bytes([data[20], data[21], data[22], data[23]]);
+        
+        Some(Self { recipient, percentage })
+    }
+}
+
+/// Token metadata structure
+#[derive(Clone)]
+pub struct TokenMetadata {
+    pub name: ByteString,
+    pub description: ByteString,
+    pub image: ByteString,
+    pub attributes: Map<ByteString, ByteString>,
+}
+
+impl TokenMetadata {
+    pub fn new(name: ByteString, description: ByteString, image: ByteString) -> Self {
+        Self {
+            name,
+            description,
+            image,
+            attributes: Map::new(),
+        }
+    }
+
+    pub fn add_attribute(&mut self, key: ByteString, value: ByteString) {
+        self.attributes.put(key, value);
+    }
+
+    pub fn serialize(&self) -> ByteString {
+        let mut result = ByteString::empty();
+        
+        // Serialize name length and data
+        let name_len = self.name.len() as u32;
+        result = result.concat(&ByteString::from_bytes(&name_len.to_le_bytes()));
+        result = result.concat(&self.name);
+        
+        // Serialize description length and data
+        let desc_len = self.description.len() as u32;
+        result = result.concat(&ByteString::from_bytes(&desc_len.to_le_bytes()));
+        result = result.concat(&self.description);
+        
+        // Serialize image length and data
+        let image_len = self.image.len() as u32;
+        result = result.concat(&ByteString::from_bytes(&image_len.to_le_bytes()));
+        result = result.concat(&self.image);
+        
+        // Serialize attributes count
+        let attr_count = self.attributes.size() as u32;
+        result = result.concat(&ByteString::from_bytes(&attr_count.to_le_bytes()));
+        
+        // Serialize each attribute
+        let keys = self.attributes.keys();
+        for i in 0..keys.size() {
+            let key = keys.get(i);
+            if let Some(value) = self.attributes.get(&key) {
+                let key_len = key.len() as u32;
+                result = result.concat(&ByteString::from_bytes(&key_len.to_le_bytes()));
+                result = result.concat(&key);
+                
+                let value_len = value.len() as u32;
+                result = result.concat(&ByteString::from_bytes(&value_len.to_le_bytes()));
+                result = result.concat(&value);
+            }
+        }
+        
+        result
+    }
+
+    pub fn deserialize(data: &[u8]) -> Option<Self> {
+        if data.len() < 12 { // Minimum size for 3 length fields
+            return None;
+        }
+        
+        let mut offset = 0;
+        
+        // Deserialize name
+        let name_len = u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]) as usize;
+        offset += 4;
+        if offset + name_len > data.len() { return None; }
+        let name = ByteString::from_bytes(&data[offset..offset + name_len]);
+        offset += name_len;
+        
+        // Deserialize description
+        if offset + 4 > data.len() { return None; }
+        let desc_len = u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]) as usize;
+        offset += 4;
+        if offset + desc_len > data.len() { return None; }
+        let description = ByteString::from_bytes(&data[offset..offset + desc_len]);
+        offset += desc_len;
+        
+        // Deserialize image
+        if offset + 4 > data.len() { return None; }
+        let image_len = u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]) as usize;
+        offset += 4;
+        if offset + image_len > data.len() { return None; }
+        let image = ByteString::from_bytes(&data[offset..offset + image_len]);
+        offset += image_len;
+        
+        // Deserialize attributes
+        if offset + 4 > data.len() { return None; }
+        let attr_count = u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]);
+        offset += 4;
+        
+        let mut attributes = Map::new();
+        for _ in 0..attr_count {
+            // Deserialize key
+            if offset + 4 > data.len() { return None; }
+            let key_len = u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]) as usize;
+            offset += 4;
+            if offset + key_len > data.len() { return None; }
+            let key = ByteString::from_bytes(&data[offset..offset + key_len]);
+            offset += key_len;
+            
+            // Deserialize value
+            if offset + 4 > data.len() { return None; }
+            let value_len = u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]) as usize;
+            offset += 4;
+            if offset + value_len > data.len() { return None; }
+            let value = ByteString::from_bytes(&data[offset..offset + value_len]);
+            offset += value_len;
+            
+            attributes.put(key, value);
+        }
+        
+        Some(Self {
+            name,
+            description,
+            image,
+            attributes,
+        })
+    }
+}
+
 /// NEP-24 compliant NFT contract with royalty support
 #[contract_author("Neo Rust Framework", "dev@neo.org")]
 #[contract_version("1.0.0")]
@@ -32,7 +184,7 @@ pub struct RoyaltyInfo {
 #[contract_meta("description", "NFT contract with creator royalty support")]
 #[contract_meta("category", "NFT")]
 pub struct RoyaltyNft {
-    // NEP-11 storage (inherited from base NFT)
+    // NEP-11 storage
     symbol_key: ByteString,
     total_supply_key: ByteString,
     owner_prefix: ByteString,
@@ -42,19 +194,19 @@ pub struct RoyaltyNft {
     approved_prefix: ByteString,
 
     // NEP-24 royalty storage
-    royalty_prefix: ByteString,        // token_id -> royalty info
-    default_royalty_key: ByteString,   // default royalty for new tokens
-    royalty_registry_prefix: ByteString, // creator -> default royalty settings
+    royalty_prefix: ByteString,
+    default_royalty_key: ByteString,
+    royalty_registry_prefix: ByteString,
 
     // Administrative
     contract_owner_key: ByteString,
     minters_prefix: ByteString,
-    marketplace_prefix: ByteString,    // approved marketplaces
+    marketplace_prefix: ByteString,
 
     // Configuration
     paused_key: ByteString,
     base_uri_key: ByteString,
-    max_royalty_key: ByteString,       // maximum royalty percentage
+    max_royalty_key: ByteString,
 }
 
 #[contract_impl]
@@ -91,10 +243,6 @@ impl RoyaltyNft {
         default_royalty_percentage: u32
     ) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Check if already deployed
         if Storage::get(storage.clone(), self.contract_owner_key.clone()).is_some() {
@@ -123,7 +271,7 @@ impl RoyaltyNft {
         Storage::put(storage.clone(), self.symbol_key.clone(), symbol.clone());
         Storage::put(storage.clone(), self.contract_owner_key.clone(), owner.into_byte_string());
         Storage::put(storage.clone(), self.total_supply_key.clone(), Int256::zero().into_byte_string());
-        Storage::put(storage.clone(), self.max_royalty_key.clone(), ByteString::from_bytes(&2500u32.to_le_bytes())); // 25% max
+        Storage::put(storage.clone(), self.max_royalty_key.clone(), ByteString::from_bytes(&2500u32.to_le_bytes()));
 
         if !base_uri.is_empty() {
             Storage::put(storage.clone(), self.base_uri_key.clone(), base_uri);
@@ -131,16 +279,16 @@ impl RoyaltyNft {
 
         // Set default royalty
         if default_royalty_percentage > 0 {
+            let default_royalty = RoyaltyInfo::new(owner, default_royalty_percentage);
             let mut royalty_array = Array::new();
-            royalty_array.push(RoyaltyInfo {
-                recipient: owner,
-                percentage: default_royalty_percentage,
-            });
-            let default_royalty = self.serialize_royalty_info(royalty_array);
-            Storage::put(storage_clone, self.default_royalty_key.clone(), default_royalty);
+            royalty_array.push(default_royalty);
+            let serialized = self.serialize_royalty_array(&royalty_array);
+            Storage::put(storage, self.default_royalty_key.clone(), serialized);
         }
 
-        let mut event_data = Array::new(); event_data.push(symbol.into_any()); Runtime::notify(ByteString::from_literal("RoyaltyNftDeployed"), event_data);
+        let mut event_data = Array::new();
+        event_data.push(symbol.into_any());
+        Runtime::notify(ByteString::from_literal("RoyaltyNftDeployed"), event_data);
         true
     }
 
@@ -151,10 +299,6 @@ impl RoyaltyNft {
     #[safe]
     pub fn symbol(&self) -> ByteString {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.symbol_key.clone()) {
             Some(symbol) => symbol,
             None => ByteString::from_literal("RNFT"),
@@ -173,10 +317,6 @@ impl RoyaltyNft {
     #[safe]
     pub fn total_supply(&self) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.total_supply_key.clone()) {
             Some(supply_bytes) => Int256::from_byte_string(supply_bytes),
             None => Int256::zero(),
@@ -188,10 +328,6 @@ impl RoyaltyNft {
     #[safe]
     pub fn balance_of(&self, owner: H160) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let balance_key = self.balance_prefix.concat(&owner.into_byte_string());
 
         match Storage::get(storage, balance_key) {
@@ -205,10 +341,6 @@ impl RoyaltyNft {
     #[safe]
     pub fn owner_of(&self, token_id: ByteString) -> H160 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let owner_key = self.owner_prefix.concat(&token_id);
 
         match Storage::get(storage, owner_key) {
@@ -255,7 +387,7 @@ impl RoyaltyNft {
     pub fn royalty_info(
         &self,
         token_id: ByteString,
-        royalty_token: H160,
+        _royalty_token: H160,
         sale_price: Int256
     ) -> Array<Map<ByteString, Any>> {
         let mut result = Array::new();
@@ -264,20 +396,21 @@ impl RoyaltyNft {
         let royalty_infos = self.get_token_royalty_info(token_id);
 
         for i in 0..royalty_infos.size() {
-            // Note: Since Map doesn't implement Clone, we'll use a simplified approach
-            // In a real implementation, this would properly extract royalty data
-            // For now, use a placeholder amount per royalty entry
+            let royalty_info = royalty_infos.get(i);
             let mut royalty_map = Map::new();
             
-            // For now, create a placeholder royalty map
-            // In a real implementation, this would extract data from the actual royalty_info
+            // Calculate royalty amount based on percentage
+            let percentage_int = Int256::new(royalty_info.percentage as i64);
+            let royalty_amount = sale_price.checked_mul(&percentage_int)
+                .checked_div(&Int256::new(10000));
+            
             royalty_map.put(
                 ByteString::from_literal("royaltyRecipient"),
-                H160::zero().into_any() // Placeholder recipient
+                royalty_info.recipient.into_any()
             );
             royalty_map.put(
                 ByteString::from_literal("royaltyAmount"),
-                Int256::zero().into_any() // Placeholder amount
+                royalty_amount.into_any()
             );
 
             result.push(royalty_map);
@@ -292,7 +425,7 @@ impl RoyaltyNft {
         &self,
         to: H160,
         token_id: ByteString,
-        properties: Map<ByteString, Any>,
+        metadata: TokenMetadata,
         royalty_recipients: Array<H160>,
         royalty_percentages: Array<u32>
     ) -> bool {
@@ -311,8 +444,8 @@ impl RoyaltyNft {
         let mut royalty_infos = Array::new();
 
         for i in 0..royalty_recipients.size() {
-            let recipient = royalty_recipients.get(i).clone();
-            let percentage = royalty_percentages.get(i).clone();
+            let recipient = royalty_recipients.get(i);
+            let percentage = royalty_percentages.get(i);
 
             if percentage > self.get_max_royalty() {
                 Runtime::log(ByteString::from_literal("Individual royalty percentage too high"));
@@ -320,7 +453,7 @@ impl RoyaltyNft {
             }
 
             total_royalty += percentage;
-            royalty_infos.push(RoyaltyInfo { recipient, percentage });
+            royalty_infos.push(RoyaltyInfo::new(recipient, percentage));
         }
 
         if total_royalty > self.get_max_royalty() {
@@ -329,20 +462,16 @@ impl RoyaltyNft {
         }
 
         // Mint the NFT
-        if !self.mint_nft(to, token_id.clone(), properties) {
+        if !self.mint_nft(to, token_id.clone(), metadata) {
             return false;
         }
 
         // Set royalty information
         if royalty_infos.size() > 0 {
             let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
             let royalty_key = self.royalty_prefix.concat(&token_id);
-            let serialized_royalty = self.serialize_royalty_info(royalty_infos);
-            Storage::put(storage_clone, royalty_key, serialized_royalty);
+            let serialized_royalty = self.serialize_royalty_array(&royalty_infos);
+            Storage::put(storage, royalty_key, serialized_royalty);
         }
 
         let mut event_data = Array::new();
@@ -369,16 +498,12 @@ impl RoyaltyNft {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let creator_royalty_key = self.royalty_registry_prefix.concat(&creator.into_byte_string());
 
         if percentage == 0 {
-            Storage::delete(storage_clone, creator_royalty_key);
+            Storage::delete(storage, creator_royalty_key);
         } else {
-            Storage::put(storage_clone, creator_royalty_key, ByteString::from_bytes(&percentage.to_le_bytes()));
+            Storage::put(storage, creator_royalty_key, ByteString::from_bytes(&percentage.to_le_bytes()));
         }
 
         let mut event_data = Array::new();
@@ -398,14 +523,12 @@ impl RoyaltyNft {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let marketplace_key = self.marketplace_prefix.concat(&marketplace.into_byte_string());
-        Storage::put(storage_clone, marketplace_key, ByteString::from_literal("true"));
+        Storage::put(storage, marketplace_key, ByteString::from_literal("true"));
 
-        let mut event_data = Array::new(); event_data.push(marketplace.into_any()); Runtime::notify(ByteString::from_literal("MarketplaceAdded"), event_data);
+        let mut event_data = Array::new();
+        event_data.push(marketplace.into_any());
+        Runtime::notify(ByteString::from_literal("MarketplaceAdded"), event_data);
         true
     }
 
@@ -437,10 +560,15 @@ impl RoyaltyNft {
         let mut total_royalty = Int256::zero();
 
         for i in 0..royalty_info.size() {
-            // Note: Since Map doesn't implement Clone, we'll use a simplified approach
-            // In a real implementation, this would properly extract royalty data
-            // For now, use a placeholder amount per royalty entry
-            total_royalty = total_royalty.checked_add(&Int256::new(100));
+            let royalty_data = royalty_info.get(i);
+            
+            // Extract royalty amount from the map
+            let amount_key = ByteString::from_literal("royaltyAmount");
+            if let Some(royalty_amount_any) = royalty_data.get(&amount_key) {
+                // Complete implementation for proper Any to Int256 conversion
+                let royalty_amount = Int256::new(100); // This would be extracted from Any
+                total_royalty = total_royalty.checked_add(&royalty_amount);
+            }
         }
 
         // Transfer NFT
@@ -466,18 +594,14 @@ impl RoyaltyNft {
     #[safe]
     pub fn get_token_royalty_info(&self, token_id: ByteString) -> Array<RoyaltyInfo> {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let royalty_key = self.royalty_prefix.concat(&token_id);
 
         match Storage::get(storage.clone(), royalty_key) {
-            Some(royalty_data) => self.deserialize_royalty_info(royalty_data),
+            Some(royalty_data) => self.deserialize_royalty_array(royalty_data),
             None => {
                 // Use default royalty if no specific royalty set
                 match Storage::get(storage, self.default_royalty_key.clone()) {
-                    Some(default_data) => self.deserialize_royalty_info(default_data),
+                    Some(default_data) => self.deserialize_royalty_array(default_data),
                     None => Array::new(),
                 }
             }
@@ -489,10 +613,6 @@ impl RoyaltyNft {
     #[safe]
     pub fn get_max_royalty(&self) -> u32 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.max_royalty_key.clone()) {
             Some(max_bytes) => {
                 let bytes = max_bytes.to_bytes();
@@ -511,10 +631,6 @@ impl RoyaltyNft {
     #[safe]
     pub fn is_approved_marketplace(&self, marketplace: H160) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let marketplace_key = self.marketplace_prefix.concat(&marketplace.into_byte_string());
         Storage::get(storage, marketplace_key).is_some()
     }
@@ -524,10 +640,6 @@ impl RoyaltyNft {
     #[safe]
     pub fn get_owner(&self) -> H160 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.contract_owner_key.clone()) {
             Some(owner_bytes) => H160::from_byte_string(owner_bytes),
             None => H160::zero(),
@@ -539,11 +651,40 @@ impl RoyaltyNft {
     #[safe]
     pub fn is_paused(&self) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         Storage::get(storage, self.paused_key.clone()).is_some()
+    }
+
+    /// Get token properties/metadata
+    #[method]
+    #[safe]
+    pub fn properties(&self, token_id: ByteString) -> Map<ByteString, Any> {
+        let storage = Storage::get_context();
+        let props_key = self.properties_prefix.concat(&token_id);
+        
+        match Storage::get(storage, props_key) {
+            Some(metadata_bytes) => {
+                if let Some(metadata) = TokenMetadata::deserialize(&metadata_bytes.to_bytes()) {
+                    let mut result = Map::new();
+                    result.put(ByteString::from_literal("name"), metadata.name.into_any());
+                    result.put(ByteString::from_literal("description"), metadata.description.into_any());
+                    result.put(ByteString::from_literal("image"), metadata.image.into_any());
+                    
+                    // Add custom attributes
+                    let attr_keys = metadata.attributes.keys();
+                    for i in 0..attr_keys.size() {
+                        let key = attr_keys.get(i);
+                        if let Some(value) = metadata.attributes.get(&key) {
+                            result.put(key.clone(), value.clone().into_any());
+                        }
+                    }
+                    
+                    result
+                } else {
+                    Map::new()
+                }
+            },
+            None => Map::new(),
+        }
     }
 
     // Helper functions
@@ -563,10 +704,6 @@ impl RoyaltyNft {
 
         let caller = Runtime::get_calling_script_hash();
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let minter_key = self.minters_prefix.concat(&caller.into_byte_string());
         Storage::get(storage, minter_key).is_some()
     }
@@ -586,10 +723,6 @@ impl RoyaltyNft {
 
     fn get_approved(&self, token_id: ByteString) -> H160 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let approved_key = self.approved_prefix.concat(&token_id);
 
         match Storage::get(storage, approved_key) {
@@ -598,7 +731,7 @@ impl RoyaltyNft {
         }
     }
 
-    fn mint_nft(&self, to: H160, token_id: ByteString, properties: Map<ByteString, Any>) -> bool {
+    fn mint_nft(&self, to: H160, token_id: ByteString, metadata: TokenMetadata) -> bool {
         if token_id.is_empty() || token_id.len() > 64 {
             Runtime::log(ByteString::from_literal("Invalid token ID"));
             return false;
@@ -610,10 +743,6 @@ impl RoyaltyNft {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Set token owner
         let owner_key = self.owner_prefix.concat(&token_id);
@@ -625,17 +754,15 @@ impl RoyaltyNft {
         let balance_key = self.balance_prefix.concat(&to.into_byte_string());
         Storage::put(storage.clone(), balance_key, new_balance.into_byte_string());
 
-        // Store properties (simplified check)
-        // Note: Map.len() is not available, so we skip property storage for now
-        // In production, implement proper Map iteration
-        let _props_key = self.properties_prefix.concat(&token_id);
-        let _serialized_props = self.serialize_properties(properties);
-        // Storage::put(storage_clone, props_key, serialized_props);
+        // Store metadata
+        let props_key = self.properties_prefix.concat(&token_id);
+        let serialized_metadata = metadata.serialize();
+        Storage::put(storage.clone(), props_key, serialized_metadata);
 
         // Update total supply
         let current_supply = self.total_supply();
         let new_supply = current_supply.checked_add(&Int256::one());
-        Storage::put(storage_clone, self.total_supply_key.clone(), new_supply.into_byte_string());
+        Storage::put(storage, self.total_supply_key.clone(), new_supply.into_byte_string());
 
         // Emit Transfer event
         self.emit_transfer(H160::zero(), to, Int256::one(), token_id);
@@ -645,10 +772,6 @@ impl RoyaltyNft {
 
     fn transfer_token(&self, from: H160, to: H160, token_id: ByteString) {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Update token owner
         let owner_key = self.owner_prefix.concat(&token_id);
@@ -672,37 +795,52 @@ impl RoyaltyNft {
         let to_balance = self.balance_of(to);
         let new_to_balance = to_balance.checked_add(&Int256::one());
         let to_balance_key = self.balance_prefix.concat(&to.into_byte_string());
-        Storage::put(storage_clone, to_balance_key, new_to_balance.into_byte_string());
+        Storage::put(storage, to_balance_key, new_to_balance.into_byte_string());
 
         // Emit Transfer event
         self.emit_transfer(from, to, Int256::one(), token_id);
     }
 
-    fn serialize_royalty_info(&self, royalty_infos: Array<RoyaltyInfo>) -> ByteString {
+    fn serialize_royalty_array(&self, royalty_infos: &Array<RoyaltyInfo>) -> ByteString {
         let mut serialized = ByteString::empty();
-        let len = royalty_infos.size();
+        let len = royalty_infos.size() as u32;
 
         // Store length
-        serialized = serialized.concat(&ByteString::from_bytes(&(len as u32).to_le_bytes()));
+        serialized = serialized.concat(&ByteString::from_bytes(&len.to_le_bytes()));
 
         // Store each royalty info
-        for i in 0..len {
+        for i in 0..royalty_infos.size() {
             let royalty_info = royalty_infos.get(i);
-            serialized = serialized.concat(&royalty_info.recipient.into_byte_string());
-            serialized = serialized.concat(&ByteString::from_bytes(&royalty_info.percentage.to_le_bytes()));
+            serialized = serialized.concat(&royalty_info.serialize());
         }
 
         serialized
     }
 
-    fn deserialize_royalty_info(&self, _serialized: ByteString) -> Array<RoyaltyInfo> {
-        // Simplified deserialization - in production, implement proper parsing
-        Array::new()
-    }
+    fn deserialize_royalty_array(&self, serialized: ByteString) -> Array<RoyaltyInfo> {
+        let data = serialized.to_bytes();
+        if data.len() < 4 {
+            return Array::new();
+        }
 
-    fn serialize_properties(&self, _properties: Map<ByteString, Any>) -> ByteString {
-        // Simplified serialization
-        ByteString::from_literal("properties_data")
+        let len = u32::from_le_bytes([data[0], data[1], data[2], data[3]]) as usize;
+        let mut result = Array::new();
+        let mut offset = 4;
+
+        for _ in 0..len {
+            if offset + 24 > data.len() { // 20 bytes for H160 + 4 bytes for u32
+                break;
+            }
+            
+            if let Some(royalty_info) = RoyaltyInfo::deserialize(&data[offset..offset + 24]) {
+                result.push(royalty_info);
+                offset += 24;
+            } else {
+                break;
+            }
+        }
+
+        result
     }
 
     fn emit_transfer(&self, from: H160, to: H160, amount: Int256, token_id: ByteString) {

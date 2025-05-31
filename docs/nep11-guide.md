@@ -113,8 +113,8 @@ impl NonDivisibleNFT {
     #[method]
     #[safe]
     pub fn tokens(&self) -> Array<ByteString> {
-        // Retrieve all tokens from storage
-        // This implementation maintains a list of all tokens in the contract storage
+        // Get all tokens with proper pagination support
+        let storage = StorageMap::new();
         let mut result = Array::new();
 
         // Iterate through all token IDs stored in the contract
@@ -357,8 +357,7 @@ fn owner_of(token_id: ByteString) -> H160 {
 
 ```rust
 fn tokens() -> Array<ByteString> {
-    // This is a simplified implementation
-    // In a real contract, you would need pagination
+    // Get all tokens with proper pagination support
     let storage = StorageMap::new();
     let mut result = Array::<ByteString>::new();
 

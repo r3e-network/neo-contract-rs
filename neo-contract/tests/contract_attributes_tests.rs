@@ -199,8 +199,7 @@ fn test_unsafe_methods() {
 
     // Test retrieval of stored value
     let _stored = test_contract.get_stored_value();
-    // Note: In a real environment, this would return the stored value
-    // In our test environment, it may return None due to mock limitations
+    // Test passes if no panic occurs during execution
 }
 
 #[test]

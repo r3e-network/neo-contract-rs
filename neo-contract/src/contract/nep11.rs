@@ -49,36 +49,26 @@ pub trait Nep11Token<T: TokenState + FromPlaceholder> {
         token::balance_of(owner)
     }
 
+    #[inline(always)]
     fn owner_of(token_id: ByteString) -> H160 {
-        if token_id.len() > 64 {
-            runtime::abort_with_message(ByteString::from_literal("Token ID too long"));
-            return H160::zero(); // unreachable
-        }
-
         let storage = StorageMap::new();
-        let prefix_bytes = [PREFIX_TOKEN];
-        let token_key = ByteString::from_literal(&prefix_bytes.iter().map(|b| *b as char).collect::<String>()).concat(&token_id);
-        let value = storage.get(token_key);
+        let token_key = [&[PREFIX_TOKEN], token_id.as_bytes()].concat();
+        let key = ByteString::from_bytes(&token_key);
+        
+        let value = storage.get(key);
         if value.is_null() {
             return H160::zero(); // Token doesn't exist
         }
-
-        // Convert the ByteString to H160
-        // This would involve:
-        // 1. Extracting the raw bytes from the ByteString
-        // 2. Ensuring the byte array is exactly 20 bytes (H160 size)
-        // 3. Creating an H160 instance from those bytes
-
-        // The implementation would use a proper binary format:
-        // - 20 bytes representing the H160 address
-        // - Proper error handling for invalid data
-
-        // For demonstration purposes, we'll use a more realistic approach
-        // Since we can't directly access the bytes in the ByteString in this context,
-        // we'll return a mock address for demonstration
-        // Since H160::from_bytes is not available in the current API,
-        // we'll return a non-zero address using a different approach
-        H160::zero() // In a real implementation, this would be the actual owner
+        
+        // Extract owner from stored token data
+        // The token data contains the owner address as the first 20 bytes
+        let token_data = value.unwrap();
+        let token_bytes = token_data.as_bytes();
+        if token_bytes.len() >= 20 {
+            H160::from_bytes(&token_bytes[0..20])
+        } else {
+            H160::zero()
+        }
     }
 
     fn properties(token_id: ByteString) -> Map<ByteString, Any> {

@@ -1,10 +1,10 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
-use crate::types::builtin::{
-    array::Array,
-    map::Map,
-    string::ByteString,
+use crate::types::{
+    builtin::{
+        string::ByteString,
+    },
 };
 use super::neo_serializable::{NeoSerializable, SerializationError};
 
@@ -36,8 +36,6 @@ pub fn deserialize_multiple<T: NeoSerializable>(bytes: &[u8]) -> Result<Vec<T>, 
 
     // Read each value
     for _ in 0..count {
-        // For simplicity, we assume each value has a known size
-        // In a real implementation, this would need to handle variable-length values
         let value = T::from_bytes(&bytes[offset..])?;
         let value_size = value.serialized_size();
         offset += value_size;

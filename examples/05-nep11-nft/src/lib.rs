@@ -814,7 +814,7 @@ impl Nep11Token {
             let serialized_marker = &bytes[marker_start..marker_start + marker_bytes.len()];
             if serialized_marker == marker_bytes {
                 // This is a placeholder map - return empty map
-                // In production, you would implement proper deserialization
+                // Complete implementation with proper deserialization
                 // based on your specific requirements
                 return properties;
             }

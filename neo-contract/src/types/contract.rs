@@ -4,6 +4,7 @@
 use crate::types::*;
 
 #[repr(C)]
+#[allow(dead_code)] // May be used in future implementations
 pub struct ContractHash {
     id: u32,
     hash: H160,

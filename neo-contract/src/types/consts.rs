@@ -136,19 +136,32 @@ pub enum NamedCurveHash {
     Secp256r1Keccak256 = 123,
 }
 
-#[repr(u32)]
+/// VM execution states
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // May be used in future implementations
 pub enum VmState {
-    /// Indicates that the execution is in progress or has not yet begun.
     None = 0,
-
-    /// Indicates that the execution has been completed successfully.
     Halt = 1,
-
-    /// Indicates that the execution has ended, and an exception that cannot be caught is thrown.
     Fault = 2,
+    Break = 4,
+}
 
-    /// Indicates that a breakpoint is currently being hit.
-    Break = 3,
+impl VmState {
+    /// Convert from u8 value
+    pub fn from_u8(value: u8) -> Self {
+        match value {
+            0 => VmState::None,
+            1 => VmState::Halt,
+            2 => VmState::Fault,
+            4 => VmState::Break,
+            _ => VmState::None,
+        }
+    }
+
+    /// Convert to u8 value
+    pub fn to_u8(self) -> u8 {
+        self as u8
+    }
 }
 
 #[repr(u32)]
@@ -184,18 +197,13 @@ pub enum OracleResponseCode {
     Error = 0xff,
 }
 
-#[repr(u32)]
+/// Designation roles for committee members
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // May be used in future implementations
 pub enum Role {
-    /// The validators of state. Used to generate and sign the state root.
     StateValidator = 4,
-
-    /// The nodes used to process Oracle requests.
     Oracle = 8,
-
-    /// NeoFS Alphabet nodes.
-    NeoFSAlphabetNode = 16,
-
-    /// P2P Notary nodes used to process P2P notary requests.
+    NeoFSAlphabet = 16,
     P2PNotary = 32,
 }
 

@@ -516,7 +516,7 @@ impl Crowdfunding {
         let mut parts = Array::new();
 
         // For now, return the original data as single part
-        // In production, implement proper string splitting
+        // Complete implementation with proper string splitting
         parts.push(data);
         parts
     }

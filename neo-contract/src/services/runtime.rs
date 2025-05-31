@@ -141,12 +141,28 @@ impl Runtime {
         860833102 // Neo N3 mainnet
     }
 
-    /// Loads and executes a script.
-    #[inline(always)]
-    #[allow(unused_variables)]
+    /// Load and execute a script with the specified call flags and arguments
+    ///
+    /// # Arguments
+    /// * `script` - The script to load and execute
+    /// * `call_flags` - Flags controlling the execution context
+    /// * `args` - Arguments to pass to the script
+    ///
+    /// # Returns
+    /// The result of script execution
     pub fn load_script(script: ByteString, call_flags: CallFlags, args: Array<Any>) -> Any {
-        // For non-WASM targets (tests), return default Any
-        Any::default()
+        #[cfg(target_family = "wasm")]
+        unsafe {
+            // Convert script ByteString to H160 script hash for the syscall
+            let script_hash = H160::from_byte_string(script);
+            env::syscall::system_runtime_load_script(script_hash, call_flags, args)
+        }
+
+        #[cfg(not(target_family = "wasm"))]
+        {
+            // For non-WASM targets, return a meaningful default
+            Any::default()
+        }
     }
 
     /// Gets the current signers of the transaction.
@@ -270,13 +286,28 @@ impl Runtime {
         unsafe { env::syscall::system_runtime_get_network() }
     }
 
-    /// Loads and executes a script.
-    #[inline(always)]
+    /// Load and execute a script with the specified call flags and arguments
+    ///
+    /// # Arguments
+    /// * `script` - The script to load and execute
+    /// * `call_flags` - Flags controlling the execution context
+    /// * `args` - Arguments to pass to the script
+    ///
+    /// # Returns
+    /// The result of script execution
     pub fn load_script(script: ByteString, call_flags: CallFlags, args: Array<Any>) -> Any {
-        // In the real implementation, we would convert the script ByteString to H160
-        // For now, we'll use a placeholder H160
-        let script_hash = H160::zero();
-        unsafe { env::syscall::system_runtime_load_script(script_hash, call_flags, args) }
+        #[cfg(target_family = "wasm")]
+        unsafe {
+            // Convert script ByteString to H160 script hash for the syscall
+            let script_hash = H160::from_byte_string(script);
+            env::syscall::system_runtime_load_script(script_hash, call_flags, args)
+        }
+
+        #[cfg(not(target_family = "wasm"))]
+        {
+            // For non-WASM targets, return a meaningful default
+            Any::default()
+        }
     }
 
     /// Gets the current signers of the transaction.

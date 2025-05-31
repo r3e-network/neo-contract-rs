@@ -43,8 +43,8 @@ impl<T> inner::Sealed for Array<T> {}
 impl Builtin for Buffer {}
 impl inner::Sealed for Buffer {}
 
-impl<K: Primitive + primitive::Primitive + std::hash::Hash + Eq, V> Builtin for Map<K, V> {}
-impl<K: Primitive + primitive::Primitive + std::hash::Hash + Eq, V> inner::Sealed for Map<K, V> {}
+impl<K: Primitive + primitive::Primitive + std::hash::Hash + Eq + Clone, V: Clone> Builtin for Map<K, V> {}
+impl<K: Primitive + primitive::Primitive + std::hash::Hash + Eq + Clone, V: Clone> inner::Sealed for Map<K, V> {}
 
 pub(crate) mod inner {
     pub trait Sealed {}
