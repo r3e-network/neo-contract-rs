@@ -37,3 +37,6 @@ node_modules/
 .env
 .env.local
 .env.*.local
+
+# Local development dependencies
+neo-devpack-dotnet/
