@@ -8,6 +8,7 @@ Cargo.lock
 .idea/
 /target
 .vscode/
+.cursor/
 /tools
 
 # wasm
@@ -19,3 +20,20 @@ Cargo.lock
 # macos
 **/.DS_Store
 settings.json
+
+# IDE and editor files
+*.swp
+*.swo
+*~
+.history/
+
+# Node modules (if any)
+node_modules/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
