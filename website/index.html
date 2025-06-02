@@ -927,8 +927,62 @@ impl HelloWorld {
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.28.0/feather.min.js"></script>
     <script src="js/main.js"></script>
+    <script>
+        // Initialize Feather icons
+        feather.replace();
+        
+        // Enhanced Prism.js initialization for better Rust highlighting
+        document.addEventListener('DOMContentLoaded', function() {
+            // Force re-highlight all code blocks
+            Prism.highlightAll();
+            
+            // Add custom Rust token patterns
+            if (Prism.languages.rust) {
+                // Enhance Rust syntax highlighting
+                Prism.languages.rust = Prism.languages.extend('rust', {
+                    'attribute': {
+                        pattern: /#!?\[(?:[^\[\]"]|"(?:\\[\s\S]|[^\\"])*")*\]/,
+                        greedy: true,
+                        alias: 'attr-name',
+                        inside: {
+                            'string': {
+                                pattern: /"(?:\\[\s\S]|[^\\"])*"/,
+                                greedy: true
+                            }
+                        }
+                    },
+                    'macro': {
+                        pattern: /\b\w+!/,
+                        alias: 'property'
+                    },
+                    'lifetime': {
+                        pattern: /'[a-zA-Z_][a-zA-Z0-9_]*(?=\s*[,\s]|$)/,
+                        alias: 'symbol'
+                    },
+                    'keyword': /\b(?:abstract|alignof|as|async|await|become|box|break|const|continue|crate|do|dyn|else|enum|extern|false|final|fn|for|if|impl|in|let|loop|macro|match|mod|move|mut|offsetof|override|priv|proc|pub|pure|ref|return|Self|self|sizeof|static|struct|super|trait|true|type|typeof|union|unsafe|unsized|use|virtual|where|while|yield)\b/,
+                    'function': /\b[a-z_][a-z0-9_]*(?=\s*[(<])/i,
+                    'string': {
+                        pattern: /(?:r#*"(?:[^"]|\\[\s\S])*"#*|b?r#*"(?:[^"]|\\[\s\S])*"#*|b?"(?:\\[\s\S]|[^\\"])*")/,
+                        greedy: true
+                    },
+                    'number': /\b(?:0x[a-fA-F0-9_]+|0o[0-7_]+|0b[01_]+|\d[\d_]*(?:\.[\d_]*)?(?:[eE][+-]?[\d_]+)?(?:f32|f64|i8|i16|i32|i64|i128|isize|u8|u16|u32|u64|u128|usize)?)\b/,
+                    'boolean': /\b(?:true|false)\b/,
+                    'punctuation': /[{}[\];(),.:]/,
+                    'operator': /[-+*\/%=!<>&|^]+/
+                });
+            }
+            
+            // Re-highlight after enhancing
+            setTimeout(() => {
+                Prism.highlightAll();
+            }, 100);
+        });
+    </script>
 </body>
 </html> 

@@ -305,10 +305,36 @@
     }
 
     // =================================
-    // Code Block Enhancements
+    // Code Block Enhancements & Prism Integration
     // =================================
     
     function initCodeBlocks() {
+        // Wait for Prism to be fully loaded
+        if (typeof Prism !== 'undefined') {
+            // Custom Rust token enhancements for better highlighting
+            if (Prism.languages.rust) {
+                // Add neo-contract specific highlighting
+                Prism.languages.rust = Prism.languages.extend('rust', {
+                    'neo-attribute': {
+                        pattern: /#\[(neo_contract|neo_contract_impl|safe)\]/,
+                        alias: 'important',
+                        greedy: true
+                    },
+                    'contract-keywords': {
+                        pattern: /\b(rt::log|rt::check_witness|rt::get_invocation_counter)\b/,
+                        alias: 'function'
+                    },
+                    'neo-types': {
+                        pattern: /\b(H160|H256|ByteArray|Storage)\b/,
+                        alias: 'class-name'
+                    }
+                });
+            }
+            
+            // Force re-highlight all code blocks
+            Prism.highlightAll();
+        }
+        
         const codeBlocks = document.querySelectorAll('pre[class*="language-"]');
 
         codeBlocks.forEach(block => {
@@ -317,69 +343,137 @@
             copyButton.className = 'copy-btn';
             copyButton.innerHTML = '📋';
             copyButton.title = 'Copy to clipboard';
+            copyButton.setAttribute('aria-label', 'Copy code to clipboard');
 
             copyButton.addEventListener('click', async () => {
-                const code = block.textContent;
+                // Get text content without syntax highlighting markup
+                const code = block.querySelector('code')?.textContent || block.textContent;
                 
                 try {
                     await navigator.clipboard.writeText(code);
                     copyButton.innerHTML = '✅';
                     copyButton.title = 'Copied!';
+                    copyButton.setAttribute('aria-label', 'Code copied to clipboard');
+                    
+                    // Announce to screen readers
+                    const announcement = document.createElement('div');
+                    announcement.setAttribute('aria-live', 'polite');
+                    announcement.setAttribute('aria-atomic', 'true');
+                    announcement.style.cssText = 'position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden;';
+                    announcement.textContent = 'Code copied to clipboard';
+                    document.body.appendChild(announcement);
                     
                     setTimeout(() => {
                         copyButton.innerHTML = '📋';
                         copyButton.title = 'Copy to clipboard';
+                        copyButton.setAttribute('aria-label', 'Copy code to clipboard');
+                        document.body.removeChild(announcement);
                     }, 2000);
                 } catch (err) {
                     console.error('Failed to copy code:', err);
                     copyButton.innerHTML = '❌';
+                    copyButton.title = 'Failed to copy';
                     setTimeout(() => {
                         copyButton.innerHTML = '📋';
+                        copyButton.title = 'Copy to clipboard';
                     }, 2000);
                 }
             });
 
-            // Add button to code block
-            block.style.position = 'relative';
-            block.appendChild(copyButton);
+            // Add button to code block container
+            const container = block.closest('.code-window') || block.parentElement;
+            container.style.position = 'relative';
+            container.appendChild(copyButton);
 
-            // Style the copy button
+            // Enhanced copy button styling
             copyButton.style.cssText = `
                 position: absolute;
                 top: 0.75rem;
                 right: 0.75rem;
-                background: rgba(37, 38, 40, 0.8);
+                background: rgba(37, 38, 40, 0.95);
                 border: 1px solid #3f4042;
                 border-radius: 0.375rem;
                 color: #a3a3a3;
-                padding: 0.25rem 0.5rem;
+                padding: 0.375rem 0.75rem;
                 cursor: pointer;
                 font-size: 0.75rem;
+                font-weight: 500;
                 transition: all 0.2s ease;
                 opacity: 0;
                 backdrop-filter: blur(10px);
+                z-index: 10;
+                user-select: none;
+                outline: none;
             `;
 
-            // Show/hide on hover
-            block.addEventListener('mouseenter', () => {
+            // Show/hide on hover with improved UX
+            const showCopyButton = () => {
                 copyButton.style.opacity = '1';
-            });
+                copyButton.style.transform = 'translateY(0)';
+            };
 
-            block.addEventListener('mouseleave', () => {
-                copyButton.style.opacity = '0';
-            });
+            const hideCopyButton = () => {
+                if (!copyButton.matches(':focus')) {
+                    copyButton.style.opacity = '0';
+                    copyButton.style.transform = 'translateY(-4px)';
+                }
+            };
 
+            container.addEventListener('mouseenter', showCopyButton);
+            container.addEventListener('mouseleave', hideCopyButton);
+            copyButton.addEventListener('focus', showCopyButton);
+            copyButton.addEventListener('blur', hideCopyButton);
+
+            // Enhanced hover effects
             copyButton.addEventListener('mouseenter', () => {
                 copyButton.style.color = '#00d4ff';
                 copyButton.style.borderColor = '#00d4ff';
-                copyButton.style.background = 'rgba(0, 212, 255, 0.1)';
+                copyButton.style.background = 'rgba(0, 212, 255, 0.15)';
+                copyButton.style.transform = 'translateY(0) scale(1.05)';
             });
 
             copyButton.addEventListener('mouseleave', () => {
                 copyButton.style.color = '#a3a3a3';
                 copyButton.style.borderColor = '#3f4042';
-                copyButton.style.background = 'rgba(37, 38, 40, 0.8)';
+                copyButton.style.background = 'rgba(37, 38, 40, 0.95)';
+                copyButton.style.transform = 'translateY(0) scale(1)';
             });
+
+            // Keyboard support
+            copyButton.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    copyButton.click();
+                }
+            });
+        });
+
+        // Add syntax highlighting indicators
+        const rustBlocks = document.querySelectorAll('pre.language-rust, pre[class*="language-rust"]');
+        rustBlocks.forEach(block => {
+            const indicator = document.createElement('span');
+            indicator.textContent = 'Rust';
+            indicator.className = 'language-indicator';
+            indicator.style.cssText = `
+                position: absolute;
+                top: 0.75rem;
+                left: 0.75rem;
+                background: rgba(255, 107, 53, 0.15);
+                color: #ff6b35;
+                border: 1px solid rgba(255, 107, 53, 0.3);
+                border-radius: 0.25rem;
+                padding: 0.125rem 0.375rem;
+                font-size: 0.625rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                z-index: 5;
+            `;
+            
+            const container = block.closest('.code-window') || block.parentElement;
+            if (container && container.style.position !== 'static') {
+                container.appendChild(indicator);
+            }
         });
     }
 

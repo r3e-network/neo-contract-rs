@@ -113,9 +113,10 @@ pre[class*="language-"] {
     cursor: help;
 }
 
-/* Rust-specific highlighting */
+/* Rust-specific highlighting - Enhanced */
 .language-rust .token.keyword {
     color: #ff6b35;
+    font-weight: 600;
 }
 
 .language-rust .token.string {
@@ -128,18 +129,158 @@ pre[class*="language-"] {
 
 .language-rust .token.function {
     color: #fbbf24;
+    font-weight: 500;
 }
 
 .language-rust .token.macro {
     color: #00d4ff;
+    font-weight: 600;
 }
 
 .language-rust .token.attribute {
     color: #00d4ff;
+    font-weight: 500;
 }
 
 .language-rust .token.lifetime {
     color: #ff6b35;
+    font-style: italic;
+}
+
+.language-rust .token.boolean {
+    color: #7c3aed;
+    font-weight: 600;
+}
+
+.language-rust .token.type {
+    color: #fbbf24;
+    font-weight: 500;
+}
+
+.language-rust .token.struct {
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+.language-rust .token.enum {
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+.language-rust .token.trait {
+    color: #00d4ff;
+    font-weight: 600;
+}
+
+.language-rust .token.module {
+    color: #10b981;
+    font-weight: 500;
+}
+
+.language-rust .token.self {
+    color: #ff6b35;
+    font-style: italic;
+}
+
+.language-rust .token.super {
+    color: #ff6b35;
+    font-style: italic;
+}
+
+.language-rust .token.crate {
+    color: #ff6b35;
+    font-weight: 600;
+}
+
+.language-rust .token.mut {
+    color: #ff6b35;
+    font-weight: 600;
+}
+
+.language-rust .token.pub {
+    color: #ff6b35;
+    font-weight: 600;
+}
+
+.language-rust .token.unsafe {
+    color: #ef4444;
+    font-weight: 700;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+.language-rust .token.const {
+    color: #7c3aed;
+    font-weight: 600;
+}
+
+.language-rust .token.static {
+    color: #7c3aed;
+    font-weight: 600;
+}
+
+/* Improved generic tokens for Rust */
+.language-rust .token.punctuation.definition.generic {
+    color: #fbbf24;
+}
+
+.language-rust .token.punctuation.definition.lifetime {
+    color: #ff6b35;
+}
+
+/* Raw strings and byte strings */
+.language-rust .token.string.raw {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+    padding: 1px 2px;
+    border-radius: 2px;
+}
+
+.language-rust .token.string.byte {
+    color: #14b8a6;
+}
+
+/* Comments with special highlighting for doc comments */
+.language-rust .token.comment.doc {
+    color: #10b981;
+    font-style: italic;
+    background: rgba(16, 185, 129, 0.05);
+    padding: 1px 2px;
+    border-radius: 2px;
+}
+
+/* Highlight important operators */
+.language-rust .token.operator.borrow {
+    color: #ff6b35;
+    font-weight: 600;
+}
+
+.language-rust .token.operator.deref {
+    color: #ff6b35;
+    font-weight: 600;
+}
+
+/* Pattern matching */
+.language-rust .token.keyword.match {
+    color: #ff6b35;
+    font-weight: 700;
+}
+
+.language-rust .token.operator.fat-arrow {
+    color: #00d4ff;
+    font-weight: 600;
+}
+
+/* Error handling keywords */
+.language-rust .token.keyword.result {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.language-rust .token.keyword.option {
+    color: #fbbf24;
+    font-weight: 600;
 }
 
 /* Bash/Shell highlighting */
