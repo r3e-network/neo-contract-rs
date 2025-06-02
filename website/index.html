@@ -45,10 +45,22 @@
             </div>
             
             <div class="nav-menu" id="navMenu">
-                <a href="#features" class="nav-link">Features</a>
-                <a href="#examples" class="nav-link">Examples</a>
-                <a href="#docs" class="nav-link">Documentation</a>
-                <a href="#getting-started" class="nav-link">Getting Started</a>
+                <a href="#features" class="nav-link">
+                    <i data-feather="star"></i>
+                    Features
+                </a>
+                <a href="#examples" class="nav-link">
+                    <i data-feather="code"></i>
+                    Examples
+                </a>
+                <a href="#docs" class="nav-link">
+                    <i data-feather="book-open"></i>
+                    Documentation
+                </a>
+                <a href="#getting-started" class="nav-link">
+                    <i data-feather="play-circle"></i>
+                    Getting Started
+                </a>
                 <a href="https://github.com/your-org/neo-contract-rs" class="nav-link nav-link-external" target="_blank">
                     <i data-feather="github"></i>
                     GitHub
@@ -85,14 +97,17 @@
                 </p>
                 <div class="hero-stats">
                     <div class="stat">
+                        <div class="stat-icon"><i data-feather="folder"></i></div>
                         <div class="stat-number">13</div>
                         <div class="stat-label">Examples</div>
                     </div>
                     <div class="stat">
+                        <div class="stat-icon"><i data-feather="check-circle"></i></div>
                         <div class="stat-number">100%</div>
                         <div class="stat-label">Success Rate</div>
                     </div>
                     <div class="stat">
+                        <div class="stat-icon"><i data-feather="code"></i></div>
                         <div class="stat-number">8K+</div>
                         <div class="stat-label">Lines of Code</div>
                     </div>
@@ -356,6 +371,7 @@ impl HelloWorld {
             <div class="examples-grid">
                 <div class="example-card" data-category="beginner">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="globe"></i></div>
                         <div class="example-number">01</div>
                         <div class="example-difficulty beginner">🟢 Beginner</div>
                     </div>
@@ -364,14 +380,15 @@ impl HelloWorld {
                         Contract basics with storage, events, and authorization
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">Storage</span>
-                        <span class="feature-tag">Events</span>
-                        <span class="feature-tag">Authorization</span>
+                        <span class="feature-tag"><i data-feather="database"></i>Storage</span>
+                        <span class="feature-tag"><i data-feather="bell"></i>Events</span>
+                        <span class="feature-tag"><i data-feather="lock"></i>Authorization</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="beginner">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="save"></i></div>
                         <div class="example-number">02</div>
                         <div class="example-difficulty beginner">🟢 Beginner</div>
                     </div>
@@ -380,14 +397,15 @@ impl HelloWorld {
                         Advanced storage with multiple data types and serialization
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">Data Types</span>
-                        <span class="feature-tag">Serialization</span>
-                        <span class="feature-tag">Storage</span>
+                        <span class="feature-tag"><i data-feather="type"></i>Data Types</span>
+                        <span class="feature-tag"><i data-feather="package"></i>Serialization</span>
+                        <span class="feature-tag"><i data-feather="database"></i>Storage</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="intermediate">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="plus-circle"></i></div>
                         <div class="example-number">03</div>
                         <div class="example-difficulty intermediate">🟡 Intermediate</div>
                     </div>
@@ -396,14 +414,15 @@ impl HelloWorld {
                         State management with access control and statistics
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">State Management</span>
-                        <span class="feature-tag">Access Control</span>
-                        <span class="feature-tag">Statistics</span>
+                        <span class="feature-tag"><i data-feather="settings"></i>State Management</span>
+                        <span class="feature-tag"><i data-feather="shield"></i>Access Control</span>
+                        <span class="feature-tag"><i data-feather="bar-chart"></i>Statistics</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="intermediate">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="coins"></i></div>
                         <div class="example-number">04</div>
                         <div class="example-difficulty intermediate">🟡 Intermediate</div>
                     </div>
@@ -412,14 +431,15 @@ impl HelloWorld {
                         Full NEP-17 compliant fungible token implementation
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">NEP-17</span>
-                        <span class="feature-tag">Fungible Token</span>
-                        <span class="feature-tag">Standards</span>
+                        <span class="feature-tag"><i data-feather="award"></i>NEP-17</span>
+                        <span class="feature-tag"><i data-feather="coins"></i>Fungible Token</span>
+                        <span class="feature-tag"><i data-feather="check-square"></i>Standards</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="intermediate">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="image"></i></div>
                         <div class="example-number">05</div>
                         <div class="example-difficulty intermediate">🟡 Intermediate</div>
                     </div>
@@ -428,14 +448,15 @@ impl HelloWorld {
                         Complete NEP-11 non-fungible token implementation
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">NEP-11</span>
-                        <span class="feature-tag">NFT</span>
-                        <span class="feature-tag">Metadata</span>
+                        <span class="feature-tag"><i data-feather="award"></i>NEP-11</span>
+                        <span class="feature-tag"><i data-feather="image"></i>NFT</span>
+                        <span class="feature-tag"><i data-feather="tag"></i>Metadata</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="advanced">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="percent"></i></div>
                         <div class="example-number">06</div>
                         <div class="example-difficulty advanced">🟠 Advanced</div>
                     </div>
@@ -444,14 +465,15 @@ impl HelloWorld {
                         NFT with NEP-24 royalty distribution system
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">NEP-24</span>
-                        <span class="feature-tag">Royalties</span>
-                        <span class="feature-tag">Distribution</span>
+                        <span class="feature-tag"><i data-feather="award"></i>NEP-24</span>
+                        <span class="feature-tag"><i data-feather="percent"></i>Royalties</span>
+                        <span class="feature-tag"><i data-feather="share"></i>Distribution</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="advanced">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="target"></i></div>
                         <div class="example-number">07</div>
                         <div class="example-difficulty advanced">🟠 Advanced</div>
                     </div>
@@ -460,14 +482,15 @@ impl HelloWorld {
                         DeFi crowdfunding with goal-based funding and refunds
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">DeFi</span>
-                        <span class="feature-tag">Funding</span>
-                        <span class="feature-tag">Refunds</span>
+                        <span class="feature-tag"><i data-feather="trending-up"></i>DeFi</span>
+                        <span class="feature-tag"><i data-feather="dollar-sign"></i>Funding</span>
+                        <span class="feature-tag"><i data-feather="refresh-cw"></i>Refunds</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="expert">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="layers"></i></div>
                         <div class="example-number">08</div>
                         <div class="example-difficulty expert">🔴 Expert</div>
                     </div>
@@ -476,14 +499,15 @@ impl HelloWorld {
                         Multi-pool staking system with yield farming
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">Staking</span>
-                        <span class="feature-tag">Yield Farming</span>
-                        <span class="feature-tag">Multi-pool</span>
+                        <span class="feature-tag"><i data-feather="anchor"></i>Staking</span>
+                        <span class="feature-tag"><i data-feather="trending-up"></i>Yield Farming</span>
+                        <span class="feature-tag"><i data-feather="layers"></i>Multi-pool</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="expert">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="shuffle"></i></div>
                         <div class="example-number">09</div>
                         <div class="example-difficulty expert">🔴 Expert</div>
                     </div>
@@ -492,14 +516,15 @@ impl HelloWorld {
                         Decentralized exchange with AMM and liquidity pools
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">DEX</span>
-                        <span class="feature-tag">AMM</span>
-                        <span class="feature-tag">Liquidity</span>
+                        <span class="feature-tag"><i data-feather="shuffle"></i>DEX</span>
+                        <span class="feature-tag"><i data-feather="git-merge"></i>AMM</span>
+                        <span class="feature-tag"><i data-feather="droplet"></i>Liquidity</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="expert">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="users"></i></div>
                         <div class="example-number">10</div>
                         <div class="example-difficulty expert">🔴 Expert</div>
                     </div>
@@ -508,14 +533,15 @@ impl HelloWorld {
                         Enterprise security with M-of-N signatures and governance
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">Multisig</span>
-                        <span class="feature-tag">Governance</span>
-                        <span class="feature-tag">Security</span>
+                        <span class="feature-tag"><i data-feather="users"></i>Multisig</span>
+                        <span class="feature-tag"><i data-feather="sliders"></i>Governance</span>
+                        <span class="feature-tag"><i data-feather="shield"></i>Security</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="expert">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="vote"></i></div>
                         <div class="example-number">11</div>
                         <div class="example-difficulty expert">🔴 Expert</div>
                     </div>
@@ -524,14 +550,15 @@ impl HelloWorld {
                         DAO governance with token-weighted voting system
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">DAO</span>
-                        <span class="feature-tag">Voting</span>
-                        <span class="feature-tag">Governance</span>
+                        <span class="feature-tag"><i data-feather="hexagon"></i>DAO</span>
+                        <span class="feature-tag"><i data-feather="check-square"></i>Voting</span>
+                        <span class="feature-tag"><i data-feather="sliders"></i>Governance</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="expert">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="activity"></i></div>
                         <div class="example-number">12</div>
                         <div class="example-difficulty expert">🔴 Expert</div>
                     </div>
@@ -540,14 +567,15 @@ impl HelloWorld {
                         External data integration with oracle systems
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">Oracle</span>
-                        <span class="feature-tag">Price Feed</span>
-                        <span class="feature-tag">External Data</span>
+                        <span class="feature-tag"><i data-feather="eye"></i>Oracle</span>
+                        <span class="feature-tag"><i data-feather="activity"></i>Price Feed</span>
+                        <span class="feature-tag"><i data-feather="external-link"></i>External Data</span>
                     </div>
                 </div>
                 
                 <div class="example-card" data-category="expert">
                     <div class="example-header">
+                        <div class="example-icon"><i data-feather="shopping-bag"></i></div>
                         <div class="example-number">13</div>
                         <div class="example-difficulty expert">🔴 Expert</div>
                     </div>
@@ -556,9 +584,9 @@ impl HelloWorld {
                         Enterprise NFT marketplace with modular architecture
                     </p>
                     <div class="example-features">
-                        <span class="feature-tag">Marketplace</span>
-                        <span class="feature-tag">Modular</span>
-                        <span class="feature-tag">Enterprise</span>
+                        <span class="feature-tag"><i data-feather="shopping-bag"></i>Marketplace</span>
+                        <span class="feature-tag"><i data-feather="grid"></i>Modular</span>
+                        <span class="feature-tag"><i data-feather="briefcase"></i>Enterprise</span>
                     </div>
                 </div>
             </div>
@@ -578,6 +606,7 @@ impl HelloWorld {
             <div class="getting-started-content">
                 <div class="steps">
                     <div class="step">
+                        <div class="step-icon"><i data-feather="download"></i></div>
                         <div class="step-number">1</div>
                         <div class="step-content">
                             <h3>Prerequisites</h3>
@@ -595,6 +624,7 @@ rustup target add wasm32-unknown-unknown
                     </div>
                     
                     <div class="step">
+                        <div class="step-icon"><i data-feather="git-branch"></i></div>
                         <div class="step-number">2</div>
                         <div class="step-content">
                             <h3>Clone & Build</h3>
@@ -613,6 +643,7 @@ cd ..</code></pre>
                     </div>
                     
                     <div class="step">
+                        <div class="step-icon"><i data-feather="rocket"></i></div>
                         <div class="step-number">3</div>
                         <div class="step-content">
                             <h3>Your First Contract</h3>
@@ -783,18 +814,22 @@ impl HelloWorld {
                     </p>
                     <div class="production-metrics">
                         <div class="metric">
+                            <div class="metric-icon"><i data-feather="check-circle"></i></div>
                             <div class="metric-value">100%</div>
                             <div class="metric-label">Build Success</div>
                         </div>
                         <div class="metric">
+                            <div class="metric-icon"><i data-feather="award"></i></div>
                             <div class="metric-value">3</div>
                             <div class="metric-label">NEP Standards</div>
                         </div>
                         <div class="metric">
+                            <div class="metric-icon"><i data-feather="code"></i></div>
                             <div class="metric-value">8K+</div>
                             <div class="metric-label">Lines Tested</div>
                         </div>
                         <div class="metric">
+                            <div class="metric-icon"><i data-feather="folder"></i></div>
                             <div class="metric-value">13</div>
                             <div class="metric-label">Examples</div>
                         </div>
