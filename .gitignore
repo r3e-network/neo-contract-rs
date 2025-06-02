@@ -38,5 +38,6 @@ node_modules/
 .env.local
 .env.*.local
 
-# Local development dependencies
+# Local development dependencies (separate projects)
 neo-devpack-dotnet/
+neo-wasm/
