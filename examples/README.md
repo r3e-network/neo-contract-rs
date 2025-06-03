@@ -99,6 +99,6 @@ To compile the WebAssembly to NEO VM bytecode:
 
 For more details about NEO Contract Rust development, see the following documentation:
 
-- [Development Guide](../docs/DEVELOPMENT-GUIDE.md)
-- [Fixed Issues](../docs/FIXED-ISSUES.md)
-- [Future Improvements](../docs/FUTURE-IMPROVEMENTS.md)
+- [Compilation Guide](../COMPILE_GUIDE.md): Guide to compiling contracts to Neo VM bytecode
+- [WASM Toolchain](../WASM_TOOLCHAIN.md): Information about the WebAssembly toolchain setup
+- [Contract Organization](../neo-contract/CONTRACTS.md): Overview of the contract module organization

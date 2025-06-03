@@ -70,7 +70,7 @@ For more details on cross-contract communication, see:
 - [Cross-Contract Communication Guide](../../docs/cross_contract_guide.md)
 - [Contract Security Guide](../../docs/contract_security_guide.md)
 - [Events Guide](../../docs/events_guide.md)
-- [Transaction Patterns Guide](../../docs/transaction_patterns.md)
+- [Gas Optimization Guide](../../docs/gas_optimization.md)
 
 ## License
 

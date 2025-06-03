@@ -60,7 +60,7 @@ impl TokenContract {
 }
 ```
 
-For detailed documentation on the annotation system, see [ANNOTATIONS.md](docs/ANNOTATIONS.md).
+For detailed documentation on the annotation system, see [examples/README.md](examples/README.md) which includes comprehensive annotation syntax and usage examples.
 
 ## Current Status
 
@@ -109,20 +109,33 @@ This generates:
 
 ## Examples
 
-The framework includes various examples:
+The framework includes various examples in the `examples/` directory:
 
-- `documentation_example`: Comprehensive example demonstrating all annotations and proper syntax
-- `annotation_test`: NEP-17 token using all annotation features
-- `nep17-token`: Standard-compliant token implementation
-- And many more specialized examples
+- **NEP-17 Token**: Standard fungible token implementation
+- **NFT Contracts**: Non-fungible token examples including basic and marketplace implementations  
+- **DeFi Applications**: Decentralized finance examples
+- **Cross-Contract Communication**: Inter-contract interaction patterns
+- **Exchange Contracts**: Trading and swap functionality
+- **DAO Examples**: Decentralized autonomous organization implementations
+
+For detailed information about available examples and their usage, see the [Examples README](examples/README.md).
 
 ## Documentation
 
-- [Annotation Reference](docs/ANNOTATIONS.md): Complete guide to the annotation system
-- [Attribute Macros Guide](docs/ATTRIBUTE-MACROS.md): Detailed documentation on all available macros
-- [Events Guide](docs/events_guide.md): Guide to defining and emitting events
-- [API Reference](neo-contract/docs/API.md): Neo N3 API documentation
-- [Storage Guide](docs/STORAGE.md): Guide to using contract storage
+### Core Guides
+- [Annotation Reference](docs/ANNOTATIONS.md): Complete guide to all available annotations and their usage
+- [Events Guide](docs/events_guide.md): Comprehensive guide to defining, emitting, and handling events
+- [Storage Guide](docs/storage_guide.md): Storage patterns, optimization techniques, and best practices
+- [Contract Security Guide](docs/contract_security_guide.md): Security best practices and vulnerability prevention
+- [Gas Optimization Guide](docs/gas_optimization.md): Strategies for reducing gas consumption
+- [Cross-Contract Communication Guide](docs/cross_contract_guide.md): Inter-contract interaction patterns
+
+### Framework Documentation
+- [Examples README](examples/README.md): Annotation syntax examples and usage patterns
+- [Macro Architecture](neo-contract/MACROS.md): Detailed documentation on macro organization and implementation
+- [Contract Organization](neo-contract/CONTRACTS.md): Overview of the contract module organization
+- [Compilation Guide](COMPILE_GUIDE.md): Guide to compiling contracts to Neo VM bytecode
+- [WASM Toolchain](WASM_TOOLCHAIN.md): Information about the WebAssembly toolchain setup
 
 ## License
 

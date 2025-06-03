@@ -192,4 +192,4 @@ let result = contract::call(
 );
 ```
 
-For more information on Neo N3 contract development, see the [Neo N3 Implementation Guide](../../docs/neo_n3_implementation_guide.md).
+For more information on Neo N3 contract development, see the [Contract Security Guide](../../docs/contract_security_guide.md) and [Cross-Contract Communication Guide](../../docs/cross_contract_guide.md).

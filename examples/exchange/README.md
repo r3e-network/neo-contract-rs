@@ -181,4 +181,4 @@ neoxp contract invoke $EXCHANGE_HASH addLiquidity "[$TOKEN_A_HASH,$TOKEN_B_HASH,
 neoxp contract invoke $EXCHANGE_HASH swap "[$TOKEN_A_HASH,$TOKEN_B_HASH,100]" --account user1
 ```
 
-For more details on contract interoperability, see the [Interoperability Guide](../../docs/INTEROPERABILITY-GUIDE.md). 
+For more details on contract interoperability, see the [Cross-Contract Communication Guide](../../docs/cross_contract_guide.md). 
