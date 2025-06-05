@@ -97,27 +97,27 @@
       {
         "parameters": [
           {
-            "name": "provider",
+            "name": "_provider",
             "type": "Hash160"
           },
           {
-            "name": "token_a",
+            "name": "_token_a",
             "type": "Hash160"
           },
           {
-            "name": "token_b",
+            "name": "_token_b",
             "type": "Hash160"
           },
           {
-            "name": "amount_a",
+            "name": "_amount_a",
             "type": "Integer"
           },
           {
-            "name": "amount_b",
+            "name": "_amount_b",
             "type": "Integer"
           },
           {
-            "name": "min_liquidity",
+            "name": "_min_liquidity",
             "type": "Integer"
           }
         ],
@@ -129,23 +129,23 @@
       {
         "parameters": [
           {
-            "name": "provider",
+            "name": "_provider",
             "type": "Hash160"
           },
           {
-            "name": "pool_id",
+            "name": "_pool_id",
             "type": "Integer"
           },
           {
-            "name": "liquidity_amount",
+            "name": "_liquidity_amount",
             "type": "Integer"
           },
           {
-            "name": "min_amount_a",
+            "name": "_min_amount_a",
             "type": "Integer"
           },
           {
-            "name": "min_amount_b",
+            "name": "_min_amount_b",
             "type": "Integer"
           }
         ],

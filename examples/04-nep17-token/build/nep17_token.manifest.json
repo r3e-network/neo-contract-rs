@@ -12,7 +12,7 @@
     }
   ],
   "trusts": [],
-  "name": "simple_token",
+  "name": "nep17_token",
   "features": {},
   "abi": {
     "methods": [
@@ -37,35 +37,31 @@
           {
             "name": "max_supply",
             "type": "Integer"
-          },
-          {
-            "name": "mintable",
-            "type": "Boolean"
           }
         ],
         "name": "deploy",
-        "offset": 36,
+        "offset": 73,
         "returntype": "Boolean",
         "safe": false
       },
       {
         "parameters": [],
         "name": "symbol",
-        "offset": 339,
+        "offset": 345,
         "returntype": "ByteArray",
         "safe": true
       },
       {
         "parameters": [],
         "name": "decimals",
-        "offset": 442,
+        "offset": 448,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "total_supply",
-        "offset": 531,
+        "offset": 537,
         "returntype": "Integer",
         "safe": true
       },
@@ -77,7 +73,7 @@
           }
         ],
         "name": "balance_of",
-        "offset": 630,
+        "offset": 636,
         "returntype": "Integer",
         "safe": true
       },
@@ -101,14 +97,34 @@
           }
         ],
         "name": "transfer",
-        "offset": 734,
+        "offset": 740,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [
           {
-            "name": "from",
+            "name": "owner",
+            "type": "Hash160"
+          },
+          {
+            "name": "spender",
+            "type": "Hash160"
+          }
+        ],
+        "name": "allowance",
+        "offset": 1020,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          },
+          {
+            "name": "spender",
             "type": "Hash160"
           },
           {
@@ -116,86 +132,36 @@
             "type": "Integer"
           }
         ],
-        "name": "burn",
-        "offset": 1079,
+        "name": "approve",
+        "offset": 1148,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [
           {
-            "name": "minter",
+            "name": "spender",
             "type": "Hash160"
-          }
-        ],
-        "name": "add_minter",
-        "offset": 1176,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [
+          },
           {
-            "name": "minter",
+            "name": "from",
             "type": "Hash160"
-          }
-        ],
-        "name": "remove_minter",
-        "offset": 1342,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "pause",
-        "offset": 1500,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "unpause",
-        "offset": 1659,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "get_owner",
-        "offset": 1810,
-        "returntype": "Hash160",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "is_paused",
-        "offset": 1909,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "is_mintable",
-        "offset": 1998,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "get_max_supply",
-        "offset": 2087,
-        "returntype": "Integer",
-        "safe": true
-      },
-      {
-        "parameters": [
+          },
           {
-            "name": "address",
+            "name": "to",
             "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          },
+          {
+            "name": "data",
+            "type": "Any"
           }
         ],
-        "name": "is_minter",
-        "offset": 2186,
+        "name": "transfer_from",
+        "offset": 1331,
         "returntype": "Boolean",
         "safe": true
       },
@@ -211,8 +177,83 @@
           }
         ],
         "name": "mint",
-        "offset": 29,
+        "offset": 1668,
         "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "from",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "name": "burn",
+        "offset": 1834,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get_owner",
+        "offset": 1931,
+        "returntype": "Hash160",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "minter",
+            "type": "Hash160"
+          }
+        ],
+        "name": "add_minter",
+        "offset": 2030,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "minter",
+            "type": "Hash160"
+          }
+        ],
+        "name": "remove_minter",
+        "offset": 2200,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "pause",
+        "offset": 2362,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "unpause",
+        "offset": 2521,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "is_paused",
+        "offset": 2672,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get_max_supply",
+        "offset": 2761,
+        "returntype": "Integer",
         "safe": true
       }
     ],
@@ -220,9 +261,9 @@
   },
   "extra": {
     "Author": "neo-contract-rs",
-    "Description": "Simple token contract implementing NEP-17 standard\n#[contract_author(\"Neo Rust Framework\", \"dev@neo.org\")]\n#[contract_version(\"1.0.0\")]\n#[contract_standards(\"NEP-17\")]\n#[contract_permission(\"*\", \"*\")]\n#[contract_meta(\"description\", \"A complete simple token implementation\")]\n#[contract_meta(\"category\", \"Token\")]",
+    "Description": "NEP-17 compliant fungible token contract\n#[contract_author(\"Neo Rust Framework\", \"dev@neo.org\")]\n#[contract_version(\"1.0.0\")]\n#[contract_standards(\"NEP-17\")]\n#[contract_permission(\"*\", \"*\")]\n#[contract_meta(\"description\", \"Production-ready NEP-17 fungible token\")]\n#[contract_meta(\"website\", \"https://github.com/R3E-Network/neo-contract-rs\")]",
     "Version": "1.0.0",
-    "category": "Token",
-    "description": "A complete simple token implementation"
+    "description": "Production-ready NEP-17 fungible token",
+    "website": "https://github.com/R3E-Network/neo-contract-rs"
   }
 }

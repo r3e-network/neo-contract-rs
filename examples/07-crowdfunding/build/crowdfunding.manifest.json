@@ -26,7 +26,7 @@
           }
         ],
         "name": "initialize",
-        "offset": 321,
+        "offset": 305,
         "returntype": "Boolean",
         "safe": false
       },
@@ -58,7 +58,7 @@
           }
         ],
         "name": "create_campaign",
-        "offset": 483,
+        "offset": 471,
         "returntype": "Integer",
         "safe": false
       },
@@ -78,7 +78,7 @@
           }
         ],
         "name": "contribute",
-        "offset": 595,
+        "offset": 583,
         "returntype": "Boolean",
         "safe": false
       },
@@ -90,7 +90,7 @@
           }
         ],
         "name": "get_campaign",
-        "offset": 631,
+        "offset": 619,
         "returntype": "ByteArray",
         "safe": true
       },
@@ -106,7 +106,7 @@
           }
         ],
         "name": "get_contribution",
-        "offset": 894,
+        "offset": 887,
         "returntype": "Integer",
         "safe": true
       },
@@ -118,28 +118,28 @@
           }
         ],
         "name": "get_total_raised",
-        "offset": 964,
+        "offset": 957,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_campaign_count",
-        "offset": 1016,
+        "offset": 1009,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_platform_owner",
-        "offset": 1063,
+        "offset": 1056,
         "returntype": "Hash160",
         "safe": true
       },
       {
         "parameters": [],
         "name": "is_emergency_paused",
-        "offset": 1110,
+        "offset": 1103,
         "returntype": "Boolean",
         "safe": true
       },
@@ -155,7 +155,7 @@
           }
         ],
         "name": "request_refund",
-        "offset": 1143,
+        "offset": 1136,
         "returntype": "Boolean",
         "safe": true
       },
@@ -167,21 +167,21 @@
           }
         ],
         "name": "cancel_campaign",
-        "offset": 1336,
+        "offset": 1332,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "emergency_pause",
-        "offset": 1688,
+        "offset": 1693,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "resume_platform",
-        "offset": 1798,
+        "offset": 1803,
         "returntype": "Boolean",
         "safe": true
       }

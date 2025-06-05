@@ -26,85 +26,163 @@
           }
         ],
         "name": "initialize",
-        "offset": 350,
+        "offset": 305,
         "returntype": "Boolean",
         "safe": false
       },
       {
-        "parameters": [],
-        "name": "propose_transaction",
-        "offset": 779,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "creator",
+            "type": "Hash160"
+          },
+          {
+            "name": "title",
+            "type": "ByteArray"
+          },
+          {
+            "name": "description",
+            "type": "ByteArray"
+          },
+          {
+            "name": "funding_goal",
+            "type": "Integer"
+          },
+          {
+            "name": "deadline",
+            "type": "Integer"
+          },
+          {
+            "name": "payment_token",
+            "type": "Hash160"
+          }
+        ],
+        "name": "create_campaign",
+        "offset": 471,
+        "returntype": "Integer",
         "safe": false
       },
       {
-        "parameters": [],
-        "name": "confirm_transaction",
-        "offset": 1112,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "campaign_id",
+            "type": "Integer"
+          },
+          {
+            "name": "contributor",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "name": "contribute",
+        "offset": 583,
+        "returntype": "Boolean",
         "safe": false
       },
       {
-        "parameters": [],
-        "name": "revoke_confirmation",
-        "offset": 1699,
-        "returntype": "Void",
-        "safe": false
+        "parameters": [
+          {
+            "name": "campaign_id",
+            "type": "Integer"
+          }
+        ],
+        "name": "get_campaign",
+        "offset": 619,
+        "returntype": "ByteArray",
+        "safe": true
       },
       {
-        "parameters": [],
-        "name": "cancel_proposal",
-        "offset": 2121,
-        "returntype": "Void",
-        "safe": false
+        "parameters": [
+          {
+            "name": "campaign_id",
+            "type": "Integer"
+          },
+          {
+            "name": "contributor",
+            "type": "Hash160"
+          }
+        ],
+        "name": "get_contribution",
+        "offset": 887,
+        "returntype": "Integer",
+        "safe": true
       },
       {
-        "parameters": [],
-        "name": "add_owner",
-        "offset": 2444,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "get_proposal",
-        "offset": 2545,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "campaign_id",
+            "type": "Integer"
+          }
+        ],
+        "name": "get_total_raised",
+        "offset": 957,
+        "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "is_owner",
-        "offset": 2575,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "get_owners",
-        "offset": 2613,
-        "returntype": "Void",
+        "name": "get_campaign_count",
+        "offset": 1009,
+        "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_required_confirmations",
-        "offset": 2647,
-        "returntype": "Void",
+        "name": "get_platform_owner",
+        "offset": 1056,
+        "returntype": "Hash160",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_owner_count",
-        "offset": 2678,
-        "returntype": "Void",
+        "name": "is_emergency_paused",
+        "offset": 1103,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "campaign_id",
+            "type": "Integer"
+          },
+          {
+            "name": "contributor",
+            "type": "Hash160"
+          }
+        ],
+        "name": "request_refund",
+        "offset": 1136,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "campaign_id",
+            "type": "Integer"
+          }
+        ],
+        "name": "cancel_campaign",
+        "offset": 1332,
+        "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_proposal_count",
-        "offset": 2709,
-        "returntype": "Void",
+        "name": "emergency_pause",
+        "offset": 1693,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "resume_platform",
+        "offset": 1803,
+        "returntype": "Boolean",
         "safe": true
       }
     ],

@@ -13,7 +13,7 @@
     }
   ],
   "trusts": [],
-  "name": "13-nft-marketplace",
+  "name": "nft_marketplace",
   "features": {},
   "abi": {
     "methods": [

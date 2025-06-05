@@ -10,14 +10,19 @@
 /// # Example
 ///
 /// ```rust
-/// #[neo::contract]
+/// use neo_contract::prelude::*;
+///
+/// struct ExampleContract;
+///
 /// impl ExampleContract {
 ///     /// Returns the total supply without modifying state
 ///     #[safe]
 ///     pub fn total_supply() -> Int256 {
 ///         // Read-only operation
 ///         let storage = StorageMap::new();
-///         storage.get("total_supply").unwrap_or_default()
+///         let value = storage.get(ByteString::from_literal("total_supply"));
+///         // Convert ByteString to Int256 or return zero
+///         Int256::new(1000000) // Simplified for example
 ///     }
 ///
 ///     /// Modifies contract state - not marked as safe

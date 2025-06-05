@@ -4,6 +4,7 @@
 use crate::types::*;
 
 #[repr(C)]
+#[derive(Default)]
 pub struct Signer {
     account: H160,
     scopes: WitnessScope,
@@ -13,12 +14,14 @@ pub struct Signer {
 }
 
 #[repr(C)]
+#[derive(Default)]
 pub struct WitnessRule {
     action: WitnessRuleAction,
     condition: WitnessCondition,
 }
 
 #[repr(C)]
+#[derive(Default)]
 pub struct WitnessCondition {
     condition_type: WitnessConditionType,
     condition: i32, // placeholder, and cannot use directly

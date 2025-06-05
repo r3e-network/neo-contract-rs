@@ -50,43 +50,84 @@
           }
         ],
         "name": "initialize",
-        "offset": 350,
+        "offset": 369,
         "returntype": "Boolean",
         "safe": false
       },
       {
-        "parameters": [],
-        "name": "propose_transaction",
-        "offset": 779,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "proposer",
+            "type": "Hash160"
+          },
+          {
+            "name": "title",
+            "type": "ByteArray"
+          },
+          {
+            "name": "description",
+            "type": "ByteArray"
+          },
+          {
+            "name": "target_contract",
+            "type": "Hash160"
+          },
+          {
+            "name": "call_data",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "propose",
+        "offset": 744,
+        "returntype": "Integer",
         "safe": false
       },
       {
-        "parameters": [],
-        "name": "confirm_transaction",
-        "offset": 1112,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "voter",
+            "type": "Hash160"
+          },
+          {
+            "name": "proposal_id",
+            "type": "Integer"
+          },
+          {
+            "name": "choice",
+            "type": "Integer"
+          },
+          {
+            "name": "reason",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "vote",
+        "offset": 1118,
+        "returntype": "Boolean",
         "safe": false
       },
       {
-        "parameters": [],
-        "name": "revoke_confirmation",
-        "offset": 1699,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "type": "Integer"
+          }
+        ],
+        "name": "queue_proposal",
+        "offset": 1370,
+        "returntype": "Boolean",
         "safe": false
       },
       {
-        "parameters": [],
-        "name": "cancel_proposal",
-        "offset": 2121,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "add_owner",
-        "offset": 2444,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "type": "Integer"
+          }
+        ],
+        "name": "execute_proposal",
+        "offset": 1523,
+        "returntype": "Boolean",
         "safe": false
       },
       {
@@ -97,42 +138,26 @@
           }
         ],
         "name": "get_proposal",
-        "offset": 2545,
+        "offset": 1789,
         "returntype": "ByteArray",
         "safe": true
       },
       {
-        "parameters": [],
-        "name": "is_owner",
-        "offset": 2575,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "get_owners",
-        "offset": 2613,
-        "returntype": "Void",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "get_required_confirmations",
-        "offset": 2647,
-        "returntype": "Void",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "get_owner_count",
-        "offset": 2678,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "_account",
+            "type": "Hash160"
+          }
+        ],
+        "name": "get_voting_power",
+        "offset": 2154,
+        "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_proposal_count",
-        "offset": 2709,
+        "offset": 2180,
         "returntype": "Integer",
         "safe": true
       }

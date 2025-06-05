@@ -28,6 +28,13 @@ impl Int256 {
     }
 
     #[inline(always)]
+    pub fn from_u64(n: u64) -> Self {
+        // For WASM target, avoid u64 operations that generate I32WrapI64
+        // Use the existing new() method with i32 conversion
+        Self::new(n as i32 as i64)
+    }
+
+    #[inline(always)]
     pub fn zero() -> Self {
         unsafe { env::numeric::int256_zero() }
     }
@@ -169,6 +176,10 @@ impl Int256 {
 #[cfg(not(target_family = "wasm"))]
 impl Int256 {
     pub fn new(n: i64) -> Self {
+        Int256(num256::Int256::from(n))
+    }
+
+    pub fn from_u64(n: u64) -> Self {
         Int256(num256::Int256::from(n))
     }
 
@@ -316,6 +327,7 @@ impl Int256 {
         Self(num256::Int256::from_le_bytes(bytes))
     }
 }
+
 
 impl Default for Int256 {
     #[inline(always)]

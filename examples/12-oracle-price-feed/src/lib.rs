@@ -280,7 +280,7 @@ impl OraclePriceFeed {
                     let mut event_data = Array::new();
                     event_data.push(symbol.into_any());
                     event_data.push(price.into_any());
-                    event_data.push(Int256::new(current_time as i64).into_any());
+                    event_data.push(Int256::from_u64(current_time).into_any());
                     Runtime::notify(ByteString::from_literal("PriceDataReceived"), event_data);
                 } else {
                     Runtime::log(ByteString::from_literal("Price data failed validation"));
@@ -321,10 +321,10 @@ impl OraclePriceFeed {
                 if current_time - price_info.timestamp <= max_age {
                     result.put(ByteString::from_literal("symbol"), price_info.symbol.into_any());
                     result.put(ByteString::from_literal("price"), price_info.price.into_any());
-                    result.put(ByteString::from_literal("timestamp"), Int256::new(price_info.timestamp as i64).into_any());
+                    result.put(ByteString::from_literal("timestamp"), Int256::from_u64(price_info.timestamp).into_any());
                     result.put(ByteString::from_literal("source"), price_info.source.into_any());
-                    result.put(ByteString::from_literal("confidence"), Int256::new(price_info.confidence as i64).into_any());
-                    result.put(ByteString::from_literal("age"), Int256::new((current_time - price_info.timestamp) as i64).into_any());
+                    result.put(ByteString::from_literal("confidence"), Int256::from_u64(price_info.confidence as u64).into_any());
+                    result.put(ByteString::from_literal("age"), Int256::from_u64(current_time - price_info.timestamp).into_any());
                 } else {
                     result.put(ByteString::from_literal("error"), ByteString::from_literal("Price data too old").into_any());
                 }
@@ -471,11 +471,11 @@ impl OraclePriceFeed {
         match Storage::get(storage, sub_key) {
             Some(expiration_bytes) => {
                 let bytes = expiration_bytes.to_bytes();
-                if bytes.len() >= 8 {
-                    let expiration = u64::from_le_bytes([
-                        bytes[0], bytes[1], bytes[2], bytes[3],
-                        bytes[4], bytes[5], bytes[6], bytes[7]
-                    ]);
+                if bytes.len() >= 4 {
+                    // Use u32 instead of u64 to avoid I32WrapI64 WASM operation
+                    let expiration = u32::from_le_bytes([
+                        bytes[0], bytes[1], bytes[2], bytes[3]
+                    ]) as u64;
                     let current_time = Runtime::get_time();
                     current_time < expiration
                 } else {
@@ -491,11 +491,11 @@ impl OraclePriceFeed {
         match Storage::get(storage, self.max_price_age_key.clone()) {
             Some(age_bytes) => {
                 let bytes = age_bytes.to_bytes();
-                if bytes.len() >= 8 {
-                    u64::from_le_bytes([
-                        bytes[0], bytes[1], bytes[2], bytes[3],
-                        bytes[4], bytes[5], bytes[6], bytes[7]
-                    ])
+                if bytes.len() >= 4 {
+                    // Use u32 instead of u64 to avoid I32WrapI64 WASM operation
+                    u32::from_le_bytes([
+                        bytes[0], bytes[1], bytes[2], bytes[3]
+                    ]) as u64
                 } else {
                     300 // 5 minutes default
                 }
@@ -526,7 +526,7 @@ impl OraclePriceFeed {
         let hist_key = self.historical_prefix
             .concat(&price_data.symbol)
             .concat(&ByteString::from_literal("_"))
-            .concat(&ByteString::from_bytes(&price_data.timestamp.to_le_bytes()));
+            .concat(&ByteString::from_bytes(&(price_data.timestamp as u32).to_le_bytes()));
         let storage_clone = storage.clone(); Storage::put(storage_clone, hist_key, self.serialize_price_data(price_data));
     }
 
@@ -585,7 +585,7 @@ impl OraclePriceFeed {
         data = data.concat(&ByteString::from_literal("|"));
         data = data.concat(&request.gas_for_response.into_byte_string());
         data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&ByteString::from_bytes(&request.timestamp.to_le_bytes()));
+        data = data.concat(&ByteString::from_bytes(&(request.timestamp as u32).to_le_bytes()));
         data = data.concat(&ByteString::from_literal("|"));
         data = data.concat(&ByteString::from_bytes(&[request.status]));
         data

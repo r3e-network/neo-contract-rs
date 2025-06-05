@@ -37,28 +37,28 @@
           }
         ],
         "name": "deploy",
-        "offset": 506,
+        "offset": 486,
         "returntype": "Boolean",
         "safe": false
       },
       {
         "parameters": [],
         "name": "symbol",
-        "offset": 735,
+        "offset": 725,
         "returntype": "ByteArray",
         "safe": true
       },
       {
         "parameters": [],
         "name": "decimals",
-        "offset": 778,
+        "offset": 768,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "total_supply",
-        "offset": 798,
+        "offset": 788,
         "returntype": "Integer",
         "safe": true
       },
@@ -70,7 +70,7 @@
           }
         ],
         "name": "balance_of",
-        "offset": 843,
+        "offset": 833,
         "returntype": "Integer",
         "safe": true
       },
@@ -82,7 +82,7 @@
           }
         ],
         "name": "owner_of",
-        "offset": 893,
+        "offset": 883,
         "returntype": "Hash160",
         "safe": true
       },
@@ -102,7 +102,7 @@
           }
         ],
         "name": "transfer",
-        "offset": 941,
+        "offset": 931,
         "returntype": "Boolean",
         "safe": true
       },
@@ -113,7 +113,7 @@
             "type": "ByteArray"
           },
           {
-            "name": "royalty_token",
+            "name": "_royalty_token",
             "type": "Hash160"
           },
           {
@@ -122,7 +122,7 @@
           }
         ],
         "name": "royalty_info",
-        "offset": 1135,
+        "offset": 1144,
         "returntype": "ByteArray",
         "safe": true
       },
@@ -137,8 +137,8 @@
             "type": "ByteArray"
           },
           {
-            "name": "properties",
-            "type": "ByteArray"
+            "name": "metadata",
+            "type": "Any"
           },
           {
             "name": "royalty_recipients",
@@ -150,7 +150,7 @@
           }
         ],
         "name": "mint_with_royalty",
-        "offset": 1244,
+        "offset": 1277,
         "returntype": "Boolean",
         "safe": true
       },
@@ -166,7 +166,7 @@
           }
         ],
         "name": "set_creator_royalty",
-        "offset": 1810,
+        "offset": 2039,
         "returntype": "Boolean",
         "safe": true
       },
@@ -178,7 +178,7 @@
           }
         ],
         "name": "add_marketplace",
-        "offset": 1985,
+        "offset": 2226,
         "returntype": "Boolean",
         "safe": true
       },
@@ -206,7 +206,7 @@
           }
         ],
         "name": "marketplace_sale",
-        "offset": 2100,
+        "offset": 2345,
         "returntype": "Boolean",
         "safe": true
       },
@@ -218,14 +218,14 @@
           }
         ],
         "name": "get_token_royalty_info",
-        "offset": 2308,
+        "offset": 2604,
         "returntype": "Array",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_max_royalty",
-        "offset": 2356,
+        "offset": 2652,
         "returntype": "Integer",
         "safe": true
       },
@@ -237,22 +237,34 @@
           }
         ],
         "name": "is_approved_marketplace",
-        "offset": 2387,
+        "offset": 2683,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_owner",
-        "offset": 2423,
+        "offset": 2719,
         "returntype": "Hash160",
         "safe": true
       },
       {
         "parameters": [],
         "name": "is_paused",
-        "offset": 2468,
+        "offset": 2764,
         "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "token_id",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "properties",
+        "offset": 2795,
+        "returntype": "ByteArray",
         "safe": true
       }
     ],
@@ -260,7 +272,7 @@
   },
   "extra": {
     "Author": "neo-contract-rs",
-    "Description": "Royalty information structure\n#[derive(Clone)]",
+    "Description": "Royalty information structure\n#[derive(Clone, Default)]",
     "Version": "1.0.0",
     "category": "NFT",
     "description": "NFT contract with creator royalty support"

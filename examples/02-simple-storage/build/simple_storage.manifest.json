@@ -29,7 +29,7 @@
       {
         "parameters": [],
         "name": "get_owner",
-        "offset": 217,
+        "offset": 221,
         "returntype": "Hash160",
         "safe": true
       },
@@ -45,7 +45,7 @@
           }
         ],
         "name": "put_string",
-        "offset": 307,
+        "offset": 311,
         "returntype": "Boolean",
         "safe": true
       },
@@ -57,7 +57,7 @@
           }
         ],
         "name": "get_string",
-        "offset": 445,
+        "offset": 453,
         "returntype": "ByteArray",
         "safe": true
       },
@@ -73,7 +73,7 @@
           }
         ],
         "name": "put_number",
-        "offset": 538,
+        "offset": 546,
         "returntype": "Boolean",
         "safe": true
       },
@@ -85,7 +85,7 @@
           }
         ],
         "name": "get_number",
-        "offset": 678,
+        "offset": 690,
         "returntype": "Integer",
         "safe": true
       },
@@ -101,7 +101,7 @@
           }
         ],
         "name": "put_address",
-        "offset": 771,
+        "offset": 783,
         "returntype": "Boolean",
         "safe": true
       },
@@ -113,7 +113,7 @@
           }
         ],
         "name": "get_address",
-        "offset": 911,
+        "offset": 927,
         "returntype": "Hash160",
         "safe": true
       },
@@ -129,7 +129,7 @@
           }
         ],
         "name": "put_array",
-        "offset": 1004,
+        "offset": 1020,
         "returntype": "Boolean",
         "safe": true
       },
@@ -141,7 +141,7 @@
           }
         ],
         "name": "get_array",
-        "offset": 1249,
+        "offset": 1224,
         "returntype": "ByteArray",
         "safe": true
       },
@@ -152,12 +152,12 @@
             "type": "ByteArray"
           },
           {
-            "name": "map_data",
+            "name": "_map_data",
             "type": "ByteArray"
           }
         ],
         "name": "put_map",
-        "offset": 1333,
+        "offset": 1308,
         "returntype": "Boolean",
         "safe": true
       },
@@ -169,7 +169,7 @@
           }
         ],
         "name": "get_map",
-        "offset": 1483,
+        "offset": 1460,
         "returntype": "ByteArray",
         "safe": true
       },
@@ -185,21 +185,21 @@
           }
         ],
         "name": "delete",
-        "offset": 1567,
+        "offset": 1544,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_total_items",
-        "offset": 1832,
+        "offset": 1813,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_stats",
-        "offset": 1922,
+        "offset": 1903,
         "returntype": "ByteArray",
         "safe": true
       }

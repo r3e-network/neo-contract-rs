@@ -54,7 +54,7 @@
           }
         ],
         "name": "create_pool",
-        "offset": 321,
+        "offset": 325,
         "returntype": "Integer",
         "safe": false
       },
@@ -74,7 +74,7 @@
           }
         ],
         "name": "stake",
-        "offset": 551,
+        "offset": 555,
         "returntype": "Boolean",
         "safe": false
       },
@@ -90,7 +90,7 @@
           }
         ],
         "name": "claim_rewards",
-        "offset": 585,
+        "offset": 589,
         "returntype": "Integer",
         "safe": false
       },
@@ -110,7 +110,7 @@
           }
         ],
         "name": "unstake",
-        "offset": 733,
+        "offset": 739,
         "returntype": "Boolean",
         "safe": false
       },
@@ -126,7 +126,7 @@
           }
         ],
         "name": "get_user_stake",
-        "offset": 767,
+        "offset": 773,
         "returntype": "ByteArray",
         "safe": true
       },
@@ -138,14 +138,14 @@
           }
         ],
         "name": "get_pool",
-        "offset": 997,
+        "offset": 993,
         "returntype": "Any",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_pool_count",
-        "offset": 1077,
+        "offset": 1065,
         "returntype": "Integer",
         "safe": true
       },
@@ -161,35 +161,35 @@
           }
         ],
         "name": "add_rewards",
-        "offset": 1122,
+        "offset": 1110,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "enable_emergency",
-        "offset": 1213,
+        "offset": 1201,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "is_emergency_enabled",
-        "offset": 1321,
+        "offset": 1309,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "is_paused",
-        "offset": 1352,
+        "offset": 1340,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_owner",
-        "offset": 1383,
+        "offset": 1371,
         "returntype": "Hash160",
         "safe": true
       }

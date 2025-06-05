@@ -32,28 +32,28 @@
           }
         ],
         "name": "deploy",
-        "offset": 481,
+        "offset": 360,
         "returntype": "Boolean",
         "safe": false
       },
       {
         "parameters": [],
         "name": "symbol",
-        "offset": 659,
+        "offset": 545,
         "returntype": "ByteArray",
         "safe": true
       },
       {
         "parameters": [],
         "name": "decimals",
-        "offset": 704,
+        "offset": 590,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "total_supply",
-        "offset": 726,
+        "offset": 612,
         "returntype": "Integer",
         "safe": true
       },
@@ -65,7 +65,7 @@
           }
         ],
         "name": "balance_of",
-        "offset": 773,
+        "offset": 659,
         "returntype": "Integer",
         "safe": true
       },
@@ -77,7 +77,7 @@
           }
         ],
         "name": "owner_of",
-        "offset": 825,
+        "offset": 711,
         "returntype": "Hash160",
         "safe": true
       },
@@ -89,7 +89,7 @@
           }
         ],
         "name": "tokens_of",
-        "offset": 875,
+        "offset": 761,
         "returntype": "ByteArray",
         "safe": true
       },
@@ -109,7 +109,7 @@
           }
         ],
         "name": "transfer",
-        "offset": 914,
+        "offset": 800,
         "returntype": "Boolean",
         "safe": true
       },
@@ -121,7 +121,7 @@
           }
         ],
         "name": "properties",
-        "offset": 1294,
+        "offset": 1246,
         "returntype": "ByteArray",
         "safe": true
       },
@@ -137,7 +137,7 @@
           }
         ],
         "name": "approve",
-        "offset": 1331,
+        "offset": 1283,
         "returntype": "Boolean",
         "safe": true
       },
@@ -149,7 +149,7 @@
           }
         ],
         "name": "get_approved",
-        "offset": 1480,
+        "offset": 1447,
         "returntype": "Hash160",
         "safe": true
       },
@@ -169,7 +169,7 @@
           }
         ],
         "name": "mint",
-        "offset": 1530,
+        "offset": 1497,
         "returntype": "Boolean",
         "safe": true
       },
@@ -181,14 +181,14 @@
           }
         ],
         "name": "burn",
-        "offset": 1948,
+        "offset": 1965,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_owner",
-        "offset": 2236,
+        "offset": 2274,
         "returntype": "Hash160",
         "safe": true
       },
@@ -200,7 +200,7 @@
           }
         ],
         "name": "add_minter",
-        "offset": 2283,
+        "offset": 2321,
         "returntype": "Boolean",
         "safe": true
       },
@@ -212,14 +212,14 @@
           }
         ],
         "name": "set_base_uri",
-        "offset": 2400,
+        "offset": 2442,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_base_uri",
-        "offset": 2522,
+        "offset": 2568,
         "returntype": "ByteArray",
         "safe": true
       },
@@ -231,21 +231,21 @@
           }
         ],
         "name": "token_uri",
-        "offset": 2561,
+        "offset": 2607,
         "returntype": "ByteArray",
         "safe": true
       },
       {
         "parameters": [],
         "name": "pause",
-        "offset": 2656,
+        "offset": 2702,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "is_paused",
-        "offset": 2766,
+        "offset": 2812,
         "returntype": "Boolean",
         "safe": true
       }

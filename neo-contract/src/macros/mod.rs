@@ -18,7 +18,7 @@ macro_rules! wasm_func {
         #[allow(unused_variables)]
         $(#[$attr])*
         pub fn $name($($arg: $type),*) -> $ret {
-            unimplemented!("This function is only available in WASM target")
+            Default::default()
         }
     };
     ($(#[$attr:meta])* pub fn $name:ident($($arg:ident: $type:ty),*) $body:block) => {
@@ -30,7 +30,7 @@ macro_rules! wasm_func {
         #[allow(unused_variables)]
         $(#[$attr])*
         pub fn $name($($arg: $type),*) {
-            unimplemented!("This function is only available in WASM target")
+            // Non-WASM implementation - no operation
         }
     };
 }

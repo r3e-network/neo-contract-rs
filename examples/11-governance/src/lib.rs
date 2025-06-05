@@ -271,8 +271,8 @@ impl Governance {
         // Calculate proper quorum based on total voting power
         let total_voting_power = self.get_total_voting_supply();
         let required_quorum = total_voting_power
-            .checked_mul(&Int256::new(self.get_quorum_percentage() as i64))
-            .checked_div(&Int256::new(10000)); // Basis points (10000 = 100%)
+            .checked_mul(&Int256::from_u64(self.get_quorum_percentage() as u64))
+            .checked_div(&Int256::from_u64(10000)); // Basis points (10000 = 100%)
         
         // Generate proposal ID
         let proposal_count = self.get_proposal_count();

@@ -36,7 +36,7 @@
       {
         "parameters": [],
         "name": "get_visitor_count",
-        "offset": 201,
+        "offset": 205,
         "returntype": "Integer",
         "safe": true
       },
@@ -48,7 +48,7 @@
           }
         ],
         "name": "say_hello",
-        "offset": 246,
+        "offset": 250,
         "returntype": "ByteArray",
         "safe": true
       },
@@ -60,21 +60,21 @@
           }
         ],
         "name": "get_visitor",
-        "offset": 449,
+        "offset": 457,
         "returntype": "ByteArray",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_info",
-        "offset": 489,
+        "offset": 497,
         "returntype": "ByteArray",
         "safe": true
       },
       {
         "parameters": [],
         "name": "reset",
-        "offset": 651,
+        "offset": 659,
         "returntype": "Boolean",
         "safe": true
       }

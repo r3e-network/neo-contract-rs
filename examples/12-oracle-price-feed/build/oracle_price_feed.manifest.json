@@ -58,7 +58,7 @@
           }
         ],
         "name": "request_price_data",
-        "offset": 458,
+        "offset": 462,
         "returntype": "Integer",
         "safe": false
       },
@@ -82,7 +82,7 @@
           }
         ],
         "name": "oracle_callback",
-        "offset": 853,
+        "offset": 869,
         "returntype": "Boolean",
         "safe": false
       },
@@ -94,7 +94,7 @@
           }
         ],
         "name": "get_price",
-        "offset": 979,
+        "offset": 995,
         "returntype": "ByteArray",
         "safe": true
       },
@@ -110,7 +110,7 @@
           }
         ],
         "name": "subscribe",
-        "offset": 1298,
+        "offset": 1315,
         "returntype": "Boolean",
         "safe": true
       },
@@ -126,42 +126,42 @@
           }
         ],
         "name": "set_emergency_price",
-        "offset": 1425,
+        "offset": 1453,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "activate_circuit_breaker",
-        "offset": 1518,
+        "offset": 1546,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "deactivate_circuit_breaker",
-        "offset": 1629,
+        "offset": 1657,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "is_circuit_breaker_active",
-        "offset": 1732,
+        "offset": 1760,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_owner",
-        "offset": 1765,
+        "offset": 1793,
         "returntype": "Hash160",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_request_count",
-        "offset": 1812,
+        "offset": 1840,
         "returntype": "Integer",
         "safe": true
       }

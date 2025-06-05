@@ -9,7 +9,7 @@ BUILD_MODE := release
 # Directories and Files
 TARGET_DIR := ../../target/$(CARGO_TARGET)/$(BUILD_MODE)
 BUILD_DIR := build
-WASM_FILE := $(TARGET_DIR)/$(shell echo $(PROJECT_NAME) | tr '-' '_').wasm
+WASM_FILE := $(TARGET_DIR)/$(shell grep '^name = ' Cargo.toml | cut -d'"' -f2 | tr '-' '_').wasm
 NEF_FILE := $(BUILD_DIR)/$(PROJECT_NAME).nef
 MANIFEST_FILE := $(BUILD_DIR)/$(PROJECT_NAME).manifest.json
 
@@ -84,7 +84,7 @@ wasm: compile
 nef: wasm
 	@mkdir -p $(BUILD_DIR)
 	@echo "$(YELLOW)Generating NEF file...$(NC)"
-	@WASM_PATH=$$(find ../../target -name "*.wasm" -type f | head -1); \
+	@WASM_PATH="$(WASM_FILE)"; \
 	if [ -z "$$WASM_PATH" ]; then \
 		echo "$(RED)❌ No WASM file found!$(NC)"; \
 		exit 1; \
@@ -104,7 +104,7 @@ nef: wasm
 manifest: wasm
 	@mkdir -p $(BUILD_DIR)
 	@echo "$(YELLOW)Generating manifest file...$(NC)"
-	@WASM_PATH=$$(find ../../target -name "*.wasm" -type f | head -1); \
+	@WASM_PATH="$(WASM_FILE)"; \
 	if [ -z "$$WASM_PATH" ]; then \
 		echo "$(RED)❌ No WASM file found!$(NC)"; \
 		exit 1; \

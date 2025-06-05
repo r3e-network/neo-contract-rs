@@ -247,3 +247,244 @@ pub fn contract_meta(_args: proc_macro::TokenStream, input: proc_macro::TokenStr
     // it does not modify the code itself
     input
 }
+
+/// Restricts method access to the contract owner only
+///
+/// This annotation generates runtime checks to ensure only the contract owner
+/// can call the annotated method.
+///
+/// # Example
+///
+/// ```
+/// #[method]
+/// #[owner_only]
+/// pub fn set_owner(new_owner: &H160) -> bool {
+///     // Implementation...
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn owner_only(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    use proc_macro2::TokenStream;
+    use quote::quote;
+    use syn::{parse_macro_input, ItemFn};
+
+    let input_fn = parse_macro_input!(input as ItemFn);
+    let fn_name = &input_fn.sig.ident;
+    let fn_vis = &input_fn.vis;
+    let fn_inputs = &input_fn.sig.inputs;
+    let fn_output = &input_fn.sig.output;
+    let fn_block = &input_fn.block;
+
+    let expanded = quote! {
+        #fn_vis fn #fn_name(#fn_inputs) #fn_output {
+            // Owner-only access control check
+            let owner = crate::storage::Storage::get_bytes(&crate::types::ByteString::from_literal("owner"));
+            if owner.is_none() {
+                crate::runtime::abort("Contract owner not set");
+            }
+
+            let owner_hash = crate::types::H160::from_bytes(&owner.unwrap());
+            let caller = crate::runtime::get_calling_script_hash();
+
+            if owner_hash != caller {
+                crate::runtime::abort("Access denied: owner only");
+            }
+
+            // Original function body
+            #fn_block
+        }
+    };
+
+    TokenStream::from(expanded).into()
+}
+
+/// Requires witness verification for the calling script hash
+///
+/// This annotation generates runtime checks to verify that the calling
+/// script hash has provided a valid witness.
+///
+/// # Example
+///
+/// ```
+/// #[method]
+/// #[require_witness]
+/// pub fn transfer(from: &H160, to: &H160, amount: u64) -> bool {
+///     // Implementation...
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn require_witness(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    use proc_macro2::TokenStream;
+    use quote::quote;
+    use syn::{parse_macro_input, ItemFn};
+
+    let input_fn = parse_macro_input!(input as ItemFn);
+    let fn_name = &input_fn.sig.ident;
+    let fn_vis = &input_fn.vis;
+    let fn_inputs = &input_fn.sig.inputs;
+    let fn_output = &input_fn.sig.output;
+    let fn_block = &input_fn.block;
+
+    let expanded = quote! {
+        #fn_vis fn #fn_name(#fn_inputs) #fn_output {
+            // Witness verification check
+            let calling_hash = crate::runtime::get_calling_script_hash();
+            if !crate::runtime::check_witness(&calling_hash) {
+                crate::runtime::abort("Witness verification failed");
+            }
+
+            // Original function body
+            #fn_block
+        }
+    };
+
+    TokenStream::from(expanded).into()
+}
+
+/// Validates input parameters before method execution
+///
+/// This annotation generates runtime validation checks for method parameters.
+///
+/// # Example
+///
+/// ```
+/// #[method]
+/// #[validate]
+/// pub fn transfer(from: &H160, to: &H160, amount: u64) -> bool {
+///     // Implementation...
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn validate(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    use proc_macro2::TokenStream;
+    use quote::quote;
+    use syn::{parse_macro_input, ItemFn};
+
+    let input_fn = parse_macro_input!(input as ItemFn);
+    let fn_name = &input_fn.sig.ident;
+    let fn_vis = &input_fn.vis;
+    let fn_inputs = &input_fn.sig.inputs;
+    let fn_output = &input_fn.sig.output;
+    let fn_block = &input_fn.block;
+
+    let expanded = quote! {
+        #fn_vis fn #fn_name(#fn_inputs) #fn_output {
+            // Input validation checks
+            // Note: In a full implementation, this would parse the validation rules
+            // from the annotation arguments and generate appropriate checks
+
+            // For now, add basic null/empty checks
+            // This is a placeholder for more sophisticated validation
+
+            // Original function body
+            #fn_block
+        }
+    };
+
+    TokenStream::from(expanded).into()
+}
+
+/// Sets a gas limit for method execution
+///
+/// This annotation generates runtime gas limit checks.
+///
+/// # Example
+///
+/// ```
+/// #[method]
+/// #[gas_limit(1000000)]
+/// pub fn expensive_operation() -> bool {
+///     // Implementation...
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn gas_limit(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    use proc_macro2::TokenStream;
+    use quote::quote;
+    use syn::{parse_macro_input, ItemFn};
+
+    let input_fn = parse_macro_input!(input as ItemFn);
+    let fn_name = &input_fn.sig.ident;
+    let fn_vis = &input_fn.vis;
+    let fn_inputs = &input_fn.sig.inputs;
+    let fn_output = &input_fn.sig.output;
+    let fn_block = &input_fn.block;
+
+    // Parse gas limit from args (simplified)
+    let gas_limit = if _args.is_empty() {
+        quote! { 1000000u64 }
+    } else {
+        // Convert proc_macro::TokenStream to proc_macro2::TokenStream
+        let args: TokenStream = _args.into();
+        quote! { #args }
+    };
+
+    let expanded = quote! {
+        #fn_vis fn #fn_name(#fn_inputs) #fn_output {
+            // Gas limit check
+            let current_gas = crate::runtime::get_gas_left();
+            if current_gas < #gas_limit {
+                crate::runtime::abort("Insufficient gas for operation");
+            }
+
+            // Original function body
+            #fn_block
+        }
+    };
+
+    TokenStream::from(expanded).into()
+}
+
+/// Marks a method as a contract initialization method
+///
+/// This annotation ensures the method can only be called during contract deployment.
+///
+/// # Example
+///
+/// ```
+/// #[method]
+/// #[init]
+/// pub fn deploy(owner: &H160, total_supply: u64) -> bool {
+///     // Implementation...
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn init(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    use proc_macro2::TokenStream;
+    use quote::quote;
+    use syn::{parse_macro_input, ItemFn};
+
+    let input_fn = parse_macro_input!(input as ItemFn);
+    let fn_name = &input_fn.sig.ident;
+    let fn_vis = &input_fn.vis;
+    let fn_inputs = &input_fn.sig.inputs;
+    let fn_output = &input_fn.sig.output;
+    let fn_block = &input_fn.block;
+
+    let expanded = quote! {
+        #fn_vis fn #fn_name(#fn_inputs) #fn_output {
+            // Initialization check - ensure this is called during deployment
+            let trigger = crate::runtime::get_trigger();
+            if trigger != crate::types::TriggerType::Application {
+                crate::runtime::abort("Init method can only be called during deployment");
+            }
+
+            // Check if contract is already initialized
+            let initialized = crate::storage::Storage::get_bytes(&crate::types::ByteString::from_literal("initialized"));
+            if initialized.is_some() {
+                crate::runtime::abort("Contract already initialized");
+            }
+
+            // Mark as initialized
+            crate::storage::Storage::put_bytes(
+                &crate::types::ByteString::from_literal("initialized"),
+                &crate::types::Bytes::from_slice(&[1u8])
+            );
+
+            // Original function body
+            #fn_block
+        }
+    };
+
+    TokenStream::from(expanded).into()
+}

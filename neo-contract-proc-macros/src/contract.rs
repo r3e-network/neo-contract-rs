@@ -170,10 +170,84 @@ fn expand_nep17_methods(item: &syn::ItemImpl) -> TokenStream {
 }
 
 fn expand_nep11_methods(item: &syn::ItemImpl) -> TokenStream {
-    let _self_type = item.self_ty.as_ref();
-    let methods: TokenStream = quote::quote! {};
+    let self_type = item.self_ty.as_ref();
+    let mut methods: TokenStream = quote::quote! {};
 
-    // Add default NEP-11 methods here if needed
+    // symbol method
+    if !has_method(item, "symbol") {
+        methods.extend(quote::quote! {
+            #[no_mangle]
+            /* @safe */
+            pub fn symbol() -> neo_contract::types::ByteString {
+                #self_type::symbol()
+            }
+        });
+    }
+
+    // decimals method
+    if !has_method(item, "decimals") {
+        methods.extend(quote::quote! {
+            #[no_mangle]
+            /* @safe */
+            pub fn decimals() -> u8 {
+                #self_type::decimals()
+            }
+        });
+    }
+
+    // totalSupply method
+    if !has_method(item, "totalSupply") {
+        methods.extend(quote::quote! {
+            #[no_mangle]
+            /* @safe */
+            pub fn totalSupply() -> neo_contract::types::Int256 {
+                #self_type::total_supply()
+            }
+        });
+    }
+
+    // balanceOf method
+    if !has_method(item, "balanceOf") {
+        methods.extend(quote::quote! {
+            #[no_mangle]
+            /* @safe */
+            pub fn balanceOf(owner: neo_contract::types::H160) -> neo_contract::types::Int256 {
+                #self_type::balance_of(owner)
+            }
+        });
+    }
+
+    // tokensOf method
+    if !has_method(item, "tokensOf") {
+        methods.extend(quote::quote! {
+            #[no_mangle]
+            /* @safe */
+            pub fn tokensOf(owner: neo_contract::types::H160) -> neo_contract::types::Array<neo_contract::types::ByteString> {
+                #self_type::tokens_of(owner)
+            }
+        });
+    }
+
+    // ownerOf method
+    if !has_method(item, "ownerOf") {
+        methods.extend(quote::quote! {
+            #[no_mangle]
+            /* @safe */
+            pub fn ownerOf(tokenId: neo_contract::types::ByteString) -> neo_contract::types::H160 {
+                #self_type::owner_of(tokenId)
+            }
+        });
+    }
+
+    // transfer method
+    if !has_method(item, "transfer") {
+        methods.extend(quote::quote! {
+            #[no_mangle]
+            pub fn transfer(to: neo_contract::types::H160, tokenId: neo_contract::types::ByteString, data: neo_contract::types::Any) -> bool {
+                #self_type::transfer(to, tokenId, data)
+            }
+        });
+    }
 
     methods
 }

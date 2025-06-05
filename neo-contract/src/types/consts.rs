@@ -2,6 +2,7 @@
 // All Rights Reserved.
 
 #[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TriggerType {
     /// OnPersist indicates that the contract is triggered by the system
     /// to execute the OnPersist method of the native contracts.
@@ -24,7 +25,14 @@ pub enum TriggerType {
     All = 0x01 | 0x02 | 0x20 | 0x40,
 }
 
+impl Default for TriggerType {
+    fn default() -> Self {
+        TriggerType::Application
+    }
+}
+
 #[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CallFlags {
     /// None indicates that no flags are set.
     None = 0x00,
@@ -51,7 +59,14 @@ pub enum CallFlags {
     All = 0x01 | 0x02 | 0x04 | 0x08,
 }
 
+impl Default for CallFlags {
+    fn default() -> Self {
+        CallFlags::All
+    }
+}
+
 #[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WitnessScope {
     /// None indicates that no witness is required.
     None = 0x00,
@@ -74,10 +89,23 @@ pub enum WitnessScope {
     Global = 0x80,
 }
 
+impl Default for WitnessScope {
+    fn default() -> Self {
+        WitnessScope::CalledByEntry
+    }
+}
+
 #[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WitnessRuleAction {
     Deny = 0x00,
     Allow = 0x01,
+}
+
+impl Default for WitnessRuleAction {
+    fn default() -> Self {
+        WitnessRuleAction::Allow
+    }
 }
 
 #[repr(u32)]
@@ -92,6 +120,7 @@ pub enum FindOptions {
 }
 
 #[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WitnessConditionType {
     /// Indicates that the condition will always be met or not met. i.e. Boolean
     Bool = 0x00,
@@ -119,6 +148,12 @@ pub enum WitnessConditionType {
 
     /// Indicates that the condition is met when the current context is called by the specified group.
     CalledByGroup = 0x29,
+}
+
+impl Default for WitnessConditionType {
+    fn default() -> Self {
+        WitnessConditionType::Bool
+    }
 }
 
 #[repr(u32)]

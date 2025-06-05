@@ -32,13 +32,23 @@ impl<T: Default> Array<T> {
     }
 
     #[inline(always)]
-    pub fn from_items(_items: &[T]) -> Self {
-        // For WASM target, create a new array
-        // Complete implementation: This would populate the array with items
-        Self {
+    pub fn from_items(items: &[T]) -> Self
+    where
+        T: IntoPlaceholder + Clone,
+    {
+        let array = Self {
             value: unsafe { env::asm::array_new() },
             _marker: core::marker::PhantomData,
+        };
+
+        // Populate the array with items
+        for item in items {
+            unsafe {
+                env::asm::array_push(array.value, item.clone().into_placeholder())
+            }
         }
+
+        array
     }
 
     #[inline(always)]
@@ -47,15 +57,22 @@ impl<T: Default> Array<T> {
     }
 
     #[inline(always)]
-    pub fn push(&mut self, _value: T) {
-        // This is a placeholder implementation
-        // The actual implementation would use env::asm::array_push
-        // but it requires IntoPlaceholder which not all types implement
+    pub fn push(&mut self, value: T)
+    where
+        T: IntoPlaceholder,
+    {
+        unsafe {
+            env::asm::array_push(self.value, value.into_placeholder())
+        }
     }
 
     #[inline(always)]
-    pub fn pop(&mut self) -> T {
-        unimplemented!("pop is not implemented for WASM target")
+    pub fn pop(&mut self) -> T
+    where
+        T: FromPlaceholder,
+    {
+        let placeholder = unsafe { env::asm::array_pop(self.value) };
+        T::from_placeholder(placeholder)
     }
 
     /// Get an element at the specified index
@@ -74,10 +91,13 @@ impl<T: Default> Array<T> {
     }
 
     #[inline(always)]
-    pub fn set(&mut self, _index: usize, _value: T) {
-        // This is a placeholder implementation
-        // The actual implementation would use env::asm::array_set
-        // but it requires IntoPlaceholder which not all types implement
+    pub fn set(&mut self, index: usize, value: T)
+    where
+        T: IntoPlaceholder,
+    {
+        unsafe {
+            env::asm::array_set(self.value, index, value.into_placeholder())
+        }
     }
 }
 
@@ -134,6 +154,8 @@ impl<T: 'static> IntoPlaceholder for Array<T> {
     }
 }
 
-impl<T: Default> Array<T> {
-    // Add any necessary implementations for the Default trait
+impl<T: Default> Default for Array<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }

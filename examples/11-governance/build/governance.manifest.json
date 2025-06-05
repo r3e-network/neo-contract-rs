@@ -78,7 +78,7 @@
           }
         ],
         "name": "propose",
-        "offset": 740,
+        "offset": 744,
         "returntype": "Integer",
         "safe": false
       },
@@ -102,7 +102,7 @@
           }
         ],
         "name": "vote",
-        "offset": 1061,
+        "offset": 1118,
         "returntype": "Boolean",
         "safe": false
       },
@@ -114,7 +114,7 @@
           }
         ],
         "name": "queue_proposal",
-        "offset": 1313,
+        "offset": 1370,
         "returntype": "Boolean",
         "safe": false
       },
@@ -126,7 +126,7 @@
           }
         ],
         "name": "execute_proposal",
-        "offset": 1459,
+        "offset": 1523,
         "returntype": "Boolean",
         "safe": false
       },
@@ -138,26 +138,26 @@
           }
         ],
         "name": "get_proposal",
-        "offset": 1615,
+        "offset": 1789,
         "returntype": "ByteArray",
         "safe": true
       },
       {
         "parameters": [
           {
-            "name": "account",
+            "name": "_account",
             "type": "Hash160"
           }
         ],
         "name": "get_voting_power",
-        "offset": 1980,
+        "offset": 2154,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_proposal_count",
-        "offset": 2006,
+        "offset": 2180,
         "returntype": "Integer",
         "safe": true
       }

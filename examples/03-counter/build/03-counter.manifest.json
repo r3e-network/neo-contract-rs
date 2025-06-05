@@ -15,87 +15,181 @@
   "abi": {
     "methods": [
       {
-        "parameters": [],
-        "name": "initialize",
-        "offset": 350,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "name": "set_owner",
+        "offset": 250,
+        "returntype": "Boolean",
         "safe": false
       },
       {
         "parameters": [],
-        "name": "propose_transaction",
-        "offset": 779,
-        "returntype": "Void",
-        "safe": false
+        "name": "get_owner",
+        "offset": 384,
+        "returntype": "Hash160",
+        "safe": true
       },
       {
-        "parameters": [],
-        "name": "confirm_transaction",
-        "offset": 1112,
-        "returntype": "Void",
-        "safe": false
+        "parameters": [
+          {
+            "name": "operator",
+            "type": "Hash160"
+          }
+        ],
+        "name": "add_operator",
+        "offset": 465,
+        "returntype": "Boolean",
+        "safe": true
       },
       {
-        "parameters": [],
-        "name": "revoke_confirmation",
-        "offset": 1699,
-        "returntype": "Void",
-        "safe": false
+        "parameters": [
+          {
+            "name": "operator",
+            "type": "Hash160"
+          }
+        ],
+        "name": "remove_operator",
+        "offset": 617,
+        "returntype": "Boolean",
+        "safe": true
       },
       {
-        "parameters": [],
-        "name": "cancel_proposal",
-        "offset": 2121,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "add_owner",
-        "offset": 2444,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "get_proposal",
-        "offset": 2545,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "address",
+            "type": "Hash160"
+          }
+        ],
+        "name": "is_operator",
+        "offset": 761,
+        "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "is_owner",
-        "offset": 2575,
-        "returntype": "Void",
-        "safe": false
+        "name": "get",
+        "offset": 837,
+        "returntype": "Integer",
+        "safe": true
       },
       {
-        "parameters": [],
-        "name": "get_owners",
-        "offset": 2613,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "get_counter",
+        "offset": 918,
+        "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_required_confirmations",
-        "offset": 2647,
-        "returntype": "Void",
+        "name": "increment",
+        "offset": 1047,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "increment_counter",
+        "offset": 1210,
+        "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_owner_count",
-        "offset": 2678,
-        "returntype": "Void",
+        "name": "decrement",
+        "offset": 1387,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "decrement_counter",
+        "offset": 1550,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "name": "add",
+        "offset": 1727,
+        "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_proposal_count",
-        "offset": 2709,
-        "returntype": "Void",
+        "name": "reset",
+        "offset": 1847,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "reset_counter",
+        "offset": 2000,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          },
+          {
+            "name": "initial_value",
+            "type": "Integer"
+          }
+        ],
+        "name": "create_counter",
+        "offset": 2191,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "name",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "delete_counter",
+        "offset": 2414,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get_stats",
+        "offset": 2658,
+        "returntype": "ByteArray",
         "safe": true
       }
     ],

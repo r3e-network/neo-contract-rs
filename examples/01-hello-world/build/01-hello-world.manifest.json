@@ -16,86 +16,66 @@
     "methods": [
       {
         "parameters": [],
-        "name": "initialize",
-        "offset": 350,
-        "returntype": "Void",
-        "safe": false
+        "name": "get_greeting",
+        "offset": 46,
+        "returntype": "ByteArray",
+        "safe": true
       },
       {
-        "parameters": [],
-        "name": "propose_transaction",
-        "offset": 779,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "confirm_transaction",
-        "offset": 1112,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "revoke_confirmation",
-        "offset": 1699,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "cancel_proposal",
-        "offset": 2121,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "add_owner",
-        "offset": 2444,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "get_proposal",
-        "offset": 2545,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "new_greeting",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "set_greeting",
+        "offset": 96,
+        "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "is_owner",
-        "offset": 2575,
-        "returntype": "Void",
-        "safe": false
+        "name": "get_visitor_count",
+        "offset": 205,
+        "returntype": "Integer",
+        "safe": true
       },
       {
-        "parameters": [],
-        "name": "get_owners",
-        "offset": 2613,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "visitor_name",
+            "type": "ByteArray"
+          }
+        ],
+        "name": "say_hello",
+        "offset": 250,
+        "returntype": "ByteArray",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "visitor_number",
+            "type": "Integer"
+          }
+        ],
+        "name": "get_visitor",
+        "offset": 457,
+        "returntype": "ByteArray",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_required_confirmations",
-        "offset": 2647,
-        "returntype": "Void",
+        "name": "get_info",
+        "offset": 497,
+        "returntype": "ByteArray",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_owner_count",
-        "offset": 2678,
-        "returntype": "Void",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "get_proposal_count",
-        "offset": 2709,
-        "returntype": "Void",
+        "name": "reset",
+        "offset": 659,
+        "returntype": "Boolean",
         "safe": true
       }
     ],

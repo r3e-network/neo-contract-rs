@@ -29,7 +29,7 @@
       {
         "parameters": [],
         "name": "get_owner",
-        "offset": 380,
+        "offset": 384,
         "returntype": "Hash160",
         "safe": true
       },
@@ -41,7 +41,7 @@
           }
         ],
         "name": "add_operator",
-        "offset": 461,
+        "offset": 465,
         "returntype": "Boolean",
         "safe": true
       },
@@ -53,7 +53,7 @@
           }
         ],
         "name": "remove_operator",
-        "offset": 609,
+        "offset": 617,
         "returntype": "Boolean",
         "safe": true
       },
@@ -65,14 +65,14 @@
           }
         ],
         "name": "is_operator",
-        "offset": 749,
+        "offset": 761,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get",
-        "offset": 825,
+        "offset": 837,
         "returntype": "Integer",
         "safe": true
       },
@@ -84,14 +84,14 @@
           }
         ],
         "name": "get_counter",
-        "offset": 906,
+        "offset": 918,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "increment",
-        "offset": 1035,
+        "offset": 1047,
         "returntype": "Integer",
         "safe": true
       },
@@ -103,14 +103,14 @@
           }
         ],
         "name": "increment_counter",
-        "offset": 1194,
+        "offset": 1210,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "decrement",
-        "offset": 1367,
+        "offset": 1387,
         "returntype": "Integer",
         "safe": true
       },
@@ -122,7 +122,7 @@
           }
         ],
         "name": "decrement_counter",
-        "offset": 1526,
+        "offset": 1550,
         "returntype": "Integer",
         "safe": true
       },
@@ -134,14 +134,14 @@
           }
         ],
         "name": "add",
-        "offset": 1699,
+        "offset": 1727,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "reset",
-        "offset": 1819,
+        "offset": 1847,
         "returntype": "Boolean",
         "safe": true
       },
@@ -153,7 +153,7 @@
           }
         ],
         "name": "reset_counter",
-        "offset": 1972,
+        "offset": 2000,
         "returntype": "Boolean",
         "safe": true
       },
@@ -169,7 +169,7 @@
           }
         ],
         "name": "create_counter",
-        "offset": 2159,
+        "offset": 2191,
         "returntype": "Boolean",
         "safe": true
       },
@@ -181,14 +181,14 @@
           }
         ],
         "name": "delete_counter",
-        "offset": 2378,
+        "offset": 2414,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_stats",
-        "offset": 2618,
+        "offset": 2658,
         "returntype": "ByteArray",
         "safe": true
       }

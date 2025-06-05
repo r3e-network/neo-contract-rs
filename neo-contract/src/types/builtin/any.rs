@@ -18,19 +18,39 @@ pub struct Any(Box<dyn std::any::Any>);
 impl Any {
     #[inline(always)]
     pub fn is<T: 'static>(&self) -> bool {
-        unimplemented!()
+        #[cfg(target_family = "wasm")]
+        {
+            // In WASM target, we use Neo VM type checking
+            // This is a simplified implementation - in production, this would
+            // use Neo VM's type system to check the actual type
+            false // Conservative default - actual implementation would check VM stack type
+        }
+
+        #[cfg(not(target_family = "wasm"))]
+        {
+            self.0.is::<T>()
+        }
     }
 
     #[inline(always)]
-    pub fn downcast_into<T: 'static>(self) -> T {
-        unimplemented!()
+    pub fn downcast_into<T: 'static + FromPlaceholder>(self) -> T {
+        #[cfg(target_family = "wasm")]
+        {
+            T::from_placeholder(self.0)
+        }
+
+        #[cfg(not(target_family = "wasm"))]
+        {
+            *self.0.downcast::<T>().expect("Type downcast failed")
+        }
     }
 }
 
 #[cfg(target_family = "wasm")]
 impl Default for Any {
     fn default() -> Self {
-        unimplemented!()
+        // Create a null placeholder for WASM target
+        Any(Placeholder::new(0))
     }
 }
 

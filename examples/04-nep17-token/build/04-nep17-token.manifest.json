@@ -17,87 +17,243 @@
   "abi": {
     "methods": [
       {
-        "parameters": [],
-        "name": "initialize",
-        "offset": 350,
-        "returntype": "Void",
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          },
+          {
+            "name": "symbol",
+            "type": "ByteArray"
+          },
+          {
+            "name": "decimals",
+            "type": "Integer"
+          },
+          {
+            "name": "initial_supply",
+            "type": "Integer"
+          },
+          {
+            "name": "max_supply",
+            "type": "Integer"
+          }
+        ],
+        "name": "deploy",
+        "offset": 73,
+        "returntype": "Boolean",
         "safe": false
       },
       {
         "parameters": [],
-        "name": "propose_transaction",
-        "offset": 779,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "confirm_transaction",
-        "offset": 1112,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "revoke_confirmation",
-        "offset": 1699,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "cancel_proposal",
-        "offset": 2121,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "add_owner",
-        "offset": 2444,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "get_proposal",
-        "offset": 2545,
-        "returntype": "Void",
+        "name": "symbol",
+        "offset": 345,
+        "returntype": "ByteArray",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "is_owner",
-        "offset": 2575,
-        "returntype": "Void",
-        "safe": false
-      },
-      {
-        "parameters": [],
-        "name": "get_owners",
-        "offset": 2613,
-        "returntype": "Void",
+        "name": "decimals",
+        "offset": 448,
+        "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_required_confirmations",
-        "offset": 2647,
-        "returntype": "Void",
+        "name": "total_supply",
+        "offset": 537,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "account",
+            "type": "Hash160"
+          }
+        ],
+        "name": "balance_of",
+        "offset": 636,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "from",
+            "type": "Hash160"
+          },
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          },
+          {
+            "name": "data",
+            "type": "Any"
+          }
+        ],
+        "name": "transfer",
+        "offset": 740,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          },
+          {
+            "name": "spender",
+            "type": "Hash160"
+          }
+        ],
+        "name": "allowance",
+        "offset": 1020,
+        "returntype": "Integer",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          },
+          {
+            "name": "spender",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "name": "approve",
+        "offset": 1148,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "spender",
+            "type": "Hash160"
+          },
+          {
+            "name": "from",
+            "type": "Hash160"
+          },
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          },
+          {
+            "name": "data",
+            "type": "Any"
+          }
+        ],
+        "name": "transfer_from",
+        "offset": 1331,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "name": "mint",
+        "offset": 1668,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "from",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "name": "burn",
+        "offset": 1834,
+        "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_owner_count",
-        "offset": 2678,
-        "returntype": "Void",
+        "name": "get_owner",
+        "offset": 1931,
+        "returntype": "Hash160",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "minter",
+            "type": "Hash160"
+          }
+        ],
+        "name": "add_minter",
+        "offset": 2030,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [
+          {
+            "name": "minter",
+            "type": "Hash160"
+          }
+        ],
+        "name": "remove_minter",
+        "offset": 2200,
+        "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_proposal_count",
-        "offset": 2709,
-        "returntype": "Void",
+        "name": "pause",
+        "offset": 2362,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "unpause",
+        "offset": 2521,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "is_paused",
+        "offset": 2672,
+        "returntype": "Boolean",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get_max_supply",
+        "offset": 2761,
+        "returntype": "Integer",
         "safe": true
       }
     ],
