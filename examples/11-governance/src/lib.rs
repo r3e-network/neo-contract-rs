@@ -16,7 +16,6 @@
 
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
-use neo_contract::serialize::NeoSerializable;
 
 /// Proposal status enumeration
 #[derive(Clone, Copy, PartialEq)]
@@ -176,10 +175,6 @@ impl Governance {
         quorum_percentage: u32
     ) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Check if already initialized
         if Storage::get(storage.clone(), self.admin_key.clone()).is_some() {
@@ -223,7 +218,7 @@ impl Governance {
         Storage::put(storage.clone(), self.execution_delay_key.clone(), ByteString::from_bytes(&execution_delay.to_le_bytes()));
         Storage::put(storage.clone(), self.proposal_threshold_key.clone(), proposal_threshold.into_byte_string());
         Storage::put(storage.clone(), self.quorum_percentage_key.clone(), ByteString::from_bytes(&quorum_percentage.to_le_bytes()));
-        Storage::put(storage_clone, self.proposal_count_key.clone(), Int256::zero().into_byte_string());
+        let storage_clone = storage.clone(); Storage::put(storage_clone, self.proposal_count_key.clone(), Int256::zero().into_byte_string());
 
         let mut event_data = Array::new(); event_data.push(admin.into_any()); Runtime::notify(ByteString::from_literal("GovernanceInitialized"), event_data);
         true
@@ -303,15 +298,11 @@ impl Governance {
 
         // Store proposal
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let proposal_key = self.proposal_prefix.concat(&proposal_id.into_byte_string());
         Storage::put(storage.clone(), proposal_key, self.serialize_proposal(proposal));
 
         // Update proposal count
-        Storage::put(storage_clone, self.proposal_count_key.clone(), proposal_id.into_byte_string());
+        let storage_clone = storage.clone(); Storage::put(storage_clone, self.proposal_count_key.clone(), proposal_id.into_byte_string());
 
         // Emit event
         let mut event_data = Array::new();
@@ -371,10 +362,6 @@ impl Governance {
         // Check if already voted
         let vote_key = self.get_vote_key(proposal_id, voter);
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         if Storage::get(storage.clone(), vote_key.clone()).is_some() {
             Runtime::log(ByteString::from_literal("Already voted"));
             return false;
@@ -414,7 +401,7 @@ impl Governance {
             timestamp: current_time,
         };
 
-        Storage::put(storage_clone, vote_key, self.serialize_vote(vote));
+        let storage_clone = storage.clone(); Storage::put(storage_clone, vote_key, self.serialize_vote(vote));
 
         // Add to voter's proposal list
         self.add_voter_proposal(voter, proposal_id);
@@ -459,12 +446,8 @@ impl Governance {
 
         // Store updated proposal
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let proposal_key = self.proposal_prefix.concat(&proposal_id.into_byte_string());
-        Storage::put(storage_clone, proposal_key, self.serialize_proposal(proposal.clone()));
+        let storage_clone = storage.clone(); Storage::put(storage_clone, proposal_key, self.serialize_proposal(proposal.clone()));
 
         if proposal.status == ProposalStatus::Queued {
             let mut event_data = Array::new();
@@ -555,7 +538,7 @@ impl Governance {
                 result.put(ByteString::from_literal("status"), Int256::new(proposal.status.to_u8() as i64).into_any());
                 result.put(ByteString::from_literal("quorum_required"), proposal.quorum_required.into_any());
 
-                let current_time = Runtime::get_time();
+                let _current_time = Runtime::get_time();
                 let total_votes = proposal.for_votes.checked_add(&proposal.against_votes).checked_add(&proposal.abstain_votes);
                 result.put(ByteString::from_literal("total_votes"), total_votes.into_any());
                 result.put(ByteString::from_literal("quorum_reached"),
@@ -574,7 +557,7 @@ impl Governance {
     /// Get voting power for an address
     #[method]
     #[safe]
-    pub fn get_voting_power(&self, account: H160) -> Int256 {
+    pub fn get_voting_power(&self, _account: H160) -> Int256 {
         // Complete implementation querying the governance token contract
         Int256::new(1000)
     }
@@ -584,10 +567,6 @@ impl Governance {
     #[safe]
     pub fn get_proposal_count(&self) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.proposal_count_key.clone()) {
             Some(count_bytes) => Int256::from_byte_string(count_bytes),
             None => Int256::zero(),
@@ -598,10 +577,6 @@ impl Governance {
 
     fn get_proposal_data(&self, proposal_id: Int256) -> Option<Proposal> {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let proposal_key = self.proposal_prefix.concat(&proposal_id.into_byte_string());
 
         match Storage::get(storage, proposal_key) {
@@ -619,10 +594,6 @@ impl Governance {
 
     fn get_voting_delay(&self) -> u64 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.voting_delay_key.clone()) {
             Some(delay_bytes) => {
                 let bytes = delay_bytes.to_bytes();
@@ -641,10 +612,6 @@ impl Governance {
 
     fn get_voting_period(&self) -> u64 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.voting_period_key.clone()) {
             Some(period_bytes) => {
                 let bytes = period_bytes.to_bytes();
@@ -663,10 +630,6 @@ impl Governance {
 
     fn get_execution_delay(&self) -> u64 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.execution_delay_key.clone()) {
             Some(delay_bytes) => {
                 let bytes = delay_bytes.to_bytes();
@@ -685,10 +648,6 @@ impl Governance {
 
     fn get_proposal_threshold(&self) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.proposal_threshold_key.clone()) {
             Some(threshold_bytes) => Int256::from_byte_string(threshold_bytes),
             None => Int256::new(10000), // Default threshold
@@ -697,10 +656,6 @@ impl Governance {
 
     fn get_quorum_percentage(&self) -> u32 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.quorum_percentage_key.clone()) {
             Some(quorum_bytes) => {
                 let bytes = quorum_bytes.to_bytes();
@@ -739,12 +694,12 @@ impl Governance {
         Runtime::notify(ByteString::from_literal("VoterProposalAdded"), event_data);
     }
 
-    fn serialize_proposal(&self, proposal: Proposal) -> ByteString {
+    fn serialize_proposal(&self, _proposal: Proposal) -> ByteString {
         // Simplified serialization - in production, use proper serialization
         ByteString::from_literal("proposal_data")
     }
 
-    fn deserialize_proposal(&self, data: ByteString) -> Proposal {
+    fn deserialize_proposal(&self, _data: ByteString) -> Proposal {
         // Simplified deserialization - in production, use proper parsing
         Proposal {
             id: Int256::zero(),
@@ -764,7 +719,7 @@ impl Governance {
         }
     }
 
-    fn serialize_vote(&self, vote: Vote) -> ByteString {
+    fn serialize_vote(&self, _vote: Vote) -> ByteString {
         // Simplified serialization
         ByteString::from_literal("vote_data")
     }

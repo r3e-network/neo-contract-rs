@@ -17,236 +17,87 @@
   "abi": {
     "methods": [
       {
-        "parameters": [
-          {
-            "name": "owner",
-            "type": "Hash160"
-          },
-          {
-            "name": "symbol",
-            "type": "ByteArray"
-          },
-          {
-            "name": "base_uri",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "deploy",
-        "offset": 481,
-        "returntype": "Boolean",
+        "parameters": [],
+        "name": "initialize",
+        "offset": 350,
+        "returntype": "Void",
         "safe": false
       },
       {
         "parameters": [],
-        "name": "symbol",
-        "offset": 659,
-        "returntype": "ByteArray",
+        "name": "propose_transaction",
+        "offset": 779,
+        "returntype": "Void",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "confirm_transaction",
+        "offset": 1112,
+        "returntype": "Void",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "revoke_confirmation",
+        "offset": 1699,
+        "returntype": "Void",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "cancel_proposal",
+        "offset": 2121,
+        "returntype": "Void",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "add_owner",
+        "offset": 2444,
+        "returntype": "Void",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "get_proposal",
+        "offset": 2545,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "decimals",
-        "offset": 704,
-        "returntype": "Integer",
+        "name": "is_owner",
+        "offset": 2575,
+        "returntype": "Void",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "get_owners",
+        "offset": 2613,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "total_supply",
-        "offset": 726,
-        "returntype": "Integer",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "owner",
-            "type": "Hash160"
-          }
-        ],
-        "name": "balance_of",
-        "offset": 773,
-        "returntype": "Integer",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "token_id",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "owner_of",
-        "offset": 825,
-        "returntype": "Hash160",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "owner",
-            "type": "Hash160"
-          }
-        ],
-        "name": "tokens_of",
-        "offset": 875,
-        "returntype": "ByteArray",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "to",
-            "type": "Hash160"
-          },
-          {
-            "name": "token_id",
-            "type": "ByteArray"
-          },
-          {
-            "name": "data",
-            "type": "Any"
-          }
-        ],
-        "name": "transfer",
-        "offset": 914,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "token_id",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "properties",
-        "offset": 1294,
-        "returntype": "ByteArray",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "to",
-            "type": "Hash160"
-          },
-          {
-            "name": "token_id",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "approve",
-        "offset": 1331,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "token_id",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "get_approved",
-        "offset": 1480,
-        "returntype": "Hash160",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "to",
-            "type": "Hash160"
-          },
-          {
-            "name": "token_id",
-            "type": "ByteArray"
-          },
-          {
-            "name": "properties",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "mint",
-        "offset": 1530,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "token_id",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "burn",
-        "offset": 1948,
-        "returntype": "Boolean",
+        "name": "get_required_confirmations",
+        "offset": 2647,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_owner",
-        "offset": 2236,
-        "returntype": "Hash160",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "minter",
-            "type": "Hash160"
-          }
-        ],
-        "name": "add_minter",
-        "offset": 2283,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "base_uri",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "set_base_uri",
-        "offset": 2400,
-        "returntype": "Boolean",
+        "name": "get_owner_count",
+        "offset": 2678,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_base_uri",
-        "offset": 2522,
-        "returntype": "ByteArray",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "token_id",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "token_uri",
-        "offset": 2561,
-        "returntype": "ByteArray",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "pause",
-        "offset": 2656,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "is_paused",
-        "offset": 2766,
-        "returntype": "Boolean",
+        "name": "get_proposal_count",
+        "offset": 2709,
+        "returntype": "Void",
         "safe": true
       }
     ],

@@ -95,10 +95,28 @@ pub struct ContractGroup {
     sign: ByteString,
 }
 
+impl Default for ContractGroup {
+    fn default() -> Self {
+        Self {
+            public_key: PublicKey::default(),
+            sign: ByteString::empty(),
+        }
+    }
+}
+
 #[repr(C)]
 pub struct ContractPermission {
     contract: ByteString,
     methods: Array<ByteString>,
+}
+
+impl Default for ContractPermission {
+    fn default() -> Self {
+        Self {
+            contract: ByteString::empty(),
+            methods: Array::new(),
+        }
+    }
 }
 
 #[repr(C)]
@@ -116,16 +134,46 @@ pub struct ContractMethodDescriptor {
     safe: bool,
 }
 
+impl Default for ContractMethodDescriptor {
+    fn default() -> Self {
+        Self {
+            name: ByteString::empty(),
+            params: Array::new(),
+            return_type: ContractParamType::Any,
+            offset: 0,
+            safe: false,
+        }
+    }
+}
+
 #[repr(C)]
 pub struct ContractEventDescriptor {
     name: ByteString,
     params: Array<ContractParam>,
 }
 
+impl Default for ContractEventDescriptor {
+    fn default() -> Self {
+        Self {
+            name: ByteString::empty(),
+            params: Array::new(),
+        }
+    }
+}
+
 #[repr(C)]
 pub struct ContractParam {
     name: ByteString,
     param_type: ContractParamType,
+}
+
+impl Default for ContractParam {
+    fn default() -> Self {
+        Self {
+            name: ByteString::empty(),
+            param_type: ContractParamType::Any,
+        }
+    }
 }
 
 #[repr(C)]

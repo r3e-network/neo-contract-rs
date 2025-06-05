@@ -11,7 +11,7 @@ use crate::{
             h160::H160,
             int256::Int256,
             map::Map,
-            string::{ByteString, IntoByteString},
+            string::{ByteString, IntoByteString, FromByteString},
             any::IntoAny,
         },
         placeholder::FromPlaceholder,
@@ -65,7 +65,7 @@ pub trait Nep11Token<T: TokenState + FromPlaceholder> {
         let token_data = value.unwrap();
         let token_bytes = token_data.as_bytes();
         if token_bytes.len() >= 20 {
-            H160::from_bytes(&token_bytes[0..20])
+            H160::from_byte_string(ByteString::from_bytes(&token_bytes[0..20]))
         } else {
             H160::zero()
         }

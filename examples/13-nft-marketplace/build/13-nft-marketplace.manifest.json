@@ -1,6 +1,9 @@
 {
   "groups": [],
-  "supportedstandards": [],
+  "supportedstandards": [
+    "NEP-11",
+    "NEP-24"
+  ],
   "permissions": [
     {
       "methods": [
@@ -10,7 +13,7 @@
     }
   ],
   "trusts": [],
-  "name": "09-simple-dex",
+  "name": "13-nft-marketplace",
   "features": {},
   "abi": {
     "methods": [
@@ -21,11 +24,15 @@
             "type": "Hash160"
           },
           {
-            "name": "min_liquidity",
+            "name": "platform_fee_rate",
             "type": "Integer"
           },
           {
-            "name": "protocol_fee_rate",
+            "name": "min_listing_duration",
+            "type": "Integer"
+          },
+          {
+            "name": "max_listing_duration",
             "type": "Integer"
           }
         ],
@@ -116,9 +123,9 @@
   },
   "extra": {
     "Author": "neo-contract-rs",
-    "Description": "Liquidity pool information\n#[derive(Clone)]",
+    "Description": "NFT Marketplace contract\n#[contract_author(\"Neo Rust Framework\", \"dev@neo.org\")]\n#[contract_version(\"1.0.0\")]\n#[contract_standards(\"NEP-11,NEP-24\")]\n#[contract_permission(\"*\", \"*\")]\n#[contract_meta(\"description\", \"Comprehensive NFT marketplace with auctions and royalties\")]\n#[contract_meta(\"category\", \"Marketplace\")]",
     "Version": "1.0.0",
-    "category": "DeFi",
-    "description": "Simple AMM-based decentralized exchange"
+    "category": "Marketplace",
+    "description": "Comprehensive NFT marketplace with auctions and royalties"
   }
 }

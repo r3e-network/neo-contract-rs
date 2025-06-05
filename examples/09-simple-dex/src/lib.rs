@@ -343,12 +343,12 @@ impl SimpleDex {
     #[method]
     pub fn add_liquidity(
         &self,
-        provider: H160,
-        token_a: H160,
-        token_b: H160,
-        amount_a: Int256,
-        amount_b: Int256,
-        min_liquidity: Int256
+        _provider: H160,
+        _token_a: H160,
+        _token_b: H160,
+        _amount_a: Int256,
+        _amount_b: Int256,
+        _min_liquidity: Int256
     ) -> Int256 {
         // Implementation similar to create_pool but for existing pools
         Runtime::log(ByteString::from_literal("Add liquidity not fully implemented"));
@@ -359,11 +359,11 @@ impl SimpleDex {
     #[method]
     pub fn remove_liquidity(
         &self,
-        provider: H160,
-        pool_id: Int256,
-        liquidity_amount: Int256,
-        min_amount_a: Int256,
-        min_amount_b: Int256
+        _provider: H160,
+        _pool_id: Int256,
+        _liquidity_amount: Int256,
+        _min_amount_a: Int256,
+        _min_amount_b: Int256
     ) -> bool {
         // Implementation for liquidity removal
         Runtime::log(ByteString::from_literal("Remove liquidity not fully implemented"));
@@ -609,16 +609,16 @@ impl SimpleDex {
         result = result.concat(&pool.token_b.into_byte_string());
         
         // Serialize reserve_a (32 bytes)
-        let reserve_a_bytes = pool.reserve_a.to_bytes();
-        result = result.concat(&ByteString::from_bytes(&reserve_a_bytes));
-        
+        let reserve_a_bytes = pool.reserve_a.into_byte_string();
+        result = result.concat(&reserve_a_bytes);
+
         // Serialize reserve_b (32 bytes)
-        let reserve_b_bytes = pool.reserve_b.to_bytes();
-        result = result.concat(&ByteString::from_bytes(&reserve_b_bytes));
-        
+        let reserve_b_bytes = pool.reserve_b.into_byte_string();
+        result = result.concat(&reserve_b_bytes);
+
         // Serialize total_liquidity (32 bytes)
-        let liquidity_bytes = pool.total_liquidity.to_bytes();
-        result = result.concat(&ByteString::from_bytes(&liquidity_bytes));
+        let liquidity_bytes = pool.total_liquidity.into_byte_string();
+        result = result.concat(&liquidity_bytes);
         
         // Serialize fee_rate (4 bytes)
         result = result.concat(&ByteString::from_bytes(&pool.fee_rate.to_le_bytes()));
@@ -629,7 +629,7 @@ impl SimpleDex {
         result
     }
 
-    fn deserialize_pool(&self, data: ByteString) -> LiquidityPool {
+    fn deserialize_pool(&self, _data: ByteString) -> LiquidityPool {
         // Simplified deserialization - in production, use proper parsing
         LiquidityPool {
             token_a: H160::zero(),
@@ -668,7 +668,7 @@ impl SimpleDex {
         for _ in 0..count {
             if offset + 32 <= bytes.len() {
                 let pool_bytes = &bytes[offset..offset + 32];
-                let pool_id = Int256::from_bytes(pool_bytes);
+                let pool_id = Int256::from_byte_string(ByteString::from_bytes(pool_bytes));
                 pools.push(pool_id);
                 offset += 32;
             }
@@ -683,8 +683,8 @@ impl SimpleDex {
         
         for i in 0..pools.size() {
             let pool_id = pools.get(i);
-            let pool_bytes = pool_id.to_bytes();
-            result = result.concat(&ByteString::from_bytes(&pool_bytes));
+            let pool_bytes = pool_id.into_byte_string();
+            result = result.concat(&pool_bytes);
         }
         
         result

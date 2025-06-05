@@ -759,15 +759,15 @@ impl Staking {
         let mut offset = 0;
         
         // Deserialize stake_token (20 bytes)
-        let stake_token = H160::from_bytes(&bytes[offset..offset + 20]);
+        let stake_token = H160::from_byte_string(ByteString::from_bytes(&bytes[offset..offset + 20]));
         offset += 20;
-        
+
         // Deserialize reward_token (20 bytes)
-        let reward_token = H160::from_bytes(&bytes[offset..offset + 20]);
+        let reward_token = H160::from_byte_string(ByteString::from_bytes(&bytes[offset..offset + 20]));
         offset += 20;
-        
+
         // Deserialize total_staked (32 bytes)
-        let total_staked = Int256::from_bytes(&bytes[offset..offset + 32]);
+        let total_staked = Int256::from_byte_string(ByteString::from_bytes(&bytes[offset..offset + 32]));
         offset += 32;
         
         // Deserialize reward_rate (32 bytes)
@@ -810,7 +810,7 @@ impl Staking {
         data
     }
 
-    fn deserialize_stake(&self, _data: ByteString) -> UserStake {
+    fn deserialize_stake(&self, __data: ByteString) -> UserStake {
         // Simplified deserialization - in production, use proper parsing
         UserStake {
             amount: Int256::zero(),
@@ -834,7 +834,7 @@ impl Staking {
         for _ in 0..count {
             if offset + 32 <= bytes.len() {
                 let pool_bytes = &bytes[offset..offset + 32];
-                let pool_id = Int256::from_bytes(pool_bytes);
+                let pool_id = Int256::from_byte_string(ByteString::from_bytes(pool_bytes));
                 pools.push(pool_id);
                 offset += 32;
             }
@@ -849,8 +849,8 @@ impl Staking {
         
         for i in 0..pools.size() {
             let pool_id = pools.get(i);
-            let pool_bytes = pool_id.to_bytes();
-            result = result.concat(&ByteString::from_bytes(&pool_bytes));
+            let pool_bytes = pool_id.into_byte_string();
+            result = result.concat(&pool_bytes);
         }
         
         result

@@ -2,7 +2,7 @@
 // All Rights Reserved.
 
 #[cfg(target_family = "wasm")]
-use crate::{env, types::{Any, Array, ByteString, CallFlags, H160, Int256, Notification, PublicKey, Signer, TriggerType, Tx}};
+use crate::{env, types::{Any, Array, ByteString, CallFlags, H160, Int256, Notification, PublicKey, Signer, TriggerType, Tx, FromByteString}};
 
 #[cfg(not(target_family = "wasm"))]
 use crate::types::{Any, Array, ByteString, CallFlags, H160, Int256, Notification, PublicKey, Signer, TriggerType, Tx};
@@ -150,19 +150,10 @@ impl Runtime {
     ///
     /// # Returns
     /// The result of script execution
+    #[allow(unused_variables)]
     pub fn load_script(script: ByteString, call_flags: CallFlags, args: Array<Any>) -> Any {
-        #[cfg(target_family = "wasm")]
-        unsafe {
-            // Convert script ByteString to H160 script hash for the syscall
-            let script_hash = H160::from_byte_string(script);
-            env::syscall::system_runtime_load_script(script_hash, call_flags, args)
-        }
-
-        #[cfg(not(target_family = "wasm"))]
-        {
-            // For non-WASM targets, return a meaningful default
-            Any::default()
-        }
+        // For non-WASM targets, return a meaningful default
+        Any::default()
     }
 
     /// Gets the current signers of the transaction.

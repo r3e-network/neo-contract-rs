@@ -14,7 +14,6 @@
 
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
-use neo_contract::serialize::NeoSerializable;
 use neo_contract::contract::native::{Gas, Neo};
 
 /// Campaign status enumeration
@@ -94,10 +93,6 @@ impl Crowdfunding {
     #[method]
     pub fn initialize(&self, owner: H160, platform_fee_bp: u32) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Check if already initialized
         if Storage::get(storage.clone(), self.platform_owner_key.clone()).is_some() {
@@ -124,7 +119,7 @@ impl Crowdfunding {
 
         // Initialize with GAS as default supported token
         let gas_hash = Gas::hash();
-        Storage::put(storage_clone, self.supported_tokens_key.clone(), gas_hash.into_byte_string());
+        let storage_clone = storage.clone(); Storage::put(storage_clone, self.supported_tokens_key.clone(), gas_hash.into_byte_string());
 
         let mut event_data = Array::new(); event_data.push(owner.into_any()); Runtime::notify(ByteString::from_literal("PlatformInitialized"), event_data);
         true
@@ -165,10 +160,6 @@ impl Crowdfunding {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Get next campaign ID
         let campaign_count = self.get_campaign_count();
@@ -194,7 +185,7 @@ impl Crowdfunding {
 
         // Initialize campaign tracking
         let raised_key = self.total_raised_prefix.concat(&campaign_id.into_byte_string());
-        Storage::put(storage_clone, raised_key, Int256::zero().into_byte_string());
+        let storage_clone = storage.clone(); Storage::put(storage_clone, raised_key, Int256::zero().into_byte_string());
 
         let mut event_data = Array::new();
         event_data.push(campaign_id.into_any());
@@ -242,10 +233,6 @@ impl Crowdfunding {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Update contributor's contribution
         let contrib_key = self.contributions_prefix
@@ -274,7 +261,7 @@ impl Crowdfunding {
         };
 
         let new_raised = current_raised.checked_add(&amount);
-        Storage::put(storage_clone, raised_key, new_raised.into_byte_string());
+        let storage_clone = storage.clone(); Storage::put(storage_clone, raised_key, new_raised.into_byte_string());
 
         // Check if funding goal is reached
         let funding_goal = self.extract_funding_goal(&campaign_data);
@@ -326,10 +313,6 @@ impl Crowdfunding {
     #[safe]
     pub fn get_contribution(&self, campaign_id: Int256, contributor: H160) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let contrib_key = self.contributions_prefix
             .concat(&campaign_id.into_byte_string())
             .concat(&ByteString::from_literal("_"))
@@ -346,10 +329,6 @@ impl Crowdfunding {
     #[safe]
     pub fn get_total_raised(&self, campaign_id: Int256) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let raised_key = self.total_raised_prefix.concat(&campaign_id.into_byte_string());
 
         match Storage::get(storage, raised_key) {
@@ -363,10 +342,6 @@ impl Crowdfunding {
     #[safe]
     pub fn get_campaign_count(&self) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.campaign_count_key.clone()) {
             Some(count_bytes) => Int256::from_byte_string(count_bytes),
             None => Int256::zero(),
@@ -378,10 +353,6 @@ impl Crowdfunding {
     #[safe]
     pub fn get_platform_owner(&self) -> H160 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.platform_owner_key.clone()) {
             Some(owner_bytes) => H160::from_byte_string(owner_bytes),
             None => H160::zero(),
@@ -393,10 +364,6 @@ impl Crowdfunding {
     #[safe]
     pub fn is_emergency_paused(&self) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         Storage::get(storage, self.emergency_pause_key.clone()).is_some()
     }
 
@@ -440,10 +407,6 @@ impl Crowdfunding {
 
     fn get_campaign_data(&self, campaign_id: Int256) -> Option<ByteString> {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let campaign_key = self.campaign_prefix.concat(&campaign_id.into_byte_string());
         Storage::get(storage, campaign_key)
     }
@@ -511,7 +474,7 @@ impl Crowdfunding {
         }
     }
 
-    fn split_by_delimiter(&self, data: ByteString, delimiter: ByteString) -> Array<ByteString> {
+    fn split_by_delimiter(&self, data: ByteString, _delimiter: ByteString) -> Array<ByteString> {
         // Simplified string splitting - in production, use proper parsing
         let mut parts = Array::new();
 
@@ -548,7 +511,7 @@ impl Crowdfunding {
         Runtime::notify(ByteString::from_literal("NewContributor"), event_data);
     }
 
-    fn get_contributor_count(&self, campaign_id: Int256) -> Int256 {
+    fn get_contributor_count(&self, _campaign_id: Int256) -> Int256 {
         // Return number of unique contributors
         // For now, return 0 - implement proper counting in production
         Int256::zero()
@@ -598,16 +561,12 @@ impl Crowdfunding {
 
         // Process refund (mark contribution as refunded)
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let contrib_key = self.contributions_prefix
             .concat(&campaign_id.into_byte_string())
             .concat(&ByteString::from_literal("_"))
             .concat(&contributor.into_byte_string());
 
-        Storage::delete(storage_clone, contrib_key);
+        let storage_clone = storage.clone(); Storage::delete(storage_clone, contrib_key);
 
         let mut event_data = Array::new();
         event_data.push(campaign_id.into_any());
@@ -652,10 +611,6 @@ impl Crowdfunding {
 
         // Update campaign status
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let new_data = self.serialize_campaign_data(
             creator,
             ByteString::from_literal(""), // Simplified - should preserve original data
@@ -667,7 +622,7 @@ impl Crowdfunding {
         );
 
         let campaign_key = self.campaign_prefix.concat(&campaign_id.into_byte_string());
-        Storage::put(storage_clone, campaign_key, new_data);
+        let storage_clone = storage.clone(); Storage::put(storage_clone, campaign_key, new_data);
 
         let mut event_data = Array::new();
         event_data.push(campaign_id.into_any());
@@ -685,11 +640,7 @@ impl Crowdfunding {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        Storage::put(storage_clone, self.emergency_pause_key.clone(), ByteString::from_literal("true"));
+        let storage_clone = storage.clone(); Storage::put(storage_clone, self.emergency_pause_key.clone(), ByteString::from_literal("true"));
 
         Runtime::notify(ByteString::from_literal("EmergencyPause"), Array::new());
         true
@@ -704,11 +655,7 @@ impl Crowdfunding {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        Storage::delete(storage_clone, self.emergency_pause_key.clone());
+        let storage_clone = storage.clone(); Storage::delete(storage_clone, self.emergency_pause_key.clone());
 
         Runtime::notify(ByteString::from_literal("PlatformResumed"), Array::new());
         true

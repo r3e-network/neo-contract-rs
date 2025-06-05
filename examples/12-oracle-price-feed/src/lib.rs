@@ -16,7 +16,6 @@
 
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
-use neo_contract::serialize::NeoSerializable;
 use neo_contract::contract::native::Oracle;
 
 /// Price data structure
@@ -109,10 +108,6 @@ impl OraclePriceFeed {
         subscription_fee: Int256
     ) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Check if already initialized
         if Storage::get(storage.clone(), self.owner_key.clone()).is_some() {
@@ -143,7 +138,7 @@ impl OraclePriceFeed {
         Storage::put(storage.clone(), self.max_price_age_key.clone(), ByteString::from_bytes(&max_price_age.to_le_bytes()));
         Storage::put(storage.clone(), self.subscription_fee_key.clone(), subscription_fee.into_byte_string());
         Storage::put(storage.clone(), self.request_count_key.clone(), Int256::zero().into_byte_string());
-        Storage::put(storage_clone, self.price_deviation_key.clone(), ByteString::from_bytes(&1000u32.to_le_bytes())); // 10% default
+        let storage_clone = storage.clone(); Storage::put(storage_clone, self.price_deviation_key.clone(), ByteString::from_bytes(&1000u32.to_le_bytes())); // 10% default
 
         let mut event_data = Array::new(); event_data.push(owner.into_any()); Runtime::notify(ByteString::from_literal("OracleFeedInitialized"), event_data);
         true
@@ -185,10 +180,6 @@ impl OraclePriceFeed {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let current_time = Runtime::get_time();
 
         // Get next request ID
@@ -318,10 +309,6 @@ impl OraclePriceFeed {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let price_key = self.price_prefix.concat(&symbol);
 
         match Storage::get(storage, price_key) {
@@ -366,16 +353,12 @@ impl OraclePriceFeed {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let current_time = Runtime::get_time();
         let expiration = current_time + duration;
 
         // Store subscription
         let sub_key = self.subscribers_prefix.concat(&subscriber.into_byte_string());
-        Storage::put(storage_clone, sub_key, ByteString::from_bytes(&expiration.to_le_bytes()));
+        let storage_clone = storage.clone(); Storage::put(storage_clone, sub_key, ByteString::from_bytes(&expiration.to_le_bytes()));
 
         let mut event_data = Array::new();
         event_data.push(subscriber.into_any());
@@ -400,12 +383,8 @@ impl OraclePriceFeed {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let emergency_key = self.emergency_price_prefix.concat(&symbol);
-        Storage::put(storage_clone, emergency_key, price.into_byte_string());
+        let storage_clone = storage.clone(); Storage::put(storage_clone, emergency_key, price.into_byte_string());
 
         let mut event_data = Array::new();
         event_data.push(symbol.into_any());
@@ -424,11 +403,7 @@ impl OraclePriceFeed {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        Storage::put(storage_clone, self.circuit_breaker_key.clone(), ByteString::from_literal("true"));
+        let storage_clone = storage.clone(); Storage::put(storage_clone, self.circuit_breaker_key.clone(), ByteString::from_literal("true"));
 
         Runtime::notify(ByteString::from_literal("CircuitBreakerActivated"), Array::new());
         true
@@ -443,11 +418,7 @@ impl OraclePriceFeed {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        Storage::delete(storage_clone, self.circuit_breaker_key.clone());
+        let storage_clone = storage.clone(); Storage::delete(storage_clone, self.circuit_breaker_key.clone());
 
         Runtime::notify(ByteString::from_literal("CircuitBreakerDeactivated"), Array::new());
         true
@@ -458,10 +429,6 @@ impl OraclePriceFeed {
     #[safe]
     pub fn is_circuit_breaker_active(&self) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         Storage::get(storage, self.circuit_breaker_key.clone()).is_some()
     }
 
@@ -470,10 +437,6 @@ impl OraclePriceFeed {
     #[safe]
     pub fn get_owner(&self) -> H160 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.owner_key.clone()) {
             Some(owner_bytes) => H160::from_byte_string(owner_bytes),
             None => H160::zero(),
@@ -485,10 +448,6 @@ impl OraclePriceFeed {
     #[safe]
     pub fn get_request_count(&self) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.request_count_key.clone()) {
             Some(count_bytes) => Int256::from_byte_string(count_bytes),
             None => Int256::zero(),
@@ -507,10 +466,6 @@ impl OraclePriceFeed {
 
     fn is_subscribed(&self, subscriber: H160) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let sub_key = self.subscribers_prefix.concat(&subscriber.into_byte_string());
 
         match Storage::get(storage, sub_key) {
@@ -533,10 +488,6 @@ impl OraclePriceFeed {
 
     fn get_max_price_age(&self) -> u64 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.max_price_age_key.clone()) {
             Some(age_bytes) => {
                 let bytes = age_bytes.to_bytes();
@@ -566,10 +517,6 @@ impl OraclePriceFeed {
 
     fn store_price_data(&self, price_data: PriceData) {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Store latest price
         let price_key = self.price_prefix.concat(&price_data.symbol);
@@ -580,7 +527,7 @@ impl OraclePriceFeed {
             .concat(&price_data.symbol)
             .concat(&ByteString::from_literal("_"))
             .concat(&ByteString::from_bytes(&price_data.timestamp.to_le_bytes()));
-        Storage::put(storage_clone, hist_key, self.serialize_price_data(price_data));
+        let storage_clone = storage.clone(); Storage::put(storage_clone, hist_key, self.serialize_price_data(price_data));
     }
 
     fn validate_price_data(&self, price_data: &PriceData) -> bool {
@@ -613,7 +560,7 @@ impl OraclePriceFeed {
         data
     }
 
-    fn deserialize_price_data(&self, data: ByteString) -> PriceData {
+    fn deserialize_price_data(&self, _data: ByteString) -> PriceData {
         // Simplified deserialization - in production, use proper parsing
         PriceData {
             symbol: ByteString::from_literal("BTC"),
@@ -644,7 +591,7 @@ impl OraclePriceFeed {
         data
     }
 
-    fn validate_oracle_request(&self, symbol: ByteString, current_time: u64) -> bool {
+    fn validate_oracle_request(&self, _symbol: ByteString, _current_time: u64) -> bool {
         // Implement oracle request validation logic
         // Check against authorized oracles, subscription status, etc.
         true

@@ -4,7 +4,6 @@
 
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
-use neo_contract::serialize::NeoSerializable;
 use crate::types::*;
 use crate::storage::*;
 
@@ -274,9 +273,6 @@ impl crate::NftMarketplace {
         let auction_key = self.storage_keys.auction_key(auction_id);
         let storage = Storage::get_context();
         let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         Storage::put(storage_clone, auction_key, self.serialize_auction(auction.clone()));
 
         // Remove from active auctions index
@@ -360,9 +356,6 @@ impl crate::NftMarketplace {
         let auction_key = self.storage_keys.auction_key(auction_id);
         let storage = Storage::get_context();
         let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         Storage::put(storage_clone, auction_key, self.serialize_auction(auction.clone()));
 
         // Remove from indexes
@@ -435,11 +428,7 @@ impl crate::NftMarketplace {
     pub fn get_bid(&self, auction_id: Int256, bidder: H160) -> Map<ByteString, Any> {
         let mut result = Map::new();
 
-        let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
+        let _storage = Storage::get_context();
         let bid_key = self.storage_keys.bid_key(auction_id, bidder);
 
         match Storage::get(Storage::get_context(), bid_key) {
@@ -499,7 +488,7 @@ impl crate::NftMarketplace {
         data
     }
 
-    fn deserialize_auction(&self, data: ByteString) -> Auction {
+    fn deserialize_auction(&self, _data: ByteString) -> Auction {
         // Simplified deserialization - in production, use proper parsing
         Auction {
             id: Int256::zero(),
@@ -530,7 +519,7 @@ impl crate::NftMarketplace {
         data
     }
 
-    fn deserialize_bid(&self, data: ByteString) -> Bid {
+    fn deserialize_bid(&self, _data: ByteString) -> Bid {
         // Simplified deserialization - in production, use proper parsing
         Bid {
             auction_id: Int256::zero(),
@@ -615,14 +604,14 @@ impl crate::NftMarketplace {
 
     fn handle_bid_escrow(&self, bidder: H160, payment_token: H160, amount: Int256) -> bool {
         // Complete production implementation for bid escrow handling
-        let storage = Storage::get_context();
+        let _storage = Storage::get_context();
         let escrow_key = ByteString::from_literal("escrow_")
             .concat(&bidder.into_byte_string())
             .concat(&ByteString::from_literal("_"))
             .concat(&payment_token.into_byte_string());
         
         // Store escrow balance
-        Storage::put(storage, escrow_key, amount.into_byte_string());
+        let storage_clone = Storage::get_context(); Storage::put(storage_clone, escrow_key, amount.into_byte_string());
         
         Runtime::log(ByteString::from_literal("Bid escrow handled"));
         
@@ -671,14 +660,14 @@ impl crate::NftMarketplace {
 
     fn release_auction_escrow(&self, auction: &Auction, winner: H160, amount: Int256) -> bool {
         // Complete production implementation for escrow release and payment distribution
-        let storage = Storage::get_context();
+        let _storage = Storage::get_context();
         let escrow_key = ByteString::from_literal("escrow_")
             .concat(&winner.into_byte_string())
             .concat(&ByteString::from_literal("_"))
             .concat(&auction.payment_token.into_byte_string());
         
         // Clear escrow balance
-        Storage::delete(storage, escrow_key);
+        let storage_clone = Storage::get_context(); Storage::delete(storage_clone, escrow_key);
         
         // Record the sale
         self.record_sale(

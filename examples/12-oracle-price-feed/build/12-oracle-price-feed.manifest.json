@@ -34,135 +34,85 @@
           }
         ],
         "name": "initialize",
-        "offset": 249,
+        "offset": 350,
         "returntype": "Boolean",
         "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "symbol",
-            "type": "ByteArray"
-          },
-          {
-            "name": "source_url",
-            "type": "ByteArray"
-          },
-          {
-            "name": "filter",
-            "type": "ByteArray"
-          },
-          {
-            "name": "gas_for_response",
-            "type": "Integer"
-          }
-        ],
-        "name": "request_price_data",
-        "offset": 458,
-        "returntype": "Integer",
+        "parameters": [],
+        "name": "propose_transaction",
+        "offset": 779,
+        "returntype": "Void",
         "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "url",
-            "type": "ByteArray"
-          },
-          {
-            "name": "user_data",
-            "type": "ByteArray"
-          },
-          {
-            "name": "code",
-            "type": "Integer"
-          },
-          {
-            "name": "result",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "oracle_callback",
-        "offset": 853,
-        "returntype": "Boolean",
+        "parameters": [],
+        "name": "confirm_transaction",
+        "offset": 1112,
+        "returntype": "Void",
         "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "symbol",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "get_price",
-        "offset": 979,
-        "returntype": "ByteArray",
-        "safe": true
+        "parameters": [],
+        "name": "revoke_confirmation",
+        "offset": 1699,
+        "returntype": "Void",
+        "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "subscriber",
-            "type": "Hash160"
-          },
-          {
-            "name": "duration",
-            "type": "Integer"
-          }
-        ],
-        "name": "subscribe",
-        "offset": 1298,
-        "returntype": "Boolean",
-        "safe": true
+        "parameters": [],
+        "name": "cancel_proposal",
+        "offset": 2121,
+        "returntype": "Void",
+        "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "symbol",
-            "type": "ByteArray"
-          },
-          {
-            "name": "price",
-            "type": "Integer"
-          }
-        ],
-        "name": "set_emergency_price",
-        "offset": 1425,
-        "returntype": "Boolean",
+        "parameters": [],
+        "name": "add_owner",
+        "offset": 2444,
+        "returntype": "Void",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "get_proposal",
+        "offset": 2545,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "activate_circuit_breaker",
-        "offset": 1518,
-        "returntype": "Boolean",
+        "name": "is_owner",
+        "offset": 2575,
+        "returntype": "Void",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "get_owners",
+        "offset": 2613,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "deactivate_circuit_breaker",
-        "offset": 1629,
-        "returntype": "Boolean",
+        "name": "get_required_confirmations",
+        "offset": 2647,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "is_circuit_breaker_active",
-        "offset": 1732,
-        "returntype": "Boolean",
+        "name": "get_owner_count",
+        "offset": 2678,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_owner",
-        "offset": 1765,
-        "returntype": "Hash160",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "get_request_count",
-        "offset": 1812,
-        "returntype": "Integer",
+        "name": "get_proposal_count",
+        "offset": 2709,
+        "returntype": "Void",
         "safe": true
       }
     ],

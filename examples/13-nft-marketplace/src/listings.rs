@@ -4,7 +4,6 @@
 
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
-use neo_contract::serialize::NeoSerializable;
 extern crate alloc;
 use alloc::vec::Vec;
 use crate::types::*;
@@ -97,9 +96,6 @@ impl crate::NftMarketplace {
         let listing_key = self.storage_keys.listing_key(listing_id);
         let serialized_listing = self.serialize_listing(listing.clone());
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let storage_clone = storage.clone();
         Storage::put(storage_clone, listing_key, serialized_listing);
 
@@ -197,9 +193,6 @@ impl crate::NftMarketplace {
         let listing_key = self.storage_keys.listing_key(listing_id);
         let storage = Storage::get_context();
         let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         Storage::put(storage_clone, listing_key, self.serialize_listing(listing.clone()));
 
         // Remove from indexes
@@ -284,9 +277,6 @@ impl crate::NftMarketplace {
         listing.status = ListingStatus::Cancelled;
         let listing_key = self.storage_keys.listing_key(listing_id);
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let storage_clone = storage.clone();
         Storage::put(storage_clone, listing_key, self.serialize_listing(listing.clone()));
 
@@ -397,7 +387,7 @@ impl crate::NftMarketplace {
         data
     }
 
-    fn deserialize_listing(&self, data: ByteString) -> Listing {
+    fn deserialize_listing(&self, _data: ByteString) -> Listing {
         // Simplified deserialization - in production, use proper parsing
         Listing {
             id: Int256::zero(),
@@ -412,7 +402,7 @@ impl crate::NftMarketplace {
         }
     }
 
-    pub fn calculate_fees(&self, nft_contract: H160, token_id: ByteString, price: Int256) -> FeeCalculation {
+    pub fn calculate_fees(&self, _nft_contract: H160, _token_id: ByteString, price: Int256) -> FeeCalculation {
         let platform_fee_rate = self.get_platform_fee_rate();
         let platform_fee = price
             .checked_mul(&Int256::new(platform_fee_rate as i64))
@@ -468,7 +458,7 @@ impl crate::NftMarketplace {
 
         let sale = Sale {
             nft_contract,
-            token_id,
+            token_id: token_id.clone(),
             seller,
             buyer,
             price,
@@ -486,7 +476,7 @@ impl crate::NftMarketplace {
             .concat(&ByteString::from_literal("_"))
             .concat(&nft_contract.into_byte_string())
             .concat(&ByteString::from_literal("_"))
-            .concat(&token_id.clone());
+            .concat(&token_id);
         
         let sale_data = self.serialize_sale_record(sale);
         Storage::put(storage, sale_key, sale_data);

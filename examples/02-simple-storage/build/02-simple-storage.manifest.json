@@ -15,192 +15,87 @@
   "abi": {
     "methods": [
       {
-        "parameters": [
-          {
-            "name": "owner",
-            "type": "Hash160"
-          }
-        ],
-        "name": "set_owner",
-        "offset": 78,
-        "returntype": "Boolean",
+        "parameters": [],
+        "name": "initialize",
+        "offset": 350,
+        "returntype": "Void",
         "safe": false
       },
       {
         "parameters": [],
-        "name": "get_owner",
-        "offset": 217,
-        "returntype": "Hash160",
-        "safe": true
+        "name": "propose_transaction",
+        "offset": 779,
+        "returntype": "Void",
+        "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "key",
-            "type": "ByteArray"
-          },
-          {
-            "name": "value",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "put_string",
-        "offset": 307,
-        "returntype": "Boolean",
-        "safe": true
+        "parameters": [],
+        "name": "confirm_transaction",
+        "offset": 1112,
+        "returntype": "Void",
+        "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "key",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "get_string",
-        "offset": 445,
-        "returntype": "ByteArray",
-        "safe": true
+        "parameters": [],
+        "name": "revoke_confirmation",
+        "offset": 1699,
+        "returntype": "Void",
+        "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "key",
-            "type": "ByteArray"
-          },
-          {
-            "name": "value",
-            "type": "Integer"
-          }
-        ],
-        "name": "put_number",
-        "offset": 538,
-        "returntype": "Boolean",
-        "safe": true
+        "parameters": [],
+        "name": "cancel_proposal",
+        "offset": 2121,
+        "returntype": "Void",
+        "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "key",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "get_number",
-        "offset": 678,
-        "returntype": "Integer",
-        "safe": true
+        "parameters": [],
+        "name": "add_owner",
+        "offset": 2444,
+        "returntype": "Void",
+        "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "key",
-            "type": "ByteArray"
-          },
-          {
-            "name": "value",
-            "type": "Hash160"
-          }
-        ],
-        "name": "put_address",
-        "offset": 771,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "key",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "get_address",
-        "offset": 911,
-        "returntype": "Hash160",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "key",
-            "type": "ByteArray"
-          },
-          {
-            "name": "values",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "put_array",
-        "offset": 1004,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "key",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "get_array",
-        "offset": 1249,
-        "returntype": "ByteArray",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "key",
-            "type": "ByteArray"
-          },
-          {
-            "name": "map_data",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "put_map",
-        "offset": 1333,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "key",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "get_map",
-        "offset": 1483,
-        "returntype": "ByteArray",
-        "safe": true
-      },
-      {
-        "parameters": [
-          {
-            "name": "data_type",
-            "type": "ByteArray"
-          },
-          {
-            "name": "key",
-            "type": "ByteArray"
-          }
-        ],
-        "name": "delete",
-        "offset": 1567,
-        "returntype": "Boolean",
+        "parameters": [],
+        "name": "get_proposal",
+        "offset": 2545,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_total_items",
-        "offset": 1832,
-        "returntype": "Integer",
+        "name": "is_owner",
+        "offset": 2575,
+        "returntype": "Void",
+        "safe": false
+      },
+      {
+        "parameters": [],
+        "name": "get_owners",
+        "offset": 2613,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_stats",
-        "offset": 1922,
-        "returntype": "ByteArray",
+        "name": "get_required_confirmations",
+        "offset": 2647,
+        "returntype": "Void",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get_owner_count",
+        "offset": 2678,
+        "returntype": "Void",
+        "safe": true
+      },
+      {
+        "parameters": [],
+        "name": "get_proposal_count",
+        "offset": 2709,
+        "returntype": "Void",
         "safe": true
       }
     ],

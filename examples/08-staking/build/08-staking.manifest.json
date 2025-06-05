@@ -26,171 +26,85 @@
           }
         ],
         "name": "initialize",
-        "offset": 193,
+        "offset": 350,
         "returntype": "Boolean",
         "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "stake_token",
-            "type": "Hash160"
-          },
-          {
-            "name": "reward_token",
-            "type": "Hash160"
-          },
-          {
-            "name": "reward_rate",
-            "type": "Integer"
-          },
-          {
-            "name": "lock_period",
-            "type": "Integer"
-          },
-          {
-            "name": "penalty_rate",
-            "type": "Integer"
-          }
-        ],
-        "name": "create_pool",
-        "offset": 321,
-        "returntype": "Integer",
+        "parameters": [],
+        "name": "propose_transaction",
+        "offset": 779,
+        "returntype": "Void",
         "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "pool_id",
-            "type": "Integer"
-          },
-          {
-            "name": "user",
-            "type": "Hash160"
-          },
-          {
-            "name": "amount",
-            "type": "Integer"
-          }
-        ],
-        "name": "stake",
-        "offset": 551,
-        "returntype": "Boolean",
+        "parameters": [],
+        "name": "confirm_transaction",
+        "offset": 1112,
+        "returntype": "Void",
         "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "pool_id",
-            "type": "Integer"
-          },
-          {
-            "name": "user",
-            "type": "Hash160"
-          }
-        ],
-        "name": "claim_rewards",
-        "offset": 585,
-        "returntype": "Integer",
+        "parameters": [],
+        "name": "revoke_confirmation",
+        "offset": 1699,
+        "returntype": "Void",
         "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "pool_id",
-            "type": "Integer"
-          },
-          {
-            "name": "user",
-            "type": "Hash160"
-          },
-          {
-            "name": "amount",
-            "type": "Integer"
-          }
-        ],
-        "name": "unstake",
-        "offset": 733,
-        "returntype": "Boolean",
+        "parameters": [],
+        "name": "cancel_proposal",
+        "offset": 2121,
+        "returntype": "Void",
         "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "pool_id",
-            "type": "Integer"
-          },
-          {
-            "name": "user",
-            "type": "Hash160"
-          }
-        ],
-        "name": "get_user_stake",
-        "offset": 767,
-        "returntype": "ByteArray",
-        "safe": true
+        "parameters": [],
+        "name": "add_owner",
+        "offset": 2444,
+        "returntype": "Void",
+        "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "pool_id",
-            "type": "Integer"
-          }
-        ],
-        "name": "get_pool",
-        "offset": 997,
-        "returntype": "Any",
+        "parameters": [],
+        "name": "get_proposal",
+        "offset": 2545,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "get_pool_count",
-        "offset": 1077,
-        "returntype": "Integer",
-        "safe": true
+        "name": "is_owner",
+        "offset": 2575,
+        "returntype": "Void",
+        "safe": false
       },
       {
-        "parameters": [
-          {
-            "name": "pool_id",
-            "type": "Integer"
-          },
-          {
-            "name": "amount",
-            "type": "Integer"
-          }
-        ],
-        "name": "add_rewards",
-        "offset": 1122,
-        "returntype": "Boolean",
+        "parameters": [],
+        "name": "get_owners",
+        "offset": 2613,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "enable_emergency",
-        "offset": 1213,
-        "returntype": "Boolean",
+        "name": "get_required_confirmations",
+        "offset": 2647,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "is_emergency_enabled",
-        "offset": 1321,
-        "returntype": "Boolean",
+        "name": "get_owner_count",
+        "offset": 2678,
+        "returntype": "Void",
         "safe": true
       },
       {
         "parameters": [],
-        "name": "is_paused",
-        "offset": 1352,
-        "returntype": "Boolean",
-        "safe": true
-      },
-      {
-        "parameters": [],
-        "name": "get_owner",
-        "offset": 1383,
-        "returntype": "Hash160",
+        "name": "get_proposal_count",
+        "offset": 2709,
+        "returntype": "Void",
         "safe": true
       }
     ],

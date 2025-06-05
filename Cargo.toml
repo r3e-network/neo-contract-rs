@@ -11,6 +11,7 @@ members = [
     "neo-wasm/examples/syscall-test",
     # New comprehensive examples
     "examples/01-hello-world",
+    "examples/02-simple-token",
     "examples/02-simple-storage",
     "examples/03-counter",
     "examples/04-nep17-token",

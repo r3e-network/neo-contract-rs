@@ -231,7 +231,7 @@ impl SimpleStorage {
 
     /// Store a map of key-value pairs
     #[method]
-    pub fn put_map(&self, key: ByteString, map_data: Map<ByteString, ByteString>) -> bool {
+    pub fn put_map(&self, key: ByteString, _map_data: Map<ByteString, ByteString>) -> bool {
         if !self.validate_key(&key) {
             return false;
         }

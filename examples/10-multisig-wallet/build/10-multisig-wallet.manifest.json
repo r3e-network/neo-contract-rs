@@ -30,7 +30,7 @@
           }
         ],
         "name": "initialize",
-        "offset": 335,
+        "offset": 350,
         "returntype": "Boolean",
         "safe": false
       },
@@ -58,7 +58,7 @@
           }
         ],
         "name": "propose_transaction",
-        "offset": 558,
+        "offset": 779,
         "returntype": "Integer",
         "safe": false
       },
@@ -74,7 +74,7 @@
           }
         ],
         "name": "confirm_transaction",
-        "offset": 887,
+        "offset": 1112,
         "returntype": "Boolean",
         "safe": false
       },
@@ -90,7 +90,7 @@
           }
         ],
         "name": "revoke_confirmation",
-        "offset": 1504,
+        "offset": 1699,
         "returntype": "Boolean",
         "safe": false
       },
@@ -106,7 +106,7 @@
           }
         ],
         "name": "cancel_proposal",
-        "offset": 1928,
+        "offset": 2121,
         "returntype": "Boolean",
         "safe": false
       },
@@ -118,7 +118,7 @@
           }
         ],
         "name": "add_owner",
-        "offset": 2251,
+        "offset": 2444,
         "returntype": "Integer",
         "safe": false
       },
@@ -130,7 +130,7 @@
           }
         ],
         "name": "get_proposal",
-        "offset": 2348,
+        "offset": 2545,
         "returntype": "Any",
         "safe": true
       },
@@ -142,35 +142,35 @@
           }
         ],
         "name": "is_owner",
-        "offset": 2376,
+        "offset": 2575,
         "returntype": "Boolean",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_owners",
-        "offset": 2412,
+        "offset": 2613,
         "returntype": "Hash160",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_required_confirmations",
-        "offset": 2444,
+        "offset": 2647,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_owner_count",
-        "offset": 2473,
+        "offset": 2678,
         "returntype": "Integer",
         "safe": true
       },
       {
         "parameters": [],
         "name": "get_proposal_count",
-        "offset": 2502,
+        "offset": 2709,
         "returntype": "Integer",
         "safe": true
       }

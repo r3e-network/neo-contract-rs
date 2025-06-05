@@ -10,28 +10,15 @@
     }
   ],
   "trusts": [],
-  "name": "09-simple-dex",
+  "name": "01-hello-world",
   "features": {},
   "abi": {
     "methods": [
       {
-        "parameters": [
-          {
-            "name": "owner",
-            "type": "Hash160"
-          },
-          {
-            "name": "min_liquidity",
-            "type": "Integer"
-          },
-          {
-            "name": "protocol_fee_rate",
-            "type": "Integer"
-          }
-        ],
+        "parameters": [],
         "name": "initialize",
         "offset": 350,
-        "returntype": "Boolean",
+        "returntype": "Void",
         "safe": false
       },
       {
@@ -116,9 +103,9 @@
   },
   "extra": {
     "Author": "neo-contract-rs",
-    "Description": "Liquidity pool information\n#[derive(Clone)]",
+    "Description": "Hello World smart contract demonstrating basic Neo N3 features\n#[contract_author(\"Neo Rust Framework\", \"dev@neo.org\")]\n#[contract_version(\"1.0.0\")]\n#[contract_standards(\"\")]\n#[contract_permission(\"*\", \"*\")]\n#[contract_meta(\"description\", \"A simple Hello World contract demonstrating basic Neo N3 features\")]\n#[contract_meta(\"website\", \"https://github.com/R3E-Network/neo-contract-rs\")]",
     "Version": "1.0.0",
-    "category": "DeFi",
-    "description": "Simple AMM-based decentralized exchange"
+    "description": "A simple Hello World contract demonstrating basic Neo N3 features",
+    "website": "https://github.com/R3E-Network/neo-contract-rs"
   }
 }

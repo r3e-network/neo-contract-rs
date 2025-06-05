@@ -16,7 +16,6 @@
 
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
-use neo_contract::serialize::NeoSerializable;
 
 mod types;
 mod storage;
@@ -59,10 +58,6 @@ impl NftMarketplace {
         max_listing_duration: u64
     ) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Check if already initialized
         if Storage::get(storage.clone(), self.storage_keys.owner_key.clone()).is_some() {
@@ -101,7 +96,7 @@ impl NftMarketplace {
         // Initialize counters
         Storage::put(storage.clone(), self.storage_keys.listing_count_key.clone(), Int256::zero().into_byte_string());
         Storage::put(storage.clone(), self.storage_keys.auction_count_key.clone(), Int256::zero().into_byte_string());
-        Storage::put(storage_clone, self.storage_keys.offer_count_key.clone(), Int256::zero().into_byte_string());
+        let storage_clone = storage.clone(); Storage::put(storage_clone, self.storage_keys.offer_count_key.clone(), Int256::zero().into_byte_string());
 
         let mut event_data = Array::new(); event_data.push(owner.into_any()); Runtime::notify(ByteString::from_literal("MarketplaceInitialized"), event_data);
         true
@@ -112,10 +107,6 @@ impl NftMarketplace {
     #[safe]
     pub fn get_owner(&self) -> H160 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.storage_keys.owner_key.clone()) {
             Some(owner_bytes) => H160::from_byte_string(owner_bytes),
             None => H160::zero(),
@@ -127,10 +118,6 @@ impl NftMarketplace {
     #[safe]
     pub fn get_platform_fee_rate(&self) -> u32 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.storage_keys.platform_fee_key.clone()) {
             Some(fee_bytes) => {
                 let bytes = fee_bytes.to_bytes();
@@ -149,10 +136,6 @@ impl NftMarketplace {
     #[safe]
     pub fn is_paused(&self) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         Storage::get(storage, self.storage_keys.paused_key.clone()).is_some()
     }
 
@@ -165,11 +148,7 @@ impl NftMarketplace {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        Storage::put(storage_clone, self.storage_keys.paused_key.clone(), ByteString::from_literal("true"));
+        let storage_clone = storage.clone(); Storage::put(storage_clone, self.storage_keys.paused_key.clone(), ByteString::from_literal("true"));
 
         Runtime::notify(ByteString::from_literal("MarketplacePaused"), Array::new());
         true
@@ -184,11 +163,7 @@ impl NftMarketplace {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        Storage::delete(storage_clone, self.storage_keys.paused_key.clone());
+        let storage_clone = storage.clone(); Storage::delete(storage_clone, self.storage_keys.paused_key.clone());
 
         Runtime::notify(ByteString::from_literal("MarketplaceUnpaused"), Array::new());
         true
@@ -240,10 +215,6 @@ impl NftMarketplace {
 
     fn get_listing_count(&self) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.storage_keys.listing_count_key.clone()) {
             Some(count_bytes) => Int256::from_byte_string(count_bytes),
             None => Int256::zero(),
@@ -252,10 +223,6 @@ impl NftMarketplace {
 
     fn get_auction_count(&self) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.storage_keys.auction_count_key.clone()) {
             Some(count_bytes) => Int256::from_byte_string(count_bytes),
             None => Int256::zero(),
@@ -264,10 +231,6 @@ impl NftMarketplace {
 
     fn get_offer_count(&self) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.storage_keys.offer_count_key.clone()) {
             Some(count_bytes) => Int256::from_byte_string(count_bytes),
             None => Int256::zero(),

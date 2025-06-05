@@ -18,7 +18,6 @@
 
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
-use neo_contract::serialize::NeoSerializable;
 
 /// NEP-11 compliant non-fungible token contract
 #[contract_author("Neo Rust Framework", "dev@neo.org")]
@@ -82,10 +81,6 @@ impl Nep11Token {
         base_uri: ByteString
     ) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Check if already deployed
         if Storage::get(storage.clone(), self.contract_owner_key.clone()).is_some() {
@@ -115,6 +110,7 @@ impl Nep11Token {
         }
 
         // Initialize empty token list
+        let storage_clone = storage.clone();
         Storage::put(storage_clone, self.all_tokens_key.clone(), ByteString::empty());
 
         let mut event_data = Array::new(); event_data.push(symbol.into_any()); Runtime::notify(ByteString::from_literal("ContractDeployed"), event_data);
@@ -126,10 +122,6 @@ impl Nep11Token {
     #[safe]
     pub fn symbol(&self) -> ByteString {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.symbol_key.clone()) {
             Some(symbol) => symbol,
             None => ByteString::from_literal("UNKNOWN"),
@@ -148,10 +140,6 @@ impl Nep11Token {
     #[safe]
     pub fn total_supply(&self) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.total_supply_key.clone()) {
             Some(supply_bytes) => Int256::from_byte_string(supply_bytes),
             None => Int256::zero(),
@@ -163,10 +151,6 @@ impl Nep11Token {
     #[safe]
     pub fn balance_of(&self, owner: H160) -> Int256 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let balance_key = self.balance_prefix.concat(&owner.into_byte_string());
 
         match Storage::get(storage, balance_key) {
@@ -180,10 +164,6 @@ impl Nep11Token {
     #[safe]
     pub fn owner_of(&self, token_id: ByteString) -> H160 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let owner_key = self.owner_prefix.concat(&token_id);
 
         match Storage::get(storage, owner_key) {
@@ -197,10 +177,6 @@ impl Nep11Token {
     #[safe]
     pub fn tokens_of(&self, owner: H160) -> Array<ByteString> {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let tokens_key = self.token_prefix.concat(&owner.into_byte_string());
 
         match Storage::get(storage, tokens_key) {
@@ -245,10 +221,6 @@ impl Nep11Token {
     #[safe]
     pub fn properties(&self, token_id: ByteString) -> Map<ByteString, Any> {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let props_key = self.properties_prefix.concat(&token_id);
 
         match Storage::get(storage, props_key) {
@@ -274,16 +246,12 @@ impl Nep11Token {
 
         // Set approval
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let approved_key = self.approved_prefix.concat(&token_id);
 
         if to == H160::zero() {
-            Storage::delete(storage_clone, approved_key);
+            let storage_clone = storage.clone(); Storage::delete(storage_clone, approved_key);
         } else {
-            Storage::put(storage_clone, approved_key, to.into_byte_string());
+            let storage_clone = storage.clone(); Storage::put(storage_clone, approved_key, to.into_byte_string());
         }
 
         // Emit Approval event
@@ -301,10 +269,6 @@ impl Nep11Token {
     #[safe]
     pub fn get_approved(&self, token_id: ByteString) -> H160 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let approved_key = self.approved_prefix.concat(&token_id);
 
         match Storage::get(storage, approved_key) {
@@ -333,10 +297,6 @@ impl Nep11Token {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Set token owner
         let owner_key = self.owner_prefix.concat(&token_id);
@@ -361,7 +321,7 @@ impl Nep11Token {
         // Update total supply
         let current_supply = self.total_supply();
         let new_supply = current_supply.checked_add(&Int256::one());
-        Storage::put(storage_clone, self.total_supply_key.clone(), new_supply.into_byte_string());
+        let storage_clone = storage.clone(); Storage::put(storage_clone, self.total_supply_key.clone(), new_supply.into_byte_string());
 
         // Add to global token list
         self.add_token_to_global_list(token_id.clone());
@@ -389,10 +349,6 @@ impl Nep11Token {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Remove token owner
         let owner_key = self.owner_prefix.concat(&token_id);
@@ -423,7 +379,7 @@ impl Nep11Token {
         // Update total supply
         let current_supply = self.total_supply();
         let new_supply = current_supply.checked_sub(&Int256::one());
-        Storage::put(storage_clone, self.total_supply_key.clone(), new_supply.into_byte_string());
+        let storage_clone = storage.clone(); Storage::put(storage_clone, self.total_supply_key.clone(), new_supply.into_byte_string());
 
         // Remove from global token list
         self.remove_token_from_global_list(token_id.clone());
@@ -440,10 +396,6 @@ impl Nep11Token {
     #[safe]
     pub fn get_owner(&self) -> H160 {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.contract_owner_key.clone()) {
             Some(owner_bytes) => H160::from_byte_string(owner_bytes),
             None => H160::zero(),
@@ -459,12 +411,8 @@ impl Nep11Token {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let minter_key = self.minters_prefix.concat(&minter.into_byte_string());
-        Storage::put(storage_clone, minter_key, ByteString::from_literal("true"));
+        let storage_clone = storage.clone(); Storage::put(storage_clone, minter_key, ByteString::from_literal("true"));
 
         let mut event_data = Array::new(); event_data.push(minter.into_any()); Runtime::notify(ByteString::from_literal("MinterAdded"), event_data);
         true
@@ -479,13 +427,10 @@ impl Nep11Token {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         if base_uri.is_empty() {
-            Storage::delete(storage_clone, self.base_uri_key.clone());
+            let storage_clone = storage.clone(); Storage::delete(storage_clone, self.base_uri_key.clone());
         } else {
+            let storage_clone = storage.clone();
             Storage::put(storage_clone, self.base_uri_key.clone(), base_uri.clone());
         }
 
@@ -498,10 +443,6 @@ impl Nep11Token {
     #[safe]
     pub fn get_base_uri(&self) -> ByteString {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         match Storage::get(storage, self.base_uri_key.clone()) {
             Some(uri) => uri,
             None => ByteString::empty(),
@@ -533,11 +474,7 @@ impl Nep11Token {
         }
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        Storage::put(storage_clone, self.paused_key.clone(), ByteString::from_literal("true"));
+        let storage_clone = storage.clone(); Storage::put(storage_clone, self.paused_key.clone(), ByteString::from_literal("true"));
 
         Runtime::notify(ByteString::from_literal("ContractPaused"), Array::new());
         true
@@ -548,10 +485,6 @@ impl Nep11Token {
     #[safe]
     pub fn is_paused(&self) -> bool {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         Storage::get(storage, self.paused_key.clone()).is_some()
     }
 
@@ -572,10 +505,6 @@ impl Nep11Token {
 
         let caller = Runtime::get_calling_script_hash();
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let minter_key = self.minters_prefix.concat(&caller.into_byte_string());
         Storage::get(storage, minter_key).is_some()
     }
@@ -597,10 +526,6 @@ impl Nep11Token {
 
     fn transfer_token(&self, from: H160, to: H160, token_id: ByteString) {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
 
         // Update token owner
         let owner_key = self.owner_prefix.concat(&token_id);
@@ -624,6 +549,7 @@ impl Nep11Token {
         let to_balance = self.balance_of(to);
         let new_to_balance = to_balance.checked_add(&Int256::one());
         let to_balance_key = self.balance_prefix.concat(&to.into_byte_string());
+        let storage_clone = storage.clone();
         Storage::put(storage_clone, to_balance_key, new_to_balance.into_byte_string());
 
         // Update token lists
@@ -636,10 +562,6 @@ impl Nep11Token {
 
     fn add_token_to_owner(&self, owner: H160, token_id: ByteString) {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let tokens_key = self.token_prefix.concat(&owner.into_byte_string());
 
         let mut tokens = match Storage::get(storage.clone(), tokens_key.clone()) {
@@ -649,15 +571,12 @@ impl Nep11Token {
 
         tokens.push(token_id);
         let serialized = self.serialize_token_list(tokens);
+        let storage_clone = storage.clone();
         Storage::put(storage_clone, tokens_key, serialized);
     }
 
     fn remove_token_from_owner(&self, owner: H160, token_id: ByteString) {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let tokens_key = self.token_prefix.concat(&owner.into_byte_string());
 
         let tokens = match Storage::get(storage.clone(), tokens_key.clone()) {
@@ -674,32 +593,25 @@ impl Nep11Token {
         }
 
         if new_tokens.size() == 0 {
-            Storage::delete(storage_clone, tokens_key);
+            let storage_clone = storage.clone(); Storage::delete(storage_clone, tokens_key);
         } else {
             let serialized = self.serialize_token_list(new_tokens);
+            let storage_clone = storage.clone();
             Storage::put(storage_clone, tokens_key, serialized);
         }
     }
 
     fn add_token_to_global_list(&self, token_id: ByteString) {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let current_supply = self.total_supply();
         let index_key = self.token_index_prefix.concat(&token_id);
-        Storage::put(storage_clone, index_key, current_supply.into_byte_string());
+        let storage_clone = storage.clone(); Storage::put(storage_clone, index_key, current_supply.into_byte_string());
     }
 
     fn remove_token_from_global_list(&self, token_id: ByteString) {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
-        let storage_clone = storage.clone();
         let index_key = self.token_index_prefix.concat(&token_id);
-        Storage::delete(storage_clone, index_key);
+        let storage_clone = storage.clone(); Storage::delete(storage_clone, index_key);
     }
 
     fn emit_transfer(&self, from: H160, to: H160, amount: Int256, token_id: ByteString) {

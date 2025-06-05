@@ -4,7 +4,6 @@
 
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
-use neo_contract::serialize::NeoSerializable;
 use crate::types::*;
 
 /// Storage keys for the marketplace contract

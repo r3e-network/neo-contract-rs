@@ -16,7 +16,6 @@
 
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
-use neo_contract::serialize::NeoSerializable;
 
 /// Transaction proposal status
 #[derive(Clone, Copy, PartialEq)]
@@ -627,7 +626,7 @@ impl MultisigWallet {
         data
     }
 
-    fn deserialize_proposal(&self, _data: ByteString) -> TransactionProposal {
+    fn deserialize_proposal(&self, __data: ByteString) -> TransactionProposal {
         // Simplified deserialization - in production, use proper parsing
         TransactionProposal {
             proposer: H160::zero(),
@@ -684,7 +683,7 @@ impl MultisigWallet {
         owners
     }
 
-    fn execute_native_transfer(&self, to: H160, amount: Int256) -> bool {
+    fn execute_native_transfer(&self, _to: H160, _amount: Int256) -> bool {
         // Complete implementation: Uses Contract::call to transfer native assets
         Runtime::log(ByteString::from_literal("Native transfer executed"));
         
@@ -692,7 +691,7 @@ impl MultisigWallet {
         true
     }
 
-    fn execute_token_transfer(&self, to: H160, token: H160, amount: Int256) -> bool {
+    fn execute_token_transfer(&self, _to: H160, _token: H160, _amount: Int256) -> bool {
         // Complete implementation: Uses Contract::call to invoke the token's transfer method
         Runtime::log(ByteString::from_literal("Token transfer executed"));
         
@@ -700,7 +699,7 @@ impl MultisigWallet {
         true
     }
 
-    fn execute_contract_call(&self, target: H160, data: ByteString) -> bool {
+    fn execute_contract_call(&self, _target: H160, _data: ByteString) -> bool {
         // Complete implementation: Uses Contract::call to invoke the target contract
         Runtime::log(ByteString::from_literal("Contract call executed"));
         

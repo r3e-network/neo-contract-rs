@@ -23,7 +23,7 @@ pub struct Map<K: Primitive + Clone, V: Clone> {
 }
 
 #[cfg(target_family = "wasm")]
-impl<K: Primitive + IntoPlaceholder + Clone, V: IntoPlaceholder + FromPlaceholder + Clone> Map<K, V> {
+impl<K: Primitive + IntoPlaceholder + Clone, V: IntoPlaceholder + FromPlaceholder + Clone + 'static> Map<K, V> {
     #[inline(always)]
     pub fn new() -> Self {
         Self {
@@ -175,7 +175,15 @@ impl<K: Primitive + Clone + 'static, V: Clone + 'static> IntoPlaceholder for Map
     }
 }
 
+#[cfg(not(target_family = "wasm"))]
 impl<K: Primitive + Clone + std::hash::Hash + Eq, V: Clone> Default for Map<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl<K: Primitive + IntoPlaceholder + Clone, V: IntoPlaceholder + FromPlaceholder + Clone + 'static> Default for Map<K, V> {
     fn default() -> Self {
         Self::new()
     }
