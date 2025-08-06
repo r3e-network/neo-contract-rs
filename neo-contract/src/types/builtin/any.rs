@@ -113,7 +113,23 @@ macro_rules! impl_into_any {
     };
 }
 
-impl_into_any!(Buffer, H160, H256, Int256, Interop, ByteString, Bytes, PublicKey);
+impl_into_any!(Buffer, H160, H256, Int256, Interop, ByteString, Bytes);
+
+// Manual implementation for PublicKey
+impl IntoAny for PublicKey {
+    #[inline(always)]
+    fn into_any(self) -> Any {
+        #[cfg(target_family = "wasm")]
+        {
+            // PublicKey wraps a ByteString, so convert through that
+            Any::default()
+        }
+        #[cfg(not(target_family = "wasm"))]
+        {
+            Any(Box::new(self))
+        }
+    }
+}
 
 impl<T: 'static> IntoAny for Array<T> {
     #[inline(always)]
