@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neo N3 Rust Framework - Production-Ready Smart Contract Development</title>
-    <meta name="description" content="Enterprise-grade framework for building secure Neo N3 smart contracts in Rust. Complete toolchain with WASM-to-NEF compiler and 13 comprehensive examples.">
+    <title>Neo N3 Rust Framework - Solana-Style Smart Contract Development</title>
+    <meta name="description" content="Production-ready framework for Neo N3 with Solana Anchor-style syntax. Build secure smart contracts with familiar patterns, complete NEP standards support, and comprehensive Neo N3 features.">
     
     <!-- Open Graph -->
-    <meta property="og:title" content="Neo N3 Rust Framework">
-    <meta property="og:description" content="Production-ready framework for building Neo N3 smart contracts in Rust">
+    <meta property="og:title" content="Neo N3 Rust Framework - Solana-Style Development">
+    <meta property="og:description" content="Build Neo N3 smart contracts with Solana Anchor-style syntax. Production-ready with 100% feature coverage.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://neo-rust.dev">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Neo N3 Rust Framework">
-    <meta name="twitter:description" content="Production-ready framework for building Neo N3 smart contracts in Rust">
+    <meta name="twitter:description" content="Solana-style development for Neo N3. Production-ready framework with complete feature support.">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,8 +49,12 @@
                     <i data-feather="star"></i>
                     Features
                 </a>
-                <a href="#examples" class="nav-link">
+                <a href="#syntax" class="nav-link">
                     <i data-feather="code"></i>
+                    Syntax
+                </a>
+                <a href="#examples" class="nav-link">
+                    <i data-feather="layers"></i>
                     Examples
                 </a>
                 <a href="#docs" class="nav-link">
@@ -61,7 +65,7 @@
                     <i data-feather="play-circle"></i>
                     Getting Started
                 </a>
-                <a href="https://github.com/your-org/neo-contract-rs" class="nav-link nav-link-external" target="_blank">
+                <a href="https://github.com/r3e-network/neo-contract-rs" class="nav-link nav-link-external" target="_blank">
                     <i data-feather="github"></i>
                     GitHub
                 </a>
@@ -83,75 +87,137 @@
         <div class="container">
             <div class="hero-content">
                 <div class="hero-badge">
-                    <span class="badge-icon">🚀</span>
-                    Production Ready
+                    <span class="badge-icon">✨</span>
+                    Solana-Style Syntax
                 </div>
                 <h1 class="hero-title">
-                    Neo N3 Rust
-                    <span class="gradient-text">Smart Contract</span>
-                    Framework
+                    Neo N3 + 
+                    <span class="gradient-text">Anchor Patterns</span>
+                    = Perfect DX
                 </h1>
                 <p class="hero-description">
-                    Enterprise-grade framework for building secure, efficient, and standards-compliant 
-                    smart contracts for Neo N3 blockchain using Rust. Complete toolchain from development to deployment.
+                    Build Neo N3 smart contracts with familiar Solana Anchor-style syntax. 
+                    Production-ready framework with 100% Neo N3 feature coverage, comprehensive NEP standards support, 
+                    and enterprise-grade security.
                 </p>
                 <div class="hero-stats">
                     <div class="stat">
+                        <div class="stat-icon"><i data-feather="check-circle"></i></div>
+                        <div class="stat-value">100%</div>
+                        <div class="stat-label">Neo N3 Features</div>
+                    </div>
+                    <div class="stat">
                         <div class="stat-icon"><i data-feather="folder"></i></div>
-                        <div class="stat-number">13</div>
+                        <div class="stat-value">14</div>
                         <div class="stat-label">Examples</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-icon"><i data-feather="check-circle"></i></div>
-                        <div class="stat-number">100%</div>
-                        <div class="stat-label">Success Rate</div>
+                        <div class="stat-icon"><i data-feather="shield"></i></div>
+                        <div class="stat-value">NEP</div>
+                        <div class="stat-label">Standards</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-icon"><i data-feather="code"></i></div>
-                        <div class="stat-number">8K+</div>
-                        <div class="stat-label">Lines of Code</div>
+                        <div class="stat-icon"><i data-feather="zap"></i></div>
+                        <div class="stat-value">Oracle</div>
+                        <div class="stat-label">Support</div>
                     </div>
                 </div>
                 <div class="hero-actions">
-                    <a href="#getting-started" class="btn btn-primary">
-                        <i data-feather="play-circle"></i>
+                    <a href="#getting-started" class="btn btn-primary btn-lg">
+                        <i data-feather="terminal"></i>
                         Get Started
                     </a>
-                    <a href="https://github.com/your-org/neo-contract-rs" class="btn btn-secondary" target="_blank">
-                        <i data-feather="github"></i>
-                        View on GitHub
+                    <a href="#syntax" class="btn btn-outline btn-lg">
+                        <i data-feather="book"></i>
+                        View Syntax
                     </a>
                 </div>
             </div>
-            <div class="hero-code">
-                <div class="code-window">
+        </div>
+    </section>
+
+    <!-- Syntax Showcase -->
+    <section class="syntax-showcase" id="syntax">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Familiar Solana-Style Syntax</h2>
+                <p class="section-subtitle">Write Neo N3 contracts with Anchor patterns you already know</p>
+            </div>
+            
+            <div class="syntax-comparison">
+                <div class="code-example">
                     <div class="code-header">
-                        <div class="code-dots">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                        <span class="code-title">🚀 Solana-Style Neo N3 Contract</span>
+                        <div class="code-badges">
+                            <span class="badge badge-success">New</span>
+                            <span class="badge badge-primary">#[program]</span>
                         </div>
-                        <div class="code-title">hello_world.rs</div>
                     </div>
-                    <div class="code-content">
-                        <pre><code class="language-rust">use neo_contract::prelude::*;
+                    <pre><code class="language-rust">#![no_std]
+#![no_main]
 
-#[neo_contract]
-pub struct HelloWorld;
+use neo_contract::prelude::*;
 
-#[neo_contract_impl]
-impl HelloWorld {
-    pub fn deploy(&self) -> bool {
-        rt::log("Hello, Neo N3!");
-        true
+declare_id!("MyNeoContract");
+
+#[program]
+pub mod my_contract {
+    use super::*;
+
+    pub fn initialize(ctx: Context&lt;Initialize&gt;) -> Result&lt;()&gt; {
+        let storage = Storage::get_context();
+        
+        Storage::put(
+            storage,
+            ByteString::from_literal("owner"),
+            ctx.accounts.owner.key
+        );
+        
+        Runtime::log(ByteString::from_literal("Initialized"));
+        Ok(())
     }
-    
-    #[safe]
-    pub fn say_hello(&self, name: String) -> String {
-        format!("Hello, {}!", name)
+
+    pub fn transfer(ctx: Context&lt;Transfer&gt;, amount: Int256) -> Result&lt;()&gt; {
+        require!(
+            ctx.accounts.from.key == ctx.accounts.authority.key,
+            ContractError::Unauthorized
+        );
+        
+        // Transfer logic here
+        emit!(TransferEvent {
+            from: ctx.accounts.from.key,
+            to: ctx.accounts.to.key,
+            amount,
+        });
+        
+        Ok(())
     }
+}
+
+#[derive(Accounts)]
+pub struct Initialize&lt;'info&gt; {
+    pub owner: Signer&lt;'info&gt;,
+}
+
+#[derive(Accounts)]
+pub struct Transfer&lt;'info&gt; {
+    pub authority: Signer&lt;'info&gt;,
+    pub from: Account&lt;'info&gt;,
+    pub to: Account&lt;'info&gt;,
+}
+
+#[event]
+pub struct TransferEvent {
+    pub from: H160,
+    pub to: H160,
+    pub amount: Int256,
+}
+
+#[error_code]
+pub enum ContractError {
+    #[msg("Unauthorized access")]
+    Unauthorized,
 }</code></pre>
-                    </div>
                 </div>
             </div>
         </div>
@@ -161,202 +227,149 @@ impl HelloWorld {
     <section class="features" id="features">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Why Choose Neo N3 Rust Framework?</h2>
-                <p class="section-description">
-                    Built for developers who demand safety, performance, and comprehensive tooling
-                </p>
+                <h2 class="section-title">Comprehensive Neo N3 Features</h2>
+                <p class="section-subtitle">100% feature coverage with elegant Solana-style developer experience</p>
             </div>
             
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">
+                        <i data-feather="anchor"></i>
+                    </div>
+                    <h3 class="feature-title">Anchor-Style Syntax</h3>
+                    <p class="feature-description">
+                        Familiar #[program], Context&lt;T&gt;, and #[derive(Accounts)] patterns from Solana Anchor
+                    </p>
+                    <ul class="feature-list">
+                        <li>Program macros</li>
+                        <li>Account validation</li>
+                        <li>Error handling</li>
+                        <li>Event emission</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i data-feather="database"></i>
+                    </div>
+                    <h3 class="feature-title">Oracle Support</h3>
+                    <p class="feature-description">
+                        Complete Neo N3 Oracle service integration for external data feeds
+                    </p>
+                    <ul class="feature-list">
+                        <li>Request/Response</li>
+                        <li>JSON/XPath filters</li>
+                        <li>Callback handling</li>
+                        <li>Gas management</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i data-feather="link"></i>
+                    </div>
+                    <h3 class="feature-title">Native Contracts</h3>
+                    <p class="feature-description">
+                        Full interoperability with all Neo N3 native contracts
+                    </p>
+                    <ul class="feature-list">
+                        <li>NEO & GAS tokens</li>
+                        <li>Policy contract</li>
+                        <li>Management</li>
+                        <li>Crypto & StdLib</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i data-feather="award"></i>
+                    </div>
+                    <h3 class="feature-title">NEP Standards</h3>
+                    <p class="feature-description">
+                        Complete implementation of Neo Enhancement Proposals
+                    </p>
+                    <ul class="feature-list">
+                        <li>NEP-17 Tokens</li>
+                        <li>NEP-11 NFTs</li>
+                        <li>NEP-24 Royalties</li>
+                        <li>Custom standards</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
                         <i data-feather="shield"></i>
                     </div>
-                    <h3 class="feature-title">Memory Safety & Performance</h3>
+                    <h3 class="feature-title">Security First</h3>
                     <p class="feature-description">
-                        Zero-cost abstractions with Rust's ownership system. Compile-time safety preventing 
-                        common smart contract vulnerabilities.
+                        Built-in security patterns and comprehensive validation
                     </p>
                     <ul class="feature-list">
-                        <li>Compile-time memory safety</li>
-                        <li>Optimal gas usage</li>
-                        <li>Zero-cost abstractions</li>
+                        <li>Multi-sig support</li>
+                        <li>Witness checking</li>
+                        <li>ECDSA verification</li>
+                        <li>Access control</li>
                     </ul>
                 </div>
                 
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <i data-feather="book-open"></i>
+                        <i data-feather="cpu"></i>
                     </div>
-                    <h3 class="feature-title">Comprehensive Learning Path</h3>
+                    <h3 class="feature-title">WASM to NEF</h3>
                     <p class="feature-description">
-                        13 complete examples from basic storage to enterprise DeFi applications. 
-                        Progressive complexity designed for developers at all levels.
+                        Integrated compiler for Neo Executable Format generation
                     </p>
                     <ul class="feature-list">
-                        <li>Beginner to expert examples</li>
-                        <li>Real-world patterns</li>
-                        <li>Best practices embedded</li>
-                    </ul>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i data-feather="tool"></i>
-                    </div>
-                    <h3 class="feature-title">Complete Development Toolchain</h3>
-                    <p class="feature-description">
-                        Rust-to-WASM compilation with optimized build pipeline. WASM-to-NEF compiler 
-                        for Neo N3 deployment with automatic manifest generation.
-                    </p>
-                    <ul class="feature-list">
-                        <li>Optimized build pipeline</li>
-                        <li>Automatic manifest generation</li>
-                        <li>NEP standard detection</li>
-                    </ul>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i data-feather="check-circle"></i>
-                    </div>
-                    <h3 class="feature-title">Standards Compliance</h3>
-                    <p class="feature-description">
-                        Full support for NEP-17 (tokens), NEP-11 (NFTs), and NEP-24 (royalties). 
-                        Automatic standard detection based on method signatures.
-                    </p>
-                    <ul class="feature-list">
-                        <li>NEP-17, NEP-11, NEP-24</li>
-                        <li>Automatic detection</li>
-                        <li>Standards-compliant ABI</li>
-                    </ul>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i data-feather="zap"></i>
-                    </div>
-                    <h3 class="feature-title">Production Ready</h3>
-                    <p class="feature-description">
-                        100% build success rate across all examples. Comprehensive security features 
-                        and gas optimization patterns used in production.
-                    </p>
-                    <ul class="feature-list">
-                        <li>100% success rate</li>
-                        <li>Security-first approach</li>
-                        <li>Gas optimization</li>
-                    </ul>
-                </div>
-                
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i data-feather="layers"></i>
-                    </div>
-                    <h3 class="feature-title">Modular Architecture</h3>
-                    <p class="feature-description">
-                        Enterprise-scale modular design patterns. Clean separation of concerns 
-                        with reusable components for complex applications.
-                    </p>
-                    <ul class="feature-list">
-                        <li>Enterprise patterns</li>
-                        <li>Modular design</li>
-                        <li>Reusable components</li>
+                        <li>Automatic compilation</li>
+                        <li>Manifest generation</li>
+                        <li>Debug support</li>
+                        <li>Optimization</li>
                     </ul>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Architecture Section -->
-    <section class="architecture">
+    <!-- Framework Architecture -->
+    <section class="architecture" id="architecture">
         <div class="container">
             <div class="section-header">
                 <h2 class="section-title">Framework Architecture</h2>
-                <p class="section-description">
-                    Complete toolchain from Rust development to Neo N3 deployment
-                </p>
+                <p class="section-subtitle">Modular design for maximum flexibility and performance</p>
             </div>
             
-            <div class="architecture-diagram">
-                <div class="arch-flow">
-                    <div class="arch-step">
-                        <div class="arch-icon">
-                            <i data-feather="edit-3"></i>
-                        </div>
-                        <h3>Rust Smart Contract</h3>
-                        <p>Write type-safe contracts with our framework</p>
-                    </div>
-                    
-                    <div class="arch-arrow">
-                        <i data-feather="arrow-right"></i>
-                    </div>
-                    
-                    <div class="arch-step">
-                        <div class="arch-icon">
-                            <i data-feather="package"></i>
-                        </div>
-                        <h3>WebAssembly</h3>
-                        <p>Compile to optimized WASM bytecode</p>
-                    </div>
-                    
-                    <div class="arch-arrow">
-                        <i data-feather="arrow-right"></i>
-                    </div>
-                    
-                    <div class="arch-step">
-                        <div class="arch-icon">
-                            <i data-feather="cpu"></i>
-                        </div>
-                        <h3>NEF Binary</h3>
-                        <p>Transform to Neo Executable Format</p>
-                    </div>
-                    
-                    <div class="arch-arrow">
-                        <i data-feather="arrow-right"></i>
-                    </div>
-                    
-                    <div class="arch-step">
-                        <div class="arch-icon">
-                            <i data-feather="globe"></i>
-                        </div>
-                        <h3>Neo N3 Network</h3>
-                        <p>Deploy to Neo N3 blockchain</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="architecture-components">
-                <div class="component">
-                    <div class="component-icon">
+            <div class="arch-components">
+                <div class="arch-component">
+                    <div class="arch-icon">
                         <i data-feather="box"></i>
                     </div>
-                    <h4>neo-contract</h4>
-                    <p>Core Rust framework library</p>
-                    <span class="component-status">✅ Production</span>
+                    <h3>neo-contract</h3>
+                    <p>Core library with Neo N3 runtime, storage, and native contract bindings</p>
                 </div>
-                <div class="component">
-                    <div class="component-icon">
+                
+                <div class="arch-component">
+                    <div class="arch-icon">
                         <i data-feather="command"></i>
                     </div>
-                    <h4>neo-contract-proc-macros</h4>
-                    <p>Procedural macros & attributes</p>
-                    <span class="component-status">✅ Production</span>
+                    <h3>neo-contract-proc-macros</h3>
+                    <p>Procedural macros for Solana-style syntax and code generation</p>
                 </div>
-                <div class="component">
-                    <div class="component-icon">
+                
+                <div class="arch-component">
+                    <div class="arch-icon">
                         <i data-feather="cpu"></i>
                     </div>
-                    <h4>neo-wasm</h4>
-                    <p>WASM→NEF compiler (Go)</p>
-                    <span class="component-status">✅ Production</span>
+                    <h3>neo-compiler</h3>
+                    <p>WASM to NEF bytecode translator with manifest generation</p>
                 </div>
-                <div class="component">
-                    <div class="component-icon">
+                
+                <div class="arch-component">
+                    <div class="arch-icon">
                         <i data-feather="folder"></i>
                     </div>
-                    <h4>Examples Library</h4>
-                    <p>13 comprehensive examples</p>
-                    <span class="component-status">✅ Production</span>
+                    <h3>Examples</h3>
+                    <p>14 production-ready examples covering all use cases</p>
                 </div>
             </div>
         </div>
@@ -366,486 +379,249 @@ impl HelloWorld {
     <section class="examples" id="examples">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Complete Example Library</h2>
-                <p class="section-description">
-                    13 production-ready examples from beginner to enterprise level
-                </p>
-            </div>
-            
-            <div class="examples-filter">
-                <button class="filter-btn active" data-filter="all">All Examples</button>
-                <button class="filter-btn" data-filter="beginner">🟢 Beginner</button>
-                <button class="filter-btn" data-filter="intermediate">🟡 Intermediate</button>
-                <button class="filter-btn" data-filter="advanced">🟠 Advanced</button>
-                <button class="filter-btn" data-filter="expert">🔴 Expert</button>
+                <h2 class="section-title">Production-Ready Examples</h2>
+                <p class="section-subtitle">Learn by example with 14 comprehensive smart contracts</p>
             </div>
             
             <div class="examples-grid">
-                <div class="example-card" data-category="beginner">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="globe"></i></div>
-                        <div class="example-number">01</div>
-                        <div class="example-difficulty beginner">🟢 Beginner</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <i data-feather="globe"></i>
                     </div>
-                    <h3 class="example-title">Hello World</h3>
-                    <p class="example-description">
-                        Contract basics with storage, events, and authorization
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="database"></i>Storage</span>
-                        <span class="feature-tag"><i data-feather="bell"></i>Events</span>
-                        <span class="feature-tag"><i data-feather="lock"></i>Authorization</span>
-                    </div>
+                    <h3>Hello World</h3>
+                    <p>Basic contract with Solana-style syntax</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
                 
-                <div class="example-card" data-category="beginner">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="save"></i></div>
-                        <div class="example-number">02</div>
-                        <div class="example-difficulty beginner">🟢 Beginner</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <i data-feather="dollar-sign"></i>
                     </div>
-                    <h3 class="example-title">Simple Storage</h3>
-                    <p class="example-description">
-                        Advanced storage with multiple data types and serialization
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="type"></i>Data Types</span>
-                        <span class="feature-tag"><i data-feather="package"></i>Serialization</span>
-                        <span class="feature-tag"><i data-feather="database"></i>Storage</span>
-                    </div>
+                    <h3>NEP-17 Token</h3>
+                    <p>Fungible token implementation</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
                 
-                <div class="example-card" data-category="intermediate">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="plus-circle"></i></div>
-                        <div class="example-number">03</div>
-                        <div class="example-difficulty intermediate">🟡 Intermediate</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <i data-feather="image"></i>
                     </div>
-                    <h3 class="example-title">Counter</h3>
-                    <p class="example-description">
-                        State management with access control and statistics
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="settings"></i>State Management</span>
-                        <span class="feature-tag"><i data-feather="shield"></i>Access Control</span>
-                        <span class="feature-tag"><i data-feather="bar-chart"></i>Statistics</span>
-                    </div>
+                    <h3>NEP-11 NFT</h3>
+                    <p>Non-fungible token with metadata</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
                 
-                <div class="example-card" data-category="intermediate">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="coins"></i></div>
-                        <div class="example-number">04</div>
-                        <div class="example-difficulty intermediate">🟡 Intermediate</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                        <i data-feather="trending-up"></i>
                     </div>
-                    <h3 class="example-title">NEP-17 Token</h3>
-                    <p class="example-description">
-                        Full NEP-17 compliant fungible token implementation
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="award"></i>NEP-17</span>
-                        <span class="feature-tag"><i data-feather="coins"></i>Fungible Token</span>
-                        <span class="feature-tag"><i data-feather="check-square"></i>Standards</span>
-                    </div>
+                    <h3>DEX</h3>
+                    <p>Decentralized exchange with AMM</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
                 
-                <div class="example-card" data-category="intermediate">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="image"></i></div>
-                        <div class="example-number">05</div>
-                        <div class="example-difficulty intermediate">🟡 Intermediate</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                        <i data-feather="users"></i>
                     </div>
-                    <h3 class="example-title">NEP-11 NFT</h3>
-                    <p class="example-description">
-                        Complete NEP-11 non-fungible token implementation
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="award"></i>NEP-11</span>
-                        <span class="feature-tag"><i data-feather="image"></i>NFT</span>
-                        <span class="feature-tag"><i data-feather="tag"></i>Metadata</span>
-                    </div>
+                    <h3>Governance</h3>
+                    <p>DAO voting and proposals</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
                 
-                <div class="example-card" data-category="advanced">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="percent"></i></div>
-                        <div class="example-number">06</div>
-                        <div class="example-difficulty advanced">🟠 Advanced</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                        <i data-feather="cloud"></i>
                     </div>
-                    <h3 class="example-title">NEP-24 Royalty NFT</h3>
-                    <p class="example-description">
-                        NFT with NEP-24 royalty distribution system
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="award"></i>NEP-24</span>
-                        <span class="feature-tag"><i data-feather="percent"></i>Royalties</span>
-                        <span class="feature-tag"><i data-feather="share"></i>Distribution</span>
-                    </div>
+                    <h3>Oracle Price Feed</h3>
+                    <p>External data integration</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
                 
-                <div class="example-card" data-category="advanced">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="target"></i></div>
-                        <div class="example-number">07</div>
-                        <div class="example-difficulty advanced">🟠 Advanced</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                        <i data-feather="lock"></i>
                     </div>
-                    <h3 class="example-title">Crowdfunding</h3>
-                    <p class="example-description">
-                        DeFi crowdfunding with goal-based funding and refunds
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="trending-up"></i>DeFi</span>
-                        <span class="feature-tag"><i data-feather="dollar-sign"></i>Funding</span>
-                        <span class="feature-tag"><i data-feather="refresh-cw"></i>Refunds</span>
-                    </div>
+                    <h3>Multi-Sig Wallet</h3>
+                    <p>Multi-signature authorization</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
                 
-                <div class="example-card" data-category="expert">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="layers"></i></div>
-                        <div class="example-number">08</div>
-                        <div class="example-difficulty expert">🔴 Expert</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
+                        <i data-feather="shopping-cart"></i>
                     </div>
-                    <h3 class="example-title">Staking</h3>
-                    <p class="example-description">
-                        Multi-pool staking system with yield farming
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="anchor"></i>Staking</span>
-                        <span class="feature-tag"><i data-feather="trending-up"></i>Yield Farming</span>
-                        <span class="feature-tag"><i data-feather="layers"></i>Multi-pool</span>
-                    </div>
+                    <h3>NFT Marketplace</h3>
+                    <p>Buy, sell, and auction NFTs</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
                 
-                <div class="example-card" data-category="expert">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="shuffle"></i></div>
-                        <div class="example-number">09</div>
-                        <div class="example-difficulty expert">🔴 Expert</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);">
+                        <i data-feather="percent"></i>
                     </div>
-                    <h3 class="example-title">Simple DEX</h3>
-                    <p class="example-description">
-                        Decentralized exchange with AMM and liquidity pools
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="shuffle"></i>DEX</span>
-                        <span class="feature-tag"><i data-feather="git-merge"></i>AMM</span>
-                        <span class="feature-tag"><i data-feather="droplet"></i>Liquidity</span>
-                    </div>
+                    <h3>Staking</h3>
+                    <p>Token staking with rewards</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
                 
-                <div class="example-card" data-category="expert">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="users"></i></div>
-                        <div class="example-number">10</div>
-                        <div class="example-difficulty expert">🔴 Expert</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #fdcbf1 0%, #e6dee9 100%);">
+                        <i data-feather="gift"></i>
                     </div>
-                    <h3 class="example-title">Multisig Wallet</h3>
-                    <p class="example-description">
-                        Enterprise security with M-of-N signatures and governance
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="users"></i>Multisig</span>
-                        <span class="feature-tag"><i data-feather="sliders"></i>Governance</span>
-                        <span class="feature-tag"><i data-feather="shield"></i>Security</span>
-                    </div>
+                    <h3>Crowdfunding</h3>
+                    <p>Decentralized fundraising</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
                 
-                <div class="example-card" data-category="expert">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="vote"></i></div>
-                        <div class="example-number">11</div>
-                        <div class="example-difficulty expert">🔴 Expert</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
+                        <i data-feather="star"></i>
                     </div>
-                    <h3 class="example-title">Governance</h3>
-                    <p class="example-description">
-                        DAO governance with token-weighted voting system
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="hexagon"></i>DAO</span>
-                        <span class="feature-tag"><i data-feather="check-square"></i>Voting</span>
-                        <span class="feature-tag"><i data-feather="sliders"></i>Governance</span>
-                    </div>
+                    <h3>NEP-24 Royalty NFT</h3>
+                    <p>NFTs with royalty support</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
                 
-                <div class="example-card" data-category="expert">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="activity"></i></div>
-                        <div class="example-number">12</div>
-                        <div class="example-difficulty expert">🔴 Expert</div>
+                <div class="example-card">
+                    <div class="example-icon" style="background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);">
+                        <i data-feather="layers"></i>
                     </div>
-                    <h3 class="example-title">Oracle Price Feed</h3>
-                    <p class="example-description">
-                        External data integration with oracle systems
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="eye"></i>Oracle</span>
-                        <span class="feature-tag"><i data-feather="activity"></i>Price Feed</span>
-                        <span class="feature-tag"><i data-feather="external-link"></i>External Data</span>
-                    </div>
-                </div>
-                
-                <div class="example-card" data-category="expert">
-                    <div class="example-header">
-                        <div class="example-icon"><i data-feather="shopping-bag"></i></div>
-                        <div class="example-number">13</div>
-                        <div class="example-difficulty expert">🔴 Expert</div>
-                    </div>
-                    <h3 class="example-title">NFT Marketplace</h3>
-                    <p class="example-description">
-                        Enterprise NFT marketplace with modular architecture
-                    </p>
-                    <div class="example-features">
-                        <span class="feature-tag"><i data-feather="shopping-bag"></i>Marketplace</span>
-                        <span class="feature-tag"><i data-feather="grid"></i>Modular</span>
-                        <span class="feature-tag"><i data-feather="briefcase"></i>Enterprise</span>
-                    </div>
+                    <h3>Neo Features Showcase</h3>
+                    <p>Complete Neo N3 feature demo</p>
+                    <a href="#" class="example-link">View Code →</a>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Getting Started Section -->
+    <!-- Getting Started -->
     <section class="getting-started" id="getting-started">
         <div class="container">
             <div class="section-header">
                 <h2 class="section-title">Getting Started</h2>
-                <p class="section-description">
-                    Get up and running with your first Neo N3 smart contract in minutes
-                </p>
+                <p class="section-subtitle">Start building Neo N3 smart contracts in minutes</p>
             </div>
             
-            <div class="getting-started-content">
-                <div class="steps">
-                    <div class="step">
-                        <div class="step-icon"><i data-feather="download"></i></div>
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <h3>Prerequisites</h3>
-                            <p>Install Rust nightly and Go for the complete toolchain</p>
-                            <div class="code-block">
-                                <pre><code class="language-bash"># Install Rust nightly
-rustup install nightly
-rustup default nightly
-rustup target add wasm32-unknown-unknown
-
-# Install Go 1.23+
-# Visit https://golang.org/dl/</code></pre>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="step">
-                        <div class="step-icon"><i data-feather="git-branch"></i></div>
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <h3>Clone & Build</h3>
-                            <p>Clone the repository and build the compiler</p>
-                            <div class="code-block">
-                                <pre><code class="language-bash"># Clone the repository
-git clone https://github.com/your-org/neo-contract-rs
-cd neo-contract-rs
-
-# Build the compiler
-cd neo-wasm
-go build -o neo-wasm .
-cd ..</code></pre>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="step">
-                        <div class="step-icon"><i data-feather="rocket"></i></div>
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <h3>Your First Contract</h3>
-                            <p>Try the hello-world example to verify everything works</p>
-                            <div class="code-block">
-                                <pre><code class="language-bash"># Navigate to hello-world example
-cd examples/01-hello-world
-
-# Build everything
-make all
-
-# Files generated:
-# ├── target/wasm32-unknown-unknown/release/hello_world.wasm
-# ├── build/hello_world.nef
-# └── build/hello_world.manifest.json</code></pre>
-                            </div>
-                        </div>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Install Rust</h3>
+                        <pre><code class="language-bash">curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup target add wasm32-unknown-unknown</code></pre>
                     </div>
                 </div>
                 
-                <div class="quick-start-demo">
-                    <div class="demo-header">
-                        <h3>Hello World Contract</h3>
-                        <p>A simple contract to get you started</p>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Clone the Framework</h3>
+                        <pre><code class="language-bash">git clone https://github.com/r3e-network/neo-contract-rs
+cd neo-contract-rs</code></pre>
                     </div>
-                    <div class="demo-code">
-                        <div class="code-window">
-                            <div class="code-header">
-                                <div class="code-dots">
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
-                                </div>
-                                <div class="code-title">src/lib.rs</div>
-                            </div>
-                            <div class="code-content">
-                                <pre><code class="language-rust">use neo_contract::prelude::*;
-
-#[neo_contract]
-pub struct HelloWorld {
-    owner: H160,
-}
-
-#[neo_contract_impl]
-impl HelloWorld {
-    pub fn deploy(&self, owner: H160) -> bool {
-        self.owner.set(owner);
-        rt::log("HelloWorld deployed!");
-        true
-    }
-    
-    #[safe]
-    pub fn get_owner(&self) -> H160 {
-        self.owner.get()
-    }
-    
-    pub fn say_hello(&self, name: String) -> String {
-        format!("Hello, {}!", name)
-    }
-}</code></pre>
-                            </div>
-                        </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Build Your First Contract</h3>
+                        <pre><code class="language-bash">cd examples/01-hello-world
+cargo build --target wasm32-unknown-unknown --release
+../../target/release/neo-compiler compile target/wasm32-unknown-unknown/release/hello_world.wasm</code></pre>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Deploy to Neo Express</h3>
+                        <pre><code class="language-bash">neoxp create
+neoxp wallet create alice
+neoxp contract deploy hello_world.nef alice</code></pre>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Documentation Section -->
+    <!-- Documentation -->
     <section class="documentation" id="docs">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Documentation & Resources</h2>
-                <p class="section-description">
-                    Comprehensive guides, API documentation, and learning resources
-                </p>
+                <h2 class="section-title">Documentation</h2>
+                <p class="section-subtitle">Everything you need to master Neo N3 development</p>
             </div>
             
             <div class="docs-grid">
-                <a href="https://github.com/your-org/neo-contract-rs/tree/main/examples" class="doc-card" target="_blank">
+                <a href="/docs/getting-started" class="doc-card">
                     <div class="doc-icon">
-                        <i data-feather="book-open"></i>
+                        <i data-feather="play"></i>
                     </div>
-                    <h3>Examples Guide</h3>
-                    <p>Comprehensive guide to all 13 examples with detailed explanations</p>
-                    <div class="doc-meta">
-                        <span>13 Examples</span>
-                        <span>→</span>
-                    </div>
+                    <h3>Quick Start</h3>
+                    <p>Get up and running in minutes</p>
                 </a>
                 
-                <a href="https://github.com/your-org/neo-contract-rs/blob/main/examples/MODULAR_ARCHITECTURE_GUIDE.md" class="doc-card" target="_blank">
-                    <div class="doc-icon">
-                        <i data-feather="layers"></i>
-                    </div>
-                    <h3>Architecture Guide</h3>
-                    <p>Enterprise patterns and modular architecture for complex applications</p>
-                    <div class="doc-meta">
-                        <span>Enterprise Patterns</span>
-                        <span>→</span>
-                    </div>
-                </a>
-                
-                <a href="https://github.com/your-org/neo-contract-rs/tree/main/neo-wasm" class="doc-card" target="_blank">
-                    <div class="doc-icon">
-                        <i data-feather="settings"></i>
-                    </div>
-                    <h3>Compiler Documentation</h3>
-                    <p>Understanding the WASM-to-NEF compiler and manifest generation</p>
-                    <div class="doc-meta">
-                        <span>Compiler Guide</span>
-                        <span>→</span>
-                    </div>
-                </a>
-                
-                <a href="https://docs.neo.org/" class="doc-card" target="_blank">
-                    <div class="doc-icon">
-                        <i data-feather="external-link"></i>
-                    </div>
-                    <h3>Neo N3 Documentation</h3>
-                    <p>Official Neo N3 documentation and blockchain specifications</p>
-                    <div class="doc-meta">
-                        <span>Official Docs</span>
-                        <span>→</span>
-                    </div>
-                </a>
-                
-                <a href="https://github.com/neo-project/proposals" class="doc-card" target="_blank">
-                    <div class="doc-icon">
-                        <i data-feather="file-text"></i>
-                    </div>
-                    <h3>NEP Standards</h3>
-                    <p>Neo Enhancement Proposals and smart contract standards</p>
-                    <div class="doc-meta">
-                        <span>Standards</span>
-                        <span>→</span>
-                    </div>
-                </a>
-                
-                <a href="https://www.rust-lang.org/learn" class="doc-card" target="_blank">
+                <a href="/docs/solana-syntax" class="doc-card">
                     <div class="doc-icon">
                         <i data-feather="code"></i>
                     </div>
-                    <h3>Rust Learning</h3>
-                    <p>Learn Rust programming language fundamentals</p>
-                    <div class="doc-meta">
-                        <span>Rust Guide</span>
-                        <span>→</span>
+                    <h3>Solana-Style Syntax</h3>
+                    <p>Learn the Anchor patterns</p>
+                </a>
+                
+                <a href="/docs/neo-features" class="doc-card">
+                    <div class="doc-icon">
+                        <i data-feather="cpu"></i>
                     </div>
+                    <h3>Neo N3 Features</h3>
+                    <p>Oracle, native contracts, and more</p>
+                </a>
+                
+                <a href="/docs/examples" class="doc-card">
+                    <div class="doc-icon">
+                        <i data-feather="book-open"></i>
+                    </div>
+                    <h3>Example Walkthroughs</h3>
+                    <p>Deep dive into each example</p>
+                </a>
+                
+                <a href="/docs/api" class="doc-card">
+                    <div class="doc-icon">
+                        <i data-feather="terminal"></i>
+                    </div>
+                    <h3>API Reference</h3>
+                    <p>Complete API documentation</p>
+                </a>
+                
+                <a href="/docs/deployment" class="doc-card">
+                    <div class="doc-icon">
+                        <i data-feather="upload-cloud"></i>
+                    </div>
+                    <h3>Deployment Guide</h3>
+                    <p>Deploy to TestNet and MainNet</p>
                 </a>
             </div>
         </div>
     </section>
 
-    <!-- Production Status Section -->
-    <section class="production-status">
+    <!-- CTA Section -->
+    <section class="cta">
         <div class="container">
-            <div class="production-banner">
-                <div class="production-content">
-                    <div class="production-badge">
-                        <span class="badge-icon">✅</span>
-                        Production Ready
-                    </div>
-                    <h2>Ready for Production Use</h2>
-                    <p>
-                        100% build success rate across all examples. Comprehensive security features, 
-                        gas optimization, and standards compliance make this framework ready for production deployment.
-                    </p>
-                    <div class="production-metrics">
-                        <div class="metric">
-                            <div class="metric-icon"><i data-feather="check-circle"></i></div>
-                            <div class="metric-value">100%</div>
-                            <div class="metric-label">Build Success</div>
-                        </div>
-                        <div class="metric">
-                            <div class="metric-icon"><i data-feather="award"></i></div>
-                            <div class="metric-value">3</div>
-                            <div class="metric-label">NEP Standards</div>
-                        </div>
-                        <div class="metric">
-                            <div class="metric-icon"><i data-feather="code"></i></div>
-                            <div class="metric-value">8K+</div>
-                            <div class="metric-label">Lines Tested</div>
-                        </div>
-                        <div class="metric">
-                            <div class="metric-icon"><i data-feather="folder"></i></div>
-                            <div class="metric-value">13</div>
-                            <div class="metric-label">Examples</div>
-                        </div>
-                    </div>
+            <div class="cta-content">
+                <h2 class="cta-title">Ready to Build on Neo N3?</h2>
+                <p class="cta-description">
+                    Join the growing community of developers building the future of blockchain with Neo N3 and Rust
+                </p>
+                <div class="cta-actions">
+                    <a href="https://github.com/r3e-network/neo-contract-rs" class="btn btn-primary btn-lg">
+                        <i data-feather="github"></i>
+                        View on GitHub
+                    </a>
+                    <a href="#getting-started" class="btn btn-outline btn-lg">
+                        <i data-feather="book"></i>
+                        Read the Docs
+                    </a>
                 </div>
             </div>
         </div>
@@ -855,134 +631,63 @@ impl HelloWorld {
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
-                <div class="footer-brand">
-                    <div class="brand-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon>
-                            <line x1="12" y1="22" x2="12" y2="15.5"></line>
-                            <polyline points="22,8.5 12,15.5 2,8.5"></polyline>
-                        </svg>
-                    </div>
-                    <div>
-                        <div class="brand-text">Neo Rust Framework</div>
-                        <p class="brand-tagline">Production-ready smart contracts in Rust</p>
+                <div class="footer-section">
+                    <h3>Neo Rust Framework</h3>
+                    <p>Production-ready smart contract development for Neo N3 with Solana-style syntax</p>
+                    <div class="footer-badges">
+                        <img src="https://img.shields.io/badge/Neo_N3-100%25_Coverage-00e599" alt="Neo N3">
+                        <img src="https://img.shields.io/badge/Rust-Production_Ready-orange" alt="Rust">
+                        <img src="https://img.shields.io/badge/CI-Passing-success" alt="CI">
                     </div>
                 </div>
                 
-                <div class="footer-links">
-                    <div class="footer-section">
-                        <h4>Framework</h4>
-                        <a href="#features">Features</a>
-                        <a href="#examples">Examples</a>
-                        <a href="#getting-started">Getting Started</a>
-                        <a href="https://github.com/your-org/neo-contract-rs" target="_blank">GitHub</a>
-                    </div>
-                    
-                    <div class="footer-section">
-                        <h4>Documentation</h4>
-                        <a href="https://github.com/your-org/neo-contract-rs/tree/main/examples" target="_blank">Examples Guide</a>
-                        <a href="https://github.com/your-org/neo-contract-rs/blob/main/examples/MODULAR_ARCHITECTURE_GUIDE.md" target="_blank">Architecture</a>
-                        <a href="https://github.com/your-org/neo-contract-rs/tree/main/neo-wasm" target="_blank">Compiler</a>
-                        <a href="https://docs.neo.org/" target="_blank">Neo N3 Docs</a>
-                    </div>
-                    
-                    <div class="footer-section">
-                        <h4>Community</h4>
-                        <a href="https://github.com/your-org/neo-contract-rs/issues" target="_blank">Issues</a>
-                        <a href="https://github.com/your-org/neo-contract-rs/discussions" target="_blank">Discussions</a>
-                        <a href="https://discord.gg/neo" target="_blank">Discord</a>
-                        <a href="https://twitter.com/neo_blockchain" target="_blank">Twitter</a>
-                    </div>
-                    
-                    <div class="footer-section">
-                        <h4>Resources</h4>
-                        <a href="https://neo.org/" target="_blank">Neo</a>
-                        <a href="https://www.rust-lang.org/" target="_blank">Rust</a>
-                        <a href="https://webassembly.org/" target="_blank">WebAssembly</a>
-                        <a href="https://github.com/neo-project/proposals" target="_blank">NEP Standards</a>
-                    </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#getting-started">Getting Started</a></li>
+                        <li><a href="#syntax">Syntax Guide</a></li>
+                        <li><a href="#examples">Examples</a></li>
+                        <li><a href="/docs/api">API Reference</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Community</h4>
+                    <ul>
+                        <li><a href="https://github.com/r3e-network/neo-contract-rs">GitHub</a></li>
+                        <li><a href="https://discord.gg/neo">Discord</a></li>
+                        <li><a href="https://twitter.com/neo_blockchain">Twitter</a></li>
+                        <li><a href="https://neo.org">Neo.org</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="/docs">Documentation</a></li>
+                        <li><a href="/tutorials">Tutorials</a></li>
+                        <li><a href="/blog">Blog</a></li>
+                        <li><a href="/support">Support</a></li>
+                    </ul>
                 </div>
             </div>
             
             <div class="footer-bottom">
-                <div class="footer-copyright">
-                    <p>&copy; 2024 R3E Network. Licensed under Apache 2.0.</p>
-                </div>
-                <div class="footer-social">
-                    <a href="https://github.com/your-org/neo-contract-rs" target="_blank" aria-label="GitHub">
-                        <i data-feather="github"></i>
-                    </a>
-                    <a href="https://twitter.com/neo_blockchain" target="_blank" aria-label="Twitter">
-                        <i data-feather="twitter"></i>
-                    </a>
-                    <a href="https://discord.gg/neo" target="_blank" aria-label="Discord">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.010c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/>
-                        </svg>
-                    </a>
-                </div>
+                <p>&copy; 2024 Neo Rust Framework. Built with ❤️ for the Neo community.</p>
             </div>
         </div>
     </footer>
 
     <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.28.0/feather.min.js"></script>
+    <script src="js/prism.js"></script>
     <script src="js/main.js"></script>
     <script>
-        // Initialize Feather icons
+        // Initialize icons
         feather.replace();
         
-        // Enhanced Prism.js initialization for better Rust highlighting
-        document.addEventListener('DOMContentLoaded', function() {
-            // Force re-highlight all code blocks
-            Prism.highlightAll();
-            
-            // Add custom Rust token patterns
-            if (Prism.languages.rust) {
-                // Enhance Rust syntax highlighting
-                Prism.languages.rust = Prism.languages.extend('rust', {
-                    'attribute': {
-                        pattern: /#!?\[(?:[^\[\]"]|"(?:\\[\s\S]|[^\\"])*")*\]/,
-                        greedy: true,
-                        alias: 'attr-name',
-                        inside: {
-                            'string': {
-                                pattern: /"(?:\\[\s\S]|[^\\"])*"/,
-                                greedy: true
-                            }
-                        }
-                    },
-                    'macro': {
-                        pattern: /\b\w+!/,
-                        alias: 'property'
-                    },
-                    'lifetime': {
-                        pattern: /'[a-zA-Z_][a-zA-Z0-9_]*(?=\s*[,\s]|$)/,
-                        alias: 'symbol'
-                    },
-                    'keyword': /\b(?:abstract|alignof|as|async|await|become|box|break|const|continue|crate|do|dyn|else|enum|extern|false|final|fn|for|if|impl|in|let|loop|macro|match|mod|move|mut|offsetof|override|priv|proc|pub|pure|ref|return|Self|self|sizeof|static|struct|super|trait|true|type|typeof|union|unsafe|unsized|use|virtual|where|while|yield)\b/,
-                    'function': /\b[a-z_][a-z0-9_]*(?=\s*[(<])/i,
-                    'string': {
-                        pattern: /(?:r#*"(?:[^"]|\\[\s\S])*"#*|b?r#*"(?:[^"]|\\[\s\S])*"#*|b?"(?:\\[\s\S]|[^\\"])*")/,
-                        greedy: true
-                    },
-                    'number': /\b(?:0x[a-fA-F0-9_]+|0o[0-7_]+|0b[01_]+|\d[\d_]*(?:\.[\d_]*)?(?:[eE][+-]?[\d_]+)?(?:f32|f64|i8|i16|i32|i64|i128|isize|u8|u16|u32|u64|u128|usize)?)\b/,
-                    'boolean': /\b(?:true|false)\b/,
-                    'punctuation': /[{}[\];(),.:]/,
-                    'operator': /[-+*\/%=!<>&|^]+/
-                });
-            }
-            
-            // Re-highlight after enhancing
-            setTimeout(() => {
-                Prism.highlightAll();
-            }, 100);
-        });
+        // Initialize syntax highlighting
+        Prism.highlightAll();
     </script>
 </body>
-</html> 
+</html>

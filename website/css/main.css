@@ -1062,6 +1062,115 @@ a:hover {
 }
 
 /* ========================================
+   Syntax Showcase
+   ======================================== */
+.syntax-showcase {
+    padding: var(--spacing-3xl) 0;
+    background: var(--bg-primary);
+}
+
+.syntax-comparison {
+    margin-top: var(--spacing-3xl);
+}
+
+.code-example {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.code-title {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.code-badges {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.code-badges .badge {
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    border-radius: var(--radius-sm);
+}
+
+.badge-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.badge-primary {
+    background: rgba(0, 212, 255, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.arch-components {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-xl);
+    margin-top: var(--spacing-3xl);
+}
+
+.arch-component {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    transition: all 0.3s ease;
+}
+
+.arch-component:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary-color);
+    box-shadow: 0 10px 30px rgba(0, 212, 255, 0.1);
+}
+
+.arch-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto var(--spacing-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(124, 58, 237, 0.1));
+    border-radius: var(--radius-lg);
+}
+
+.arch-icon svg {
+    width: 30px;
+    height: 30px;
+    color: var(--primary-color);
+}
+
+.arch-component h3 {
+    font-size: 1.125rem;
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+}
+
+.arch-component p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* ========================================
    Footer
    ======================================== */
 .footer {
