@@ -1,8 +1,8 @@
 //! # Simple Token Contract
 //!
-//! A complete implementation of a basic fungible token contract for the Neo N3 blockchain.
+//! A complete implementation of a basic fungible token contract.
 //! This contract demonstrates:
-//! - Full NEP-17 token standard compliance
+//! - Full token standard compliance
 //! - Secure minting and burning operations
 //! - Administrative controls and ownership management
 //! - Comprehensive event logging
@@ -19,526 +19,604 @@
 #![no_main]
 
 use neo_contract::prelude::*;
-use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
+use neo_contract::types::{IntoByteString, FromByteString};
 
-/// Simple token contract implementing NEP-17 standard
-#[contract_author("Neo Rust Framework", "dev@neo.org")]
-#[contract_version("1.0.0")]
-#[contract_standards("NEP-17")]
-#[contract_permission("*", "*")]
-#[contract_meta("description", "A complete simple token implementation")]
-#[contract_meta("category", "Token")]
-pub struct SimpleToken {
-    // Token metadata
-    symbol_key: ByteString,
-    decimals_key: ByteString,
-    total_supply_key: ByteString,
-    
-    // Balance storage
-    balance_prefix: ByteString,
-    
-    // Administrative
-    owner_key: ByteString,
-    minters_prefix: ByteString,
-    
-    // Configuration
-    paused_key: ByteString,
-    max_supply_key: ByteString,
-    mintable_key: ByteString,
+extern crate alloc;
+use alloc::vec::Vec;
+
+declare_id!("SimpleToken11111111111111111111111111111112");
+
+/// Token account data
+#[derive(Clone, Debug)]
+pub struct TokenAccount {
+    pub mint: H160,
+    pub owner: H160,
+    pub amount: Int256,
 }
 
-#[contract_impl]
-impl SimpleToken {
-    /// Initialize the simple token contract
-    pub fn init() -> Self {
-        Self {
-            symbol_key: ByteString::from_literal("symbol"),
-            decimals_key: ByteString::from_literal("decimals"),
-            total_supply_key: ByteString::from_literal("total_supply"),
-            balance_prefix: ByteString::from_literal("balance_"),
-            owner_key: ByteString::from_literal("owner"),
-            minters_prefix: ByteString::from_literal("minter_"),
-            paused_key: ByteString::from_literal("paused"),
-            max_supply_key: ByteString::from_literal("max_supply"),
-            mintable_key: ByteString::from_literal("mintable"),
-        }
+impl TokenAccount {
+    pub fn serialize(&self) -> ByteString {
+        let mut data = Vec::new();
+        data.extend_from_slice(&self.mint.to_bytes());
+        data.extend_from_slice(&self.owner.to_bytes());
+        data.extend_from_slice(&self.amount.into_byte_string().to_bytes());
+        ByteString::from_bytes(&data)
     }
+    
+    pub fn deserialize(data: ByteString) -> Result<Self> {
+        let bytes = data.to_bytes();
+        if bytes.len() < 72 { // 20 + 20 + 32 bytes minimum
+            return Err(SimpleTokenError::InvalidAccountData.into());
+        }
+        
+        let mut mint_bytes = [0u8; 20];
+        mint_bytes.copy_from_slice(&bytes[0..20]);
+        let mint = H160::from_bytes(&mint_bytes);
+        
+        let mut owner_bytes = [0u8; 20];
+        owner_bytes.copy_from_slice(&bytes[20..40]);
+        let owner = H160::from_bytes(&owner_bytes);
+        
+        let amount_bytes = ByteString::from_bytes(&bytes[40..]);
+        let amount = Int256::from_byte_string(amount_bytes);
+        
+        Ok(TokenAccount { mint, owner, amount })
+    }
+}
+
+/// Mint account data
+#[derive(Clone, Debug)]
+pub struct MintAccount {
+    pub supply: Int256,
+    pub decimals: u32,
+    pub symbol: ByteString,
+    pub max_supply: Int256,
+    pub mint_authority: H160,
+    pub freeze_authority: H160,
+    pub is_mintable: bool,
+    pub is_frozen: bool,
+}
+
+impl MintAccount {
+    pub fn serialize(&self) -> ByteString {
+        let mut data = Vec::new();
+        data.extend_from_slice(&self.supply.into_byte_string().to_bytes());
+        data.extend_from_slice(&(self.decimals as u64).to_le_bytes());
+        let symbol_bytes = self.symbol.to_bytes();
+        data.extend_from_slice(&(symbol_bytes.len() as u32).to_le_bytes());
+        data.extend_from_slice(&symbol_bytes);
+        data.extend_from_slice(&self.max_supply.into_byte_string().to_bytes());
+        data.extend_from_slice(&self.mint_authority.to_bytes());
+        data.extend_from_slice(&self.freeze_authority.to_bytes());
+        data.push(if self.is_mintable { 1 } else { 0 });
+        data.push(if self.is_frozen { 1 } else { 0 });
+        ByteString::from_bytes(&data)
+    }
+    
+    pub fn deserialize(data: ByteString) -> Result<Self> {
+        let bytes = data.to_bytes();
+        if bytes.len() < 98 { // Minimum size check
+            return Err(SimpleTokenError::InvalidAccountData.into());
+        }
+        
+        let mut offset = 0;
+        
+        let supply_bytes = ByteString::from_bytes(&bytes[offset..offset+32]);
+        let supply = Int256::from_byte_string(supply_bytes);
+        offset += 32;
+        
+        let decimals = u32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]) as u32;
+        offset += 8; // skip padding
+        
+        let symbol_len = u32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]) as usize;
+        offset += 4;
+        let symbol = ByteString::from_bytes(&bytes[offset..offset+symbol_len]);
+        offset += symbol_len;
+        
+        let max_supply_bytes = ByteString::from_bytes(&bytes[offset..offset+32]);
+        let max_supply = Int256::from_byte_string(max_supply_bytes);
+        offset += 32;
+        
+        let mint_authority = H160::from_bytes(&bytes[offset..offset+20]);
+        offset += 20;
+        let freeze_authority = H160::from_bytes(&bytes[offset..offset+20]);
+        offset += 20;
+        
+        let is_mintable = bytes[offset] != 0;
+        offset += 1;
+        let is_frozen = bytes[offset] != 0;
+        
+        Ok(MintAccount {
+            supply,
+            decimals,
+            symbol,
+            max_supply,
+            mint_authority,
+            freeze_authority,
+            is_mintable,
+            is_frozen,
+        })
+    }
+}
+
+/// Deploy context
+#[derive(Accounts)]
+pub struct Deploy<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(init)]
+    pub mint: AccountInfo<'info>,
+}
+
+/// Transfer context
+#[derive(Accounts)]
+pub struct Transfer<'info> {
+    #[account(signer)]
+    pub from: AccountInfo<'info>,
+    #[account(mut)]
+    pub from_token_account: AccountInfo<'info>,
+    #[account(mut)]
+    pub to_token_account: AccountInfo<'info>,
+}
+
+/// Mint context
+#[derive(Accounts)]
+pub struct Mint<'info> {
+    #[account(signer)]
+    pub authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub mint: AccountInfo<'info>,
+    #[account(mut)]
+    pub to_token_account: AccountInfo<'info>,
+}
+
+/// Burn context
+#[derive(Accounts)]
+pub struct Burn<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(mut)]
+    pub from_token_account: AccountInfo<'info>,
+    #[account(mut)]
+    pub mint: AccountInfo<'info>,
+}
+
+/// Admin context
+#[derive(Accounts)]
+pub struct AdminAction<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(mut)]
+    pub mint: AccountInfo<'info>,
+}
+
+/// View context
+#[derive(Accounts)]
+pub struct View<'info> {
+    pub mint: AccountInfo<'info>,
+}
+
+/// Balance context
+#[derive(Accounts)]
+pub struct BalanceQuery<'info> {
+    pub token_account: AccountInfo<'info>,
+}
+
+#[program]
+pub mod simple_token {
+    use super::*;
 
     /// Deploy the token contract
-    #[method]
     pub fn deploy(
-        &self,
-        owner: H160,
+        mut ctx: Context<Deploy>,
         symbol: ByteString,
         decimals: u32,
         initial_supply: Int256,
         max_supply: Int256,
         mintable: bool
-    ) -> bool {
-        let storage = Storage::get_context();
-
-        // Check if already deployed
-        if Storage::get(storage.clone(), self.owner_key.clone()).is_some() {
-            Runtime::log(ByteString::from_literal("Contract already deployed"));
-            return false;
-        }
+    ) -> Result<()> {
+        let _mint = &mut ctx.accounts.mint;
+        let owner = &ctx.accounts.owner;
 
         // Validate parameters
-        if symbol.is_empty() || symbol.len() > 16 {
-            Runtime::log(ByteString::from_literal("Invalid symbol: must be 1-16 characters"));
-            return false;
-        }
+        require!(!symbol.is_empty() && symbol.len() <= 16, SimpleTokenError::InvalidAmount);
+        require!(decimals <= 18, SimpleTokenError::InvalidAmount);
+        require!(initial_supply >= Int256::zero(), SimpleTokenError::InvalidAmount);
+        require!(
+            max_supply < Int256::zero() || 
+            (max_supply > Int256::zero() && initial_supply <= max_supply), 
+            SimpleTokenError::InvalidAmount
+        );
 
-        if decimals > 18 {
-            Runtime::log(ByteString::from_literal("Invalid decimals: maximum 18"));
-            return false;
-        }
+        // Initialize mint account
+        let mint_data = MintAccount {
+            supply: initial_supply,
+            decimals,
+            symbol: symbol.clone(),
+            max_supply,
+            mint_authority: owner.key,
+            freeze_authority: owner.key,
+            is_mintable: mintable,
+            is_frozen: false,
+        };
 
-        if initial_supply < Int256::zero() {
-            Runtime::log(ByteString::from_literal("Invalid initial supply: cannot be negative"));
-            return false;
-        }
+        // Store mint data
+        let _storage = Storage::get_context();
+        Storage::put(Storage::get_context(), ByteString::from_literal("mint_data"), mint_data.serialize());
 
-        if max_supply < Int256::zero() || (max_supply > Int256::zero() && initial_supply > max_supply) {
-            Runtime::log(ByteString::from_literal("Invalid max supply"));
-            return false;
-        }
-
-        // Verify authorization
-        if !Runtime::check_witness(owner) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return false;
-        }
-
-        // Store contract metadata
-        Storage::put(storage.clone(), self.symbol_key.clone(), symbol.clone());
-        Storage::put(storage.clone(), self.decimals_key.clone(), ByteString::from_bytes(&decimals.to_le_bytes()));
-        Storage::put(storage.clone(), self.total_supply_key.clone(), initial_supply.into_byte_string());
-        Storage::put(storage.clone(), self.owner_key.clone(), owner.into_byte_string());
-        
-        if max_supply > Int256::zero() {
-            Storage::put(storage.clone(), self.max_supply_key.clone(), max_supply.into_byte_string());
-        }
-        
-        if mintable {
-            Storage::put(storage.clone(), self.mintable_key.clone(), ByteString::from_literal("true"));
-        }
-
-        // Set initial balance for owner
+        // Create initial token account for owner if there's initial supply
         if initial_supply > Int256::zero() {
-            let balance_key = self.balance_prefix.concat(&owner.into_byte_string());
-            Storage::put(storage.clone(), balance_key, initial_supply.into_byte_string());
+            let owner_token_account = TokenAccount {
+                mint: H160::zero(), // Use contract address
+                owner: owner.key,
+                amount: initial_supply,
+            };
+            let account_key = create_account_key(owner.key);
+            Storage::put(Storage::get_context(), account_key, owner_token_account.serialize());
+
+            // Emit initial transfer event
+            Runtime::log(ByteString::from_literal("Transfer event: initial supply minted"));
         }
 
         // Emit deployment event
-        let mut event_data = Array::new();
-        event_data.push(symbol.into_any());
-        event_data.push(Int256::new(decimals as i64).into_any());
-        event_data.push(initial_supply.into_any());
-        Runtime::notify(ByteString::from_literal("TokenDeployed"), event_data);
+        Runtime::log(ByteString::from_literal("Token deployed"));
 
-        // Emit initial transfer event if there's initial supply
-        if initial_supply > Int256::zero() {
-            self.emit_transfer(H160::zero(), owner, initial_supply);
-        }
-
-        true
+        Ok(())
     }
 
-    // NEP-17 Required Methods
-
     /// Get token symbol
-    #[method]
-    #[safe]
-    pub fn symbol(&self) -> ByteString {
-        let storage = Storage::get_context();
-        match Storage::get(storage, self.symbol_key.clone()) {
-            Some(symbol) => symbol,
-            None => ByteString::from_literal("STK"),
-        }
+    pub fn symbol(_ctx: Context<View>) -> Result<ByteString> {
+        let _storage = Storage::get_context();
+        let mint_data = get_mint_data(Storage::get_context())?;
+        Ok(mint_data.symbol)
     }
 
     /// Get token decimals
-    #[method]
-    #[safe]
-    pub fn decimals(&self) -> u32 {
-        let storage = Storage::get_context();
-        match Storage::get(storage, self.decimals_key.clone()) {
-            Some(decimals_bytes) => {
-                let bytes = decimals_bytes.to_bytes();
-                if bytes.len() >= 4 {
-                    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
-                } else {
-                    8 // Default decimals
-                }
-            },
-            None => 8,
-        }
+    pub fn decimals(_ctx: Context<View>) -> Result<u32> {
+        let _storage = Storage::get_context();
+        let mint_data = get_mint_data(Storage::get_context())?;
+        Ok(mint_data.decimals)
     }
 
     /// Get total supply
-    #[method]
-    #[safe]
-    pub fn total_supply(&self) -> Int256 {
-        let storage = Storage::get_context();
-        match Storage::get(storage, self.total_supply_key.clone()) {
-            Some(supply_bytes) => Int256::from_byte_string(supply_bytes),
-            None => Int256::zero(),
-        }
+    pub fn total_supply(_ctx: Context<View>) -> Result<Int256> {
+        let _storage = Storage::get_context();
+        let mint_data = get_mint_data(Storage::get_context())?;
+        Ok(mint_data.supply)
     }
 
     /// Get balance of account
-    #[method]
-    #[safe]
-    pub fn balance_of(&self, account: H160) -> Int256 {
-        let storage = Storage::get_context();
-        let balance_key = self.balance_prefix.concat(&account.into_byte_string());
-
-        match Storage::get(storage, balance_key) {
-            Some(balance_bytes) => Int256::from_byte_string(balance_bytes),
-            None => Int256::zero(),
+    pub fn balance_of(ctx: Context<BalanceQuery>) -> Result<Int256> {
+        let token_account = &ctx.accounts.token_account;
+        let _storage = Storage::get_context();
+        let account_key = create_account_key(token_account.key);
+        
+        match Storage::get(Storage::get_context(), account_key) {
+            Some(account_data) => {
+                let token_account: TokenAccount = TokenAccount::deserialize(account_data)?;
+                Ok(token_account.amount)
+            },
+            None => Ok(Int256::zero()),
         }
     }
 
     /// Transfer tokens
-    #[method]
-    pub fn transfer(&self, from: H160, to: H160, amount: Int256, data: Any) -> bool {
+    pub fn transfer(
+        mut ctx: Context<Transfer>,
+        amount: Int256,
+        _data: ByteString
+    ) -> Result<()> {
+        let _from = &ctx.accounts.from;
+        let from_token_account = &mut ctx.accounts.from_token_account;
+        let to_token_account = &mut ctx.accounts.to_token_account;
+
         // Validate parameters
-        if amount < Int256::zero() {
-            Runtime::log(ByteString::from_literal("Invalid amount: cannot be negative"));
-            return false;
-        }
+        require!(amount > Int256::zero(), SimpleTokenError::InvalidAmount);
+        require!(from_token_account.key != to_token_account.key, SimpleTokenError::InvalidAmount);
 
-        if amount == Int256::zero() {
-            Runtime::log(ByteString::from_literal("Invalid amount: cannot be zero"));
-            return false;
-        }
-
-        if from == to {
-            Runtime::log(ByteString::from_literal("Invalid transfer: from and to cannot be the same"));
-            return false;
-        }
-
-        // Check authorization
-        if !Runtime::check_witness(from) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return false;
-        }
+        let _storage = Storage::get_context();
 
         // Check if contract is paused
-        if self.is_paused() {
-            Runtime::log(ByteString::from_literal("Contract is paused"));
-            return false;
-        }
+        let mint_data = get_mint_data(Storage::get_context())?;
+        require!(!mint_data.is_frozen, SimpleTokenError::ContractPaused);
+
+        // Get from token account data
+        let from_key = create_account_key(from_token_account.key);
+        let mut from_account_data: TokenAccount = match Storage::get(Storage::get_context(), from_key.clone()) {
+            Some(data) => TokenAccount::deserialize(data)?,
+            None => return Err(SimpleTokenError::InsufficientBalance.into()),
+        };
 
         // Check balance
-        let from_balance = self.balance_of(from);
-        if from_balance < amount {
-            Runtime::log(ByteString::from_literal("Insufficient balance"));
-            return false;
+        require!(from_account_data.amount >= amount, SimpleTokenError::InsufficientBalance);
+
+        // Get to token account data
+        let to_key = create_account_key(to_token_account.key);
+        let mut to_account_data: TokenAccount = match Storage::get(Storage::get_context(), to_key.clone()) {
+            Some(data) => TokenAccount::deserialize(data)?,
+            None => TokenAccount {
+                mint: from_account_data.mint,
+                owner: to_token_account.key,
+                amount: Int256::zero(),
+            },
+        };
+
+        // Update balances
+        from_account_data.amount = from_account_data.amount.checked_sub(&amount);
+        to_account_data.amount = to_account_data.amount.checked_add(&amount);
+
+        // Save updated accounts
+        if from_account_data.amount == Int256::zero() {
+            Storage::delete(Storage::get_context(), from_key);
+        } else {
+            Storage::put(Storage::get_context(), from_key, from_account_data.serialize());
         }
-
-        // Perform transfer
-        self.transfer_tokens(from, to, amount);
-
-        // Call onPayment if recipient is a contract
-        self.on_payment_callback(from, amount, data);
-
-        true
-    }
-
-    // Administrative Methods
-
-    /// Mint new tokens (only owner or authorized minters)
-    #[method]
-    pub fn mint(&self, to: H160, amount: Int256) -> bool {
-        if amount <= Int256::zero() {
-            Runtime::log(ByteString::from_literal("Invalid amount: must be positive"));
-            return false;
-        }
-
-        if !self.is_mintable() {
-            Runtime::log(ByteString::from_literal("Token is not mintable"));
-            return false;
-        }
-
-        if !self.is_authorized_minter() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Not authorized to mint"));
-            return false;
-        }
-
-        if self.is_paused() {
-            Runtime::log(ByteString::from_literal("Contract is paused"));
-            return false;
-        }
-
-        // Check max supply constraint
-        let current_supply = self.total_supply();
-        let new_supply = current_supply.checked_add(&amount);
-        let max_supply = self.get_max_supply();
-        
-        if max_supply > Int256::zero() && new_supply > max_supply {
-            Runtime::log(ByteString::from_literal("Exceeds maximum supply"));
-            return false;
-        }
-
-        let storage = Storage::get_context();
-
-        // Update total supply
-        Storage::put(storage.clone(), self.total_supply_key.clone(), new_supply.into_byte_string());
-
-        // Update recipient balance
-        let current_balance = self.balance_of(to);
-        let new_balance = current_balance.checked_add(&amount);
-        let balance_key = self.balance_prefix.concat(&to.into_byte_string());
-        Storage::put(storage, balance_key, new_balance.into_byte_string());
+        Storage::put(Storage::get_context(), to_key, to_account_data.serialize());
 
         // Emit transfer event
-        self.emit_transfer(H160::zero(), to, amount);
+        Runtime::log(ByteString::from_literal("Transfer completed"));
 
-        let mut event_data = Array::new();
-        event_data.push(to.into_any());
-        event_data.push(amount.into_any());
-        Runtime::notify(ByteString::from_literal("TokensMinted"), event_data);
+        Ok(())
+    }
 
-        true
+    /// Mint new tokens (only authorized)
+    pub fn mint(
+        mut ctx: Context<Mint>,
+        amount: Int256
+    ) -> Result<()> {
+        let authority = &ctx.accounts.authority;
+        let _mint = &mut ctx.accounts.mint;
+        let to_token_account = &mut ctx.accounts.to_token_account;
+
+        require!(amount > Int256::zero(), SimpleTokenError::InvalidAmount);
+
+        let _storage = Storage::get_context();
+        let mut mint_data = get_mint_data(Storage::get_context())?;
+
+        require!(mint_data.is_mintable, SimpleTokenError::NotMintable);
+        require!(
+            authority.key == mint_data.mint_authority || is_authorized_minter(Storage::get_context(), authority.key)?,
+            SimpleTokenError::Unauthorized
+        );
+        require!(!mint_data.is_frozen, SimpleTokenError::ContractPaused);
+
+        // Check max supply constraint
+        let new_supply = mint_data.supply.checked_add(&amount);
+        require!(
+            mint_data.max_supply <= Int256::zero() || new_supply <= mint_data.max_supply,
+            SimpleTokenError::ExceedsMaxSupply
+        );
+
+        // Update mint data
+        mint_data.supply = new_supply;
+        Storage::put(Storage::get_context(), ByteString::from_literal("mint_data"), mint_data.serialize());
+
+        // Update recipient balance
+        let to_key = create_account_key(to_token_account.key);
+        let mut to_account_data: TokenAccount = match Storage::get(Storage::get_context(), to_key.clone()) {
+            Some(data) => TokenAccount::deserialize(data)?,
+            None => TokenAccount {
+                mint: H160::zero(), // Use contract address
+                owner: to_token_account.key,
+                amount: Int256::zero(),
+            },
+        };
+
+        to_account_data.amount = to_account_data.amount.checked_add(&amount);
+        Storage::put(Storage::get_context(), to_key, to_account_data.serialize());
+
+        // Emit transfer event
+        Runtime::log(ByteString::from_literal("Tokens minted"));
+
+        Ok(())
     }
 
     /// Burn tokens (only token holder)
-    #[method]
-    pub fn burn(&self, from: H160, amount: Int256) -> bool {
-        if amount <= Int256::zero() {
-            Runtime::log(ByteString::from_literal("Invalid amount: must be positive"));
-            return false;
-        }
+    pub fn burn(
+        mut ctx: Context<Burn>,
+        amount: Int256
+    ) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let from_token_account = &mut ctx.accounts.from_token_account;
+        let _mint = &mut ctx.accounts.mint;
 
-        if !Runtime::check_witness(from) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return false;
-        }
+        require!(amount > Int256::zero(), SimpleTokenError::InvalidAmount);
 
-        if self.is_paused() {
-            Runtime::log(ByteString::from_literal("Contract is paused"));
-            return false;
-        }
+        let _storage = Storage::get_context();
+        let mut mint_data = get_mint_data(Storage::get_context())?;
+        require!(!mint_data.is_frozen, SimpleTokenError::ContractPaused);
 
-        // Check balance
-        let current_balance = self.balance_of(from);
-        if current_balance < amount {
-            Runtime::log(ByteString::from_literal("Insufficient balance"));
-            return false;
-        }
+        // Get from token account data
+        let from_key = create_account_key(from_token_account.key);
+        let mut from_account_data: TokenAccount = match Storage::get(Storage::get_context(), from_key.clone()) {
+            Some(data) => TokenAccount::deserialize(data)?,
+            None => return Err(SimpleTokenError::InsufficientBalance.into()),
+        };
 
-        let storage = Storage::get_context();
+        require!(from_account_data.amount >= amount, SimpleTokenError::InsufficientBalance);
+        require!(from_account_data.owner == owner.key, SimpleTokenError::Unauthorized);
 
         // Update total supply
-        let current_supply = self.total_supply();
-        let new_supply = current_supply.checked_sub(&amount);
-        Storage::put(storage.clone(), self.total_supply_key.clone(), new_supply.into_byte_string());
+        mint_data.supply = mint_data.supply.checked_sub(&amount);
+        Storage::put(Storage::get_context(), ByteString::from_literal("mint_data"), mint_data.serialize());
 
         // Update holder balance
-        let new_balance = current_balance.checked_sub(&amount);
-        let balance_key = self.balance_prefix.concat(&from.into_byte_string());
+        from_account_data.amount = from_account_data.amount.checked_sub(&amount);
         
-        if new_balance == Int256::zero() {
-            Storage::delete(storage, balance_key);
+        if from_account_data.amount == Int256::zero() {
+            Storage::delete(Storage::get_context(), from_key);
         } else {
-            Storage::put(storage, balance_key, new_balance.into_byte_string());
+            Storage::put(Storage::get_context(), from_key, from_account_data.serialize());
         }
 
         // Emit transfer event
-        self.emit_transfer(from, H160::zero(), amount);
+        Runtime::log(ByteString::from_literal("Tokens burned"));
 
-        let mut event_data = Array::new();
-        event_data.push(from.into_any());
-        event_data.push(amount.into_any());
-        Runtime::notify(ByteString::from_literal("TokensBurned"), event_data);
-
-        true
+        Ok(())
     }
 
     /// Add authorized minter (only owner)
-    #[method]
-    pub fn add_minter(&self, minter: H160) -> bool {
-        if !self.is_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only owner can add minters"));
-            return false;
-        }
+    pub fn add_minter(
+        mut ctx: Context<AdminAction>,
+        minter: H160
+    ) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let _mint = &mut ctx.accounts.mint;
 
-        let storage = Storage::get_context();
-        let minter_key = self.minters_prefix.concat(&minter.into_byte_string());
-        Storage::put(storage, minter_key, ByteString::from_literal("true"));
+        let _storage = Storage::get_context();
+        let mint_data = get_mint_data(Storage::get_context())?;
+        require!(owner.key == mint_data.mint_authority, SimpleTokenError::Unauthorized);
 
-        let mut event_data = Array::new();
-        event_data.push(minter.into_any());
-        Runtime::notify(ByteString::from_literal("MinterAdded"), event_data);
-        true
+        let minter_key = create_minter_key(minter);
+        Storage::put(Storage::get_context(), minter_key, ByteString::from_literal("true"));
+
+        Runtime::log(ByteString::from_literal("Minter added"));
+        Ok(())
     }
 
     /// Remove authorized minter (only owner)
-    #[method]
-    pub fn remove_minter(&self, minter: H160) -> bool {
-        if !self.is_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only owner can remove minters"));
-            return false;
-        }
+    pub fn remove_minter(
+        mut ctx: Context<AdminAction>,
+        minter: H160
+    ) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let _mint = &mut ctx.accounts.mint;
 
-        let storage = Storage::get_context();
-        let minter_key = self.minters_prefix.concat(&minter.into_byte_string());
-        Storage::delete(storage, minter_key);
+        let _storage = Storage::get_context();
+        let mint_data = get_mint_data(Storage::get_context())?;
+        require!(owner.key == mint_data.mint_authority, SimpleTokenError::Unauthorized);
 
-        let mut event_data = Array::new();
-        event_data.push(minter.into_any());
-        Runtime::notify(ByteString::from_literal("MinterRemoved"), event_data);
-        true
+        let minter_key = create_minter_key(minter);
+        Storage::delete(Storage::get_context(), minter_key);
+
+        Runtime::log(ByteString::from_literal("Minter removed"));
+        Ok(())
     }
 
     /// Pause contract (only owner)
-    #[method]
-    pub fn pause(&self) -> bool {
-        if !self.is_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only owner can pause"));
-            return false;
-        }
+    pub fn pause(mut ctx: Context<AdminAction>) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let _mint = &mut ctx.accounts.mint;
 
-        let storage = Storage::get_context();
-        Storage::put(storage, self.paused_key.clone(), ByteString::from_literal("true"));
+        let _storage = Storage::get_context();
+        let mut mint_data = get_mint_data(Storage::get_context())?;
+        require!(owner.key == mint_data.freeze_authority, SimpleTokenError::Unauthorized);
 
-        Runtime::notify(ByteString::from_literal("ContractPaused"), Array::new());
-        true
+        mint_data.is_frozen = true;
+        Storage::put(Storage::get_context(), ByteString::from_literal("mint_data"), mint_data.serialize());
+
+        Runtime::log(ByteString::from_literal("Contract paused"));
+        Ok(())
     }
 
     /// Unpause contract (only owner)
-    #[method]
-    pub fn unpause(&self) -> bool {
-        if !self.is_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only owner can unpause"));
-            return false;
-        }
+    pub fn unpause(mut ctx: Context<AdminAction>) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let _mint = &mut ctx.accounts.mint;
 
-        let storage = Storage::get_context();
-        Storage::delete(storage, self.paused_key.clone());
+        let _storage = Storage::get_context();
+        let mut mint_data = get_mint_data(Storage::get_context())?;
+        require!(owner.key == mint_data.freeze_authority, SimpleTokenError::Unauthorized);
 
-        Runtime::notify(ByteString::from_literal("ContractUnpaused"), Array::new());
-        true
+        mint_data.is_frozen = false;
+        Storage::put(Storage::get_context(), ByteString::from_literal("mint_data"), mint_data.serialize());
+
+        Runtime::log(ByteString::from_literal("Contract unpaused"));
+        Ok(())
     }
 
-    // View Methods
-
     /// Get contract owner
-    #[method]
-    #[safe]
-    pub fn get_owner(&self) -> H160 {
-        let storage = Storage::get_context();
-        match Storage::get(storage, self.owner_key.clone()) {
-            Some(owner_bytes) => H160::from_byte_string(owner_bytes),
-            None => H160::zero(),
-        }
+    pub fn get_owner(_ctx: Context<View>) -> Result<H160> {
+        let _storage = Storage::get_context();
+        let mint_data = get_mint_data(Storage::get_context())?;
+        Ok(mint_data.mint_authority)
     }
 
     /// Check if contract is paused
-    #[method]
-    #[safe]
-    pub fn is_paused(&self) -> bool {
-        let storage = Storage::get_context();
-        Storage::get(storage, self.paused_key.clone()).is_some()
+    pub fn is_paused(_ctx: Context<View>) -> Result<bool> {
+        let _storage = Storage::get_context();
+        let mint_data = get_mint_data(Storage::get_context())?;
+        Ok(mint_data.is_frozen)
     }
 
     /// Check if token is mintable
-    #[method]
-    #[safe]
-    pub fn is_mintable(&self) -> bool {
-        let storage = Storage::get_context();
-        Storage::get(storage, self.mintable_key.clone()).is_some()
+    pub fn is_mintable(_ctx: Context<View>) -> Result<bool> {
+        let _storage = Storage::get_context();
+        let mint_data = get_mint_data(Storage::get_context())?;
+        Ok(mint_data.is_mintable)
     }
 
     /// Get maximum supply (0 means unlimited)
-    #[method]
-    #[safe]
-    pub fn get_max_supply(&self) -> Int256 {
-        let storage = Storage::get_context();
-        match Storage::get(storage, self.max_supply_key.clone()) {
-            Some(max_bytes) => Int256::from_byte_string(max_bytes),
-            None => Int256::zero(), // 0 means unlimited
-        }
+    pub fn get_max_supply(_ctx: Context<View>) -> Result<Int256> {
+        let _storage = Storage::get_context();
+        let mint_data = get_mint_data(Storage::get_context())?;
+        Ok(mint_data.max_supply)
     }
 
     /// Check if address is authorized minter
-    #[method]
-    #[safe]
-    pub fn is_minter(&self, address: H160) -> bool {
-        if self.is_owner_address(address) {
-            return true;
+    pub fn is_minter(_ctx: Context<View>, address: H160) -> Result<bool> {
+        let _storage = Storage::get_context();
+        let mint_data = get_mint_data(Storage::get_context())?;
+        
+        if address == mint_data.mint_authority {
+            return Ok(true);
         }
 
-        let storage = Storage::get_context();
-        let minter_key = self.minters_prefix.concat(&address.into_byte_string());
-        Storage::get(storage, minter_key).is_some()
+        is_authorized_minter(Storage::get_context(), address)
     }
+}
 
-    // Helper functions
+// Helper functions
+fn get_mint_data(_storage: StorageContext) -> Result<MintAccount> {
+    match Storage::get(Storage::get_context(), ByteString::from_literal("mint_data")) {
+        Some(data) => MintAccount::deserialize(data),
+        None => Err(SimpleTokenError::AccountNotInitialized.into()),
+    }
+}
 
-    fn is_owner(&self) -> bool {
-        let owner = self.get_owner();
-        if owner == H160::zero() {
-            return false;
+fn is_authorized_minter(_storage: StorageContext, address: H160) -> Result<bool> {
+    let minter_key = create_minter_key(address);
+    Ok(Storage::get(Storage::get_context(), minter_key).is_some())
+}
+
+// Events removed - using simple log messages instead
+
+#[derive(Clone, Debug)]
+pub enum SimpleTokenError {
+    AccountNotInitialized,
+    InsufficientBalance,
+    Unauthorized,
+    InvalidAmount,
+    ContractPaused,
+    NotMintable,
+    ExceedsMaxSupply,
+    InvalidAccountData,
+}
+
+impl From<SimpleTokenError> for ContractError {
+    fn from(err: SimpleTokenError) -> Self {
+        match err {
+            SimpleTokenError::AccountNotInitialized => ContractError::InvalidAccountData,
+            SimpleTokenError::InsufficientBalance => ContractError::InsufficientFunds,
+            SimpleTokenError::Unauthorized => ContractError::Unauthorized,
+            SimpleTokenError::InvalidAmount => ContractError::InvalidArgument,
+            SimpleTokenError::ContractPaused => ContractError::InvalidInstruction,
+            SimpleTokenError::NotMintable => ContractError::InvalidInstruction,
+            SimpleTokenError::ExceedsMaxSupply => ContractError::InvalidArgument,
+            SimpleTokenError::InvalidAccountData => ContractError::InvalidAccountData,
         }
-        Runtime::check_witness(owner)
     }
+}
 
-    fn is_owner_address(&self, address: H160) -> bool {
-        let owner = self.get_owner();
-        owner != H160::zero() && owner == address
-    }
+// Helper function for format! replacement
+fn create_account_key(address: H160) -> ByteString {
+    let prefix = ByteString::from_literal("token_account_");
+    let addr_bytes = address.into_byte_string();
+    prefix.concat(&addr_bytes)
+}
 
-    fn is_authorized_minter(&self) -> bool {
-        if self.is_owner() {
-            return true;
-        }
-
-        let caller = Runtime::get_calling_script_hash();
-        let storage = Storage::get_context();
-        let minter_key = self.minters_prefix.concat(&caller.into_byte_string());
-        Storage::get(storage, minter_key).is_some()
-    }
-
-    fn transfer_tokens(&self, from: H160, to: H160, amount: Int256) {
-        let storage = Storage::get_context();
-
-        // Update from balance
-        let from_balance = self.balance_of(from);
-        let new_from_balance = from_balance.checked_sub(&amount);
-        let from_balance_key = self.balance_prefix.concat(&from.into_byte_string());
-
-        if new_from_balance == Int256::zero() {
-            Storage::delete(storage.clone(), from_balance_key);
-        } else {
-            Storage::put(storage.clone(), from_balance_key, new_from_balance.into_byte_string());
-        }
-
-        // Update to balance
-        let to_balance = self.balance_of(to);
-        let new_to_balance = to_balance.checked_add(&amount);
-        let to_balance_key = self.balance_prefix.concat(&to.into_byte_string());
-        Storage::put(storage, to_balance_key, new_to_balance.into_byte_string());
-
-        // Emit transfer event
-        self.emit_transfer(from, to, amount);
-    }
-
-    fn emit_transfer(&self, from: H160, to: H160, amount: Int256) {
-        let mut event_data = Array::new();
-        event_data.push(from.into_any());
-        event_data.push(to.into_any());
-        event_data.push(amount.into_any());
-        Runtime::notify(ByteString::from_literal("Transfer"), event_data);
-    }
-
-    fn on_payment_callback(&self, from: H160, amount: Int256, data: Any) {
-        let mut event_data = Array::new();
-        event_data.push(from.into_any());
-        event_data.push(amount.into_any());
-        event_data.push(data);
-        Runtime::notify(ByteString::from_literal("PaymentCallback"), event_data);
-    }
-} 
+fn create_minter_key(address: H160) -> ByteString {
+    let prefix = ByteString::from_literal("minter_");
+    let addr_bytes = address.into_byte_string();
+    prefix.concat(&addr_bytes)
+}

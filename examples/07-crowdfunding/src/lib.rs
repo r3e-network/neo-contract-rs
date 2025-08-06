@@ -7,17 +7,18 @@
 //! - Contributor tracking and rewards
 //! - Administrative controls and emergency mechanisms
 //!
-//! This contract showcases advanced Neo N3 patterns for decentralized fundraising.
+//! This contract showcases advanced patterns for decentralized fundraising.
 
 #![no_std]
 #![no_main]
 
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
-use neo_contract::contract::native::{Gas, Neo};
+
+declare_id!("Crowdfunding1111111111111111111111111111112");
 
 /// Campaign status enumeration
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum CampaignStatus {
     Active = 0,
     Successful = 1,
@@ -40,632 +41,565 @@ impl CampaignStatus {
     }
 }
 
-/// Crowdfunding platform contract
-#[contract_author("Neo Rust Framework", "dev@neo.org")]
-#[contract_version("1.0.0")]
-#[contract_standards("")]
-#[contract_permission("*", "*")]
-#[contract_meta("description", "Decentralized crowdfunding platform with milestone-based releases")]
-#[contract_meta("category", "DeFi")]
-pub struct Crowdfunding {
-    // Campaign storage keys
-    campaign_prefix: ByteString,
-    campaign_count_key: ByteString,
-
-    // Contribution tracking
-    contributions_prefix: ByteString,  // campaign_id + contributor -> amount
-    contributor_list_prefix: ByteString, // campaign_id -> list of contributors
-    total_raised_prefix: ByteString,   // campaign_id -> total amount raised
-
-    // Milestone tracking
-    milestones_prefix: ByteString,     // campaign_id -> milestone data
-    milestone_released_prefix: ByteString, // campaign_id + milestone_id -> released amount
-
-    // Administrative
-    platform_owner_key: ByteString,
-    platform_fee_key: ByteString,     // Platform fee percentage (basis points)
-    emergency_pause_key: ByteString,
-
-    // Supported tokens
-    supported_tokens_key: ByteString,
+/// Campaign data structure
+#[derive(Clone, Debug)]
+pub struct Campaign {
+    pub id: u32,
+    pub creator: H160,
+    pub title: ByteString,
+    pub description: ByteString,
+    pub goal_amount: Int256,
+    pub deadline: u64,
+    pub total_raised: Int256,
+    pub status: CampaignStatus,
+    pub milestone_count: u32,
+    pub released_amount: Int256,
 }
 
-#[contract_impl]
-impl Crowdfunding {
-    /// Initialize the crowdfunding platform
-    pub fn init() -> Self {
-        Self {
-            campaign_prefix: ByteString::from_literal("campaign_"),
-            campaign_count_key: ByteString::from_literal("campaign_count"),
-            contributions_prefix: ByteString::from_literal("contrib_"),
-            contributor_list_prefix: ByteString::from_literal("contributors_"),
-            total_raised_prefix: ByteString::from_literal("raised_"),
-            milestones_prefix: ByteString::from_literal("milestones_"),
-            milestone_released_prefix: ByteString::from_literal("released_"),
-            platform_owner_key: ByteString::from_literal("platform_owner"),
-            platform_fee_key: ByteString::from_literal("platform_fee"),
-            emergency_pause_key: ByteString::from_literal("emergency_pause"),
-            supported_tokens_key: ByteString::from_literal("supported_tokens"),
-        }
-    }
+/// Contribution data structure
+#[derive(Clone, Debug)]
+pub struct Contribution {
+    pub contributor: H160,
+    pub campaign_id: u32,
+    pub amount: Int256,
+    pub timestamp: u64,
+}
+
+/// Platform data structure
+#[derive(Clone, Debug)]
+pub struct PlatformData {
+    pub owner: H160,
+    pub platform_fee_bp: u32, // basis points (100 = 1%)
+    pub campaign_count: u32,
+    pub is_paused: bool,
+}
+
+/// Initialize context
+#[derive(Accounts)]
+pub struct Initialize<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(init)]
+    pub platform: AccountInfo<'info>,
+}
+
+/// Create campaign context
+#[derive(Accounts)]
+pub struct CreateCampaign<'info> {
+    #[account(signer)]
+    pub creator: AccountInfo<'info>,
+    #[account(mut)]
+    pub platform: AccountInfo<'info>,
+    #[account(init)]
+    pub campaign: AccountInfo<'info>,
+}
+
+/// Contribute context
+#[derive(Accounts)]
+pub struct Contribute<'info> {
+    #[account(signer)]
+    pub contributor: AccountInfo<'info>,
+    #[account(mut)]
+    pub campaign: AccountInfo<'info>,
+    #[account(mut)]
+    pub platform: AccountInfo<'info>,
+}
+
+/// Withdraw context
+#[derive(Accounts)]
+pub struct Withdraw<'info> {
+    #[account(signer)]
+    pub creator: AccountInfo<'info>,
+    #[account(mut)]
+    pub campaign: AccountInfo<'info>,
+}
+
+/// Refund context
+#[derive(Accounts)]
+pub struct Refund<'info> {
+    #[account(signer)]
+    pub contributor: AccountInfo<'info>,
+    #[account(mut)]
+    pub campaign: AccountInfo<'info>,
+}
+
+/// Admin context
+#[derive(Accounts)]
+pub struct AdminAction<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(mut)]
+    pub platform: AccountInfo<'info>,
+}
+
+/// View context
+#[derive(Accounts)]
+pub struct View<'info> {
+    pub account: AccountInfo<'info>,
+}
+
+#[program]
+pub mod crowdfunding {
+    use super::*;
 
     /// Initialize the platform (one-time setup)
-    #[method]
-    pub fn initialize(&self, owner: H160, platform_fee_bp: u32) -> bool {
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        platform_fee_bp: u32
+    ) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let platform = &mut ctx.accounts.platform;
+
+        require!(platform_fee_bp <= 1000, "Platform fee too high (max 10%)");
+
+        // Initialize platform data
+        let platform_data = PlatformData {
+            owner: owner.key(),
+            platform_fee_bp,
+            campaign_count: 0,
+            is_paused: false,
+        };
+
+        // Store platform data
         let storage = Storage::get_context();
+        Storage::put(storage, ByteString::from_literal("platform_data"), platform_data.serialize());
 
-        // Check if already initialized
-        if Storage::get(storage.clone(), self.platform_owner_key.clone()).is_some() {
-            Runtime::log(ByteString::from_literal("Platform already initialized"));
-            return false;
-        }
-
-        // Validate parameters
-        if platform_fee_bp > 1000 { // Max 10% fee
-            Runtime::log(ByteString::from_literal("Platform fee too high (max 10%)"));
-            return false;
-        }
-
-        // Verify authorization
-        if !Runtime::check_witness(owner) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return false;
-        }
-
-        // Store platform configuration
-        Storage::put(storage.clone(), self.platform_owner_key.clone(), owner.into_byte_string());
-        Storage::put(storage.clone(), self.platform_fee_key.clone(), ByteString::from_bytes(&platform_fee_bp.to_le_bytes()));
-        Storage::put(storage.clone(), self.campaign_count_key.clone(), Int256::zero().into_byte_string());
-
-        // Initialize with GAS as default supported token
-        let gas_hash = Gas::hash();
-        let storage_clone = storage.clone(); Storage::put(storage_clone, self.supported_tokens_key.clone(), gas_hash.into_byte_string());
-
-        let mut event_data = Array::new(); event_data.push(owner.into_any()); Runtime::notify(ByteString::from_literal("PlatformInitialized"), event_data);
-        true
+        emit!(PlatformInitialized { 
+            owner: owner.key(), 
+            platform_fee_bp: Int256::new(platform_fee_bp as i64),
+        });
+        Ok(())
     }
 
     /// Create a new crowdfunding campaign
-    #[method]
     pub fn create_campaign(
-        &self,
-        creator: H160,
+        ctx: Context<CreateCampaign>,
         title: ByteString,
         description: ByteString,
-        funding_goal: Int256,
-        deadline: u64,
-        payment_token: H160
-    ) -> Int256 {
-        // Validate inputs
-        if !self.validate_campaign_params(&title, &description, funding_goal, deadline) {
-            return Int256::minus_one();
-        }
+        goal_amount: Int256,
+        duration_days: u32,
+        milestone_count: u32
+    ) -> Result<()> {
+        let creator = &ctx.accounts.creator;
+        let platform = &mut ctx.accounts.platform;
+        let campaign = &mut ctx.accounts.campaign;
 
-        // Verify authorization
-        if !Runtime::check_witness(creator) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return Int256::minus_one();
-        }
-
-        // Check if platform is paused
-        if self.is_emergency_paused() {
-            Runtime::log(ByteString::from_literal("Platform is paused"));
-            return Int256::minus_one();
-        }
-
-        // Verify supported token
-        if !self.is_token_supported(payment_token) {
-            Runtime::log(ByteString::from_literal("Token not supported"));
-            return Int256::minus_one();
-        }
+        // Validate parameters
+        require!(!title.is_empty() && title.len() <= 100, "Invalid title length");
+        require!(!description.is_empty() && description.len() <= 1000, "Invalid description length");
+        require!(goal_amount > Int256::zero(), "Goal amount must be positive");
+        require!(duration_days > 0 && duration_days <= 365, "Invalid duration (1-365 days)");
+        require!(milestone_count > 0 && milestone_count <= 10, "Invalid milestone count (1-10)");
 
         let storage = Storage::get_context();
+        let mut platform_data = get_platform_data(&storage)?;
+        
+        require!(!platform_data.is_paused, "Platform is paused");
 
-        // Get next campaign ID
-        let campaign_count = self.get_campaign_count();
-        let campaign_id = campaign_count.checked_add(&Int256::one());
+        // Create campaign
+        let current_time = Runtime::get_time();
+        let deadline = current_time + (duration_days as u64 * 24 * 60 * 60 * 1000); // milliseconds
 
-        // Create campaign data
-        let campaign_data = self.serialize_campaign_data(
-            creator,
-            title.clone(),
-            description,
-            funding_goal,
+        platform_data.campaign_count += 1;
+        let campaign_id = platform_data.campaign_count;
+
+        let campaign_data = Campaign {
+            id: campaign_id,
+            creator: creator.key(),
+            title: title.clone(),
+            description: description.clone(),
+            goal_amount,
             deadline,
-            payment_token,
-            CampaignStatus::Active
-        );
+            total_raised: Int256::zero(),
+            status: CampaignStatus::Active,
+            milestone_count,
+            released_amount: Int256::zero(),
+        };
 
-        // Store campaign
-        let campaign_key = self.campaign_prefix.concat(&campaign_id.into_byte_string());
-        Storage::put(storage.clone(), campaign_key, campaign_data);
+        // Store campaign data
+        let campaign_key = format!("campaign_{}", campaign_id);
+        Storage::put(storage.clone(), ByteString::from_str(&campaign_key), campaign_data.serialize());
 
-        // Update campaign count
-        Storage::put(storage.clone(), self.campaign_count_key.clone(), campaign_id.into_byte_string());
+        // Update platform data
+        Storage::put(storage, ByteString::from_literal("platform_data"), platform_data.serialize());
 
-        // Initialize campaign tracking
-        let raised_key = self.total_raised_prefix.concat(&campaign_id.into_byte_string());
-        let storage_clone = storage.clone(); Storage::put(storage_clone, raised_key, Int256::zero().into_byte_string());
-
-        let mut event_data = Array::new();
-        event_data.push(campaign_id.into_any());
-        event_data.push(creator.into_any());
-        event_data.push(title.into_any());
-        Runtime::notify(ByteString::from_literal("CampaignCreated"), event_data);
-
-        campaign_id
+        emit!(CampaignCreated {
+            campaign_id,
+            creator: creator.key(),
+            title,
+            goal_amount,
+            deadline,
+        });
+        Ok(())
     }
 
     /// Contribute to a campaign
-    #[method]
-    pub fn contribute(&self, campaign_id: Int256, contributor: H160, amount: Int256) -> bool {
-        // Validate inputs
-        if campaign_id <= Int256::zero() || amount <= Int256::zero() {
-            Runtime::log(ByteString::from_literal("Invalid campaign ID or amount"));
-            return false;
-        }
+    pub fn contribute(
+        ctx: Context<Contribute>,
+        campaign_id: u32,
+        amount: Int256
+    ) -> Result<()> {
+        let contributor = &ctx.accounts.contributor;
+        let campaign = &mut ctx.accounts.campaign;
+        let platform = &mut ctx.accounts.platform;
 
-        // Verify authorization
-        if !Runtime::check_witness(contributor) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return false;
-        }
+        require!(amount > Int256::zero(), "Contribution must be positive");
 
-        // Check if platform is paused
-        if self.is_emergency_paused() {
-            Runtime::log(ByteString::from_literal("Platform is paused"));
-            return false;
-        }
+        let storage = Storage::get_context();
+        let platform_data = get_platform_data(&storage)?;
+        require!(!platform_data.is_paused, "Platform is paused");
 
         // Get campaign data
-        let campaign_data = match self.get_campaign_data(campaign_id) {
-            Some(data) => data,
-            None => {
-                Runtime::log(ByteString::from_literal("Campaign not found"));
-                return false;
-            }
+        let campaign_key = format!("campaign_{}", campaign_id);
+        let mut campaign_data: Campaign = match Storage::get(storage.clone(), ByteString::from_str(&campaign_key)) {
+            Some(data) => Campaign::deserialize(data)?,
+            None => return Err(ErrorCode::CampaignNotFound.into()),
         };
 
-        // Verify campaign is active and not expired
-        if !self.is_campaign_active(&campaign_data) {
-            Runtime::log(ByteString::from_literal("Campaign is not active or has expired"));
-            return false;
+        require!(campaign_data.status == CampaignStatus::Active, "Campaign not active");
+        require!(Runtime::get_time() < campaign_data.deadline, "Campaign deadline passed");
+
+        // Update campaign total
+        campaign_data.total_raised = campaign_data.total_raised.checked_add(&amount);
+
+        // Check if goal reached
+        if campaign_data.total_raised >= campaign_data.goal_amount {
+            campaign_data.status = CampaignStatus::Successful;
         }
 
-        let storage = Storage::get_context();
+        // Store updated campaign
+        Storage::put(storage.clone(), ByteString::from_str(&campaign_key), campaign_data.serialize());
 
-        // Update contributor's contribution
-        let contrib_key = self.contributions_prefix
-            .concat(&campaign_id.into_byte_string())
-            .concat(&ByteString::from_literal("_"))
-            .concat(&contributor.into_byte_string());
-
-        let current_contrib = match Storage::get(storage.clone(), contrib_key.clone()) {
-            Some(amount_bytes) => Int256::from_byte_string(amount_bytes),
+        // Track individual contribution
+        let contribution_key = format!("contribution_{}_{}", campaign_id, contributor.key());
+        let existing_contribution = match Storage::get(storage.clone(), ByteString::from_str(&contribution_key)) {
+            Some(data) => Int256::from_byte_string(data),
             None => Int256::zero(),
         };
+        let new_contribution = existing_contribution.checked_add(&amount);
+        Storage::put(storage.clone(), ByteString::from_str(&contribution_key), new_contribution.into_byte_string());
 
-        let new_contrib = current_contrib.checked_add(&amount);
-        Storage::put(storage.clone(), contrib_key, new_contrib.into_byte_string());
-
-        // Add to contributor list if first contribution
-        if current_contrib == Int256::zero() {
-            self.add_contributor_to_list(campaign_id, contributor);
-        }
-
-        // Update total raised
-        let raised_key = self.total_raised_prefix.concat(&campaign_id.into_byte_string());
-        let current_raised = match Storage::get(storage.clone(), raised_key.clone()) {
-            Some(amount_bytes) => Int256::from_byte_string(amount_bytes),
-            None => Int256::zero(),
+        // Add to contributors list (simplified)
+        let contributors_key = format!("contributors_{}", campaign_id);
+        let mut contributors = match Storage::get(storage.clone(), ByteString::from_str(&contributors_key)) {
+            Some(data) => deserialize_contributor_list(data),
+            None => Array::new(),
         };
 
-        let new_raised = current_raised.checked_add(&amount);
-        let storage_clone = storage.clone(); Storage::put(storage_clone, raised_key, new_raised.into_byte_string());
-
-        // Check if funding goal is reached
-        let funding_goal = self.extract_funding_goal(&campaign_data);
-        if new_raised >= funding_goal {
-            self.mark_campaign_successful(campaign_id);
-        }
-
-        let mut event_data = Array::new();
-        event_data.push(campaign_id.into_any());
-        event_data.push(contributor.into_any());
-        event_data.push(amount.into_any());
-        event_data.push(new_raised.into_any());
-        Runtime::notify(ByteString::from_literal("ContributionMade"), event_data);
-
-        true
-    }
-
-    /// Get campaign information
-    #[method]
-    #[safe]
-    pub fn get_campaign(&self, campaign_id: Int256) -> Map<ByteString, Any> {
-        let mut result = Map::new();
-
-        match self.get_campaign_data(campaign_id) {
-            Some(data) => {
-                let (creator, title, description, funding_goal, deadline, payment_token, status) =
-                    self.deserialize_campaign_data(data);
-
-                result.put(ByteString::from_literal("creator"), creator.into_any());
-                result.put(ByteString::from_literal("title"), title.into_any());
-                result.put(ByteString::from_literal("description"), description.into_any());
-                result.put(ByteString::from_literal("funding_goal"), funding_goal.into_any());
-                result.put(ByteString::from_literal("deadline"), Int256::new(deadline as i64).into_any());
-                result.put(ByteString::from_literal("payment_token"), payment_token.into_any());
-                result.put(ByteString::from_literal("status"), Int256::new(status.to_u8() as i64).into_any());
-                result.put(ByteString::from_literal("total_raised"), self.get_total_raised(campaign_id).into_any());
-                result.put(ByteString::from_literal("contributor_count"), self.get_contributor_count(campaign_id).into_any());
-            },
-            None => {
-                result.put(ByteString::from_literal("error"), ByteString::from_literal("Campaign not found").into_any());
+        // Add contributor if not already in list
+        let mut found = false;
+        for i in 0..contributors.size() {
+            if contributors.get(i) == contributor.key() {
+                found = true;
+                break;
             }
         }
+        if !found {
+            contributors.push(contributor.key());
+        }
 
-        result
+        Storage::put(storage, ByteString::from_str(&contributors_key), serialize_contributor_list(&contributors));
+
+        emit!(ContributionMade {
+            campaign_id,
+            contributor: contributor.key(),
+            amount,
+            total_raised: campaign_data.total_raised,
+        });
+
+        if campaign_data.status == CampaignStatus::Successful {
+            emit!(CampaignSuccessful { campaign_id, total_raised: campaign_data.total_raised });
+        }
+
+        Ok(())
     }
 
-    /// Get contributor's contribution amount
-    #[method]
-    #[safe]
-    pub fn get_contribution(&self, campaign_id: Int256, contributor: H160) -> Int256 {
+    /// Withdraw funds (creator only for successful campaigns)
+    pub fn withdraw_funds(
+        ctx: Context<Withdraw>,
+        campaign_id: u32,
+        milestone_id: u32
+    ) -> Result<()> {
+        let creator = &ctx.accounts.creator;
+        let campaign = &mut ctx.accounts.campaign;
+
         let storage = Storage::get_context();
-        let contrib_key = self.contributions_prefix
-            .concat(&campaign_id.into_byte_string())
-            .concat(&ByteString::from_literal("_"))
-            .concat(&contributor.into_byte_string());
-
-        match Storage::get(storage, contrib_key) {
-            Some(amount_bytes) => Int256::from_byte_string(amount_bytes),
-            None => Int256::zero(),
-        }
-    }
-
-    /// Get total amount raised for a campaign
-    #[method]
-    #[safe]
-    pub fn get_total_raised(&self, campaign_id: Int256) -> Int256 {
-        let storage = Storage::get_context();
-        let raised_key = self.total_raised_prefix.concat(&campaign_id.into_byte_string());
-
-        match Storage::get(storage, raised_key) {
-            Some(amount_bytes) => Int256::from_byte_string(amount_bytes),
-            None => Int256::zero(),
-        }
-    }
-
-    /// Get total number of campaigns
-    #[method]
-    #[safe]
-    pub fn get_campaign_count(&self) -> Int256 {
-        let storage = Storage::get_context();
-        match Storage::get(storage, self.campaign_count_key.clone()) {
-            Some(count_bytes) => Int256::from_byte_string(count_bytes),
-            None => Int256::zero(),
-        }
-    }
-
-    /// Get platform owner
-    #[method]
-    #[safe]
-    pub fn get_platform_owner(&self) -> H160 {
-        let storage = Storage::get_context();
-        match Storage::get(storage, self.platform_owner_key.clone()) {
-            Some(owner_bytes) => H160::from_byte_string(owner_bytes),
-            None => H160::zero(),
-        }
-    }
-
-    /// Check if platform is in emergency pause
-    #[method]
-    #[safe]
-    pub fn is_emergency_paused(&self) -> bool {
-        let storage = Storage::get_context();
-        Storage::get(storage, self.emergency_pause_key.clone()).is_some()
-    }
-
-    // Helper functions
-
-    fn validate_campaign_params(
-        &self,
-        title: &ByteString,
-        description: &ByteString,
-        funding_goal: Int256,
-        deadline: u64
-    ) -> bool {
-        if title.is_empty() || title.len() > 100 {
-            Runtime::log(ByteString::from_literal("Invalid title: must be 1-100 characters"));
-            return false;
-        }
-
-        if description.is_empty() || description.len() > 1000 {
-            Runtime::log(ByteString::from_literal("Invalid description: must be 1-1000 characters"));
-            return false;
-        }
-
-        if funding_goal <= Int256::zero() {
-            Runtime::log(ByteString::from_literal("Invalid funding goal: must be positive"));
-            return false;
-        }
-
-        let current_time = Runtime::get_time();
-        if deadline <= current_time {
-            Runtime::log(ByteString::from_literal("Invalid deadline: must be in the future"));
-            return false;
-        }
-
-        true
-    }
-
-    fn is_token_supported(&self, token: H160) -> bool {
-        // For simplicity, support GAS and NEO
-        token == Gas::hash() || token == Neo::hash()
-    }
-
-    fn get_campaign_data(&self, campaign_id: Int256) -> Option<ByteString> {
-        let storage = Storage::get_context();
-        let campaign_key = self.campaign_prefix.concat(&campaign_id.into_byte_string());
-        Storage::get(storage, campaign_key)
-    }
-
-    fn serialize_campaign_data(
-        &self,
-        creator: H160,
-        title: ByteString,
-        description: ByteString,
-        funding_goal: Int256,
-        deadline: u64,
-        payment_token: H160,
-        status: CampaignStatus
-    ) -> ByteString {
-        // Simple serialization - in production, use a proper format
-        let mut data = creator.into_byte_string();
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&title);
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&description);
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&funding_goal.into_byte_string());
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&ByteString::from_bytes(&deadline.to_le_bytes()));
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&payment_token.into_byte_string());
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&ByteString::from_bytes(&[status.to_u8()]));
-        data
-    }
-
-    fn deserialize_campaign_data(&self, data: ByteString) -> (H160, ByteString, ByteString, Int256, u64, H160, CampaignStatus) {
-        // Simplified deserialization - in production, use proper parsing
-        let parts = self.split_by_delimiter(data, ByteString::from_literal("|"));
-
-        if parts.size() >= 7 {
-            let creator = H160::from_byte_string(parts.get(0).clone());
-            let title = parts.get(1).clone();
-            let description = parts.get(2).clone();
-            let funding_goal = Int256::from_byte_string(parts.get(3).clone());
-
-            let deadline_bytes = parts.get(4).to_bytes();
-            let deadline = if deadline_bytes.len() >= 8 {
-                u64::from_le_bytes([
-                    deadline_bytes[0], deadline_bytes[1], deadline_bytes[2], deadline_bytes[3],
-                    deadline_bytes[4], deadline_bytes[5], deadline_bytes[6], deadline_bytes[7]
-                ])
-            } else {
-                0
-            };
-
-            let payment_token = H160::from_byte_string(parts.get(5).clone());
-
-            let status_bytes = parts.get(6).to_bytes();
-            let status = if status_bytes.len() > 0 {
-                CampaignStatus::from_u8(status_bytes[0])
-            } else {
-                CampaignStatus::Active
-            };
-
-            (creator, title, description, funding_goal, deadline, payment_token, status)
-        } else {
-            (H160::zero(), ByteString::empty(), ByteString::empty(),
-             Int256::zero(), 0, H160::zero(), CampaignStatus::Failed)
-        }
-    }
-
-    fn split_by_delimiter(&self, data: ByteString, _delimiter: ByteString) -> Array<ByteString> {
-        // Simplified string splitting - in production, use proper parsing
-        let mut parts = Array::new();
-
-        // For now, return the original data as single part
-        // Complete implementation with proper string splitting
-        parts.push(data);
-        parts
-    }
-
-    fn extract_funding_goal(&self, data: &ByteString) -> Int256 {
-        let (_, _, _, funding_goal, _, _, _) = self.deserialize_campaign_data(data.clone());
-        funding_goal
-    }
-
-    fn is_campaign_active(&self, data: &ByteString) -> bool {
-        let (_, _, _, _, deadline, _, status) = self.deserialize_campaign_data(data.clone());
-        let current_time = Runtime::get_time();
-
-        status == CampaignStatus::Active && current_time < deadline
-    }
-
-    fn mark_campaign_successful(&self, campaign_id: Int256) {
-        // Update campaign status to successful
-        let mut event_data = Array::new();
-        event_data.push(campaign_id.into_any());
-        Runtime::notify(ByteString::from_literal("CampaignSuccessful"), event_data);
-    }
-
-    fn add_contributor_to_list(&self, campaign_id: Int256, contributor: H160) {
-        // Add contributor to the campaign's contributor list
-        let mut event_data = Array::new();
-        event_data.push(campaign_id.into_any());
-        event_data.push(contributor.into_any());
-        Runtime::notify(ByteString::from_literal("NewContributor"), event_data);
-    }
-
-    fn get_contributor_count(&self, _campaign_id: Int256) -> Int256 {
-        // Return number of unique contributors
-        // For now, return 0 - implement proper counting in production
-        Int256::zero()
-    }
-
-    /// Request refund for failed or cancelled campaign
-    #[method]
-    pub fn request_refund(&self, campaign_id: Int256, contributor: H160) -> bool {
-        // Verify authorization
-        if !Runtime::check_witness(contributor) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return false;
-        }
 
         // Get campaign data
-        let campaign_data = match self.get_campaign_data(campaign_id) {
-            Some(data) => data,
-            None => {
-                Runtime::log(ByteString::from_literal("Campaign not found"));
-                return false;
-            }
+        let campaign_key = format!("campaign_{}", campaign_id);
+        let mut campaign_data: Campaign = match Storage::get(storage.clone(), ByteString::from_str(&campaign_key)) {
+            Some(data) => Campaign::deserialize(data)?,
+            None => return Err(ErrorCode::CampaignNotFound.into()),
         };
 
-        let (_, _, _, _, deadline, _, status) = self.deserialize_campaign_data(campaign_data.clone());
-        let current_time = Runtime::get_time();
+        require!(campaign_data.creator == creator.key(), "Unauthorized: Not campaign creator");
+        require!(campaign_data.status == CampaignStatus::Successful, "Campaign not successful");
+        require!(milestone_id > 0 && milestone_id <= campaign_data.milestone_count, "Invalid milestone ID");
 
-        // Check if refund is allowed (campaign failed or deadline passed without reaching goal)
-        let refund_allowed = match status {
-            CampaignStatus::Failed | CampaignStatus::Cancelled => true,
-            CampaignStatus::Active => {
-                current_time > deadline && self.get_total_raised(campaign_id) < self.extract_funding_goal(&campaign_data)
-            },
-            _ => false,
-        };
+        // Check if milestone already released
+        let milestone_key = format!("milestone_{}_{}", campaign_id, milestone_id);
+        require!(
+            Storage::get(storage.clone(), ByteString::from_str(&milestone_key)).is_none(),
+            "Milestone already released"
+        );
 
-        if !refund_allowed {
-            Runtime::log(ByteString::from_literal("Refund not allowed for this campaign"));
-            return false;
-        }
+        // Calculate milestone amount (equal distribution)
+        let milestone_amount = campaign_data.total_raised.checked_div(&Int256::new(campaign_data.milestone_count as i64));
+        
+        // Calculate platform fee
+        let platform_data = get_platform_data(&storage)?;
+        let fee_amount = milestone_amount.checked_mul(&Int256::new(platform_data.platform_fee_bp as i64))
+            .checked_div(&Int256::new(10000));
+        let creator_amount = milestone_amount.checked_sub(&fee_amount);
 
-        // Get contribution amount
-        let contribution = self.get_contribution(campaign_id, contributor);
-        if contribution <= Int256::zero() {
-            Runtime::log(ByteString::from_literal("No contribution found"));
-            return false;
-        }
+        // Mark milestone as released
+        Storage::put(storage.clone(), ByteString::from_str(&milestone_key), ByteString::from_literal("released"));
 
-        // Process refund (mark contribution as refunded)
+        // Update released amount
+        campaign_data.released_amount = campaign_data.released_amount.checked_add(&milestone_amount);
+        Storage::put(storage, ByteString::from_str(&campaign_key), campaign_data.serialize());
+
+        emit!(FundsWithdrawn {
+            campaign_id,
+            milestone_id,
+            creator: creator.key(),
+            amount: creator_amount,
+            platform_fee: fee_amount,
+        });
+
+        Ok(())
+    }
+
+    /// Request refund (contributor only for failed campaigns)
+    pub fn request_refund(
+        ctx: Context<Refund>,
+        campaign_id: u32
+    ) -> Result<()> {
+        let contributor = &ctx.accounts.contributor;
+        let campaign = &mut ctx.accounts.campaign;
+
         let storage = Storage::get_context();
-        let contrib_key = self.contributions_prefix
-            .concat(&campaign_id.into_byte_string())
-            .concat(&ByteString::from_literal("_"))
-            .concat(&contributor.into_byte_string());
 
-        let storage_clone = storage.clone(); Storage::delete(storage_clone, contrib_key);
+        // Get campaign data
+        let campaign_key = format!("campaign_{}", campaign_id);
+        let mut campaign_data: Campaign = match Storage::get(storage.clone(), ByteString::from_str(&campaign_key)) {
+            Some(data) => Campaign::deserialize(data)?,
+            None => return Err(ErrorCode::CampaignNotFound.into()),
+        };
 
-        let mut event_data = Array::new();
-        event_data.push(campaign_id.into_any());
-        event_data.push(contributor.into_any());
-        event_data.push(contribution.into_any());
-        Runtime::notify(ByteString::from_literal("RefundProcessed"), event_data);
+        // Check if campaign failed (deadline passed and goal not met)
+        if campaign_data.status == CampaignStatus::Active && Runtime::get_time() >= campaign_data.deadline {
+            if campaign_data.total_raised < campaign_data.goal_amount {
+                campaign_data.status = CampaignStatus::Failed;
+                Storage::put(storage.clone(), ByteString::from_str(&campaign_key), campaign_data.serialize());
+            }
+        }
 
-        true
+        require!(campaign_data.status == CampaignStatus::Failed, "Campaign not failed");
+
+        // Get contributor's contribution
+        let contribution_key = format!("contribution_{}_{}", campaign_id, contributor.key());
+        let contribution_amount = match Storage::get(storage.clone(), ByteString::from_str(&contribution_key)) {
+            Some(data) => Int256::from_byte_string(data),
+            None => return Err(ErrorCode::NoContribution.into()),
+        };
+
+        require!(contribution_amount > Int256::zero(), "No contribution found");
+
+        // Mark as refunded
+        Storage::delete(storage, ByteString::from_str(&contribution_key));
+
+        emit!(RefundProcessed {
+            campaign_id,
+            contributor: contributor.key(),
+            amount: contribution_amount,
+        });
+
+        Ok(())
     }
 
     /// Cancel campaign (creator only, before deadline)
-    #[method]
-    pub fn cancel_campaign(&self, campaign_id: Int256) -> bool {
+    pub fn cancel_campaign(
+        ctx: Context<Withdraw>,
+        campaign_id: u32
+    ) -> Result<()> {
+        let creator = &ctx.accounts.creator;
+        let campaign = &mut ctx.accounts.campaign;
+
+        let storage = Storage::get_context();
+
         // Get campaign data
-        let campaign_data = match self.get_campaign_data(campaign_id) {
-            Some(data) => data,
-            None => {
-                Runtime::log(ByteString::from_literal("Campaign not found"));
-                return false;
-            }
+        let campaign_key = format!("campaign_{}", campaign_id);
+        let mut campaign_data: Campaign = match Storage::get(storage.clone(), ByteString::from_str(&campaign_key)) {
+            Some(data) => Campaign::deserialize(data)?,
+            None => return Err(ErrorCode::CampaignNotFound.into()),
         };
 
-        let (creator, _, _, _, deadline, _, status) = self.deserialize_campaign_data(campaign_data);
-        let current_time = Runtime::get_time();
+        require!(campaign_data.creator == creator.key(), "Unauthorized: Not campaign creator");
+        require!(campaign_data.status == CampaignStatus::Active, "Campaign not active");
+        require!(campaign_data.released_amount == Int256::zero(), "Funds already released");
 
-        // Verify authorization (creator or platform owner)
-        if !Runtime::check_witness(creator) && !self.is_platform_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only creator or platform owner can cancel"));
-            return false;
-        }
+        // Cancel campaign
+        campaign_data.status = CampaignStatus::Cancelled;
+        Storage::put(storage, ByteString::from_str(&campaign_key), campaign_data.serialize());
 
-        // Check if campaign can be cancelled
-        if status != CampaignStatus::Active {
-            Runtime::log(ByteString::from_literal("Campaign is not active"));
-            return false;
-        }
-
-        if current_time > deadline {
-            Runtime::log(ByteString::from_literal("Campaign deadline has passed"));
-            return false;
-        }
-
-        // Update campaign status
-        let storage = Storage::get_context();
-        let new_data = self.serialize_campaign_data(
-            creator,
-            ByteString::from_literal(""), // Simplified - should preserve original data
-            ByteString::from_literal(""),
-            Int256::zero(),
-            deadline,
-            H160::zero(),
-            CampaignStatus::Cancelled
-        );
-
-        let campaign_key = self.campaign_prefix.concat(&campaign_id.into_byte_string());
-        let storage_clone = storage.clone(); Storage::put(storage_clone, campaign_key, new_data);
-
-        let mut event_data = Array::new();
-        event_data.push(campaign_id.into_any());
-        Runtime::notify(ByteString::from_literal("CampaignCancelled"), event_data);
-
-        true
+        emit!(CampaignCancelled { campaign_id });
+        Ok(())
     }
 
-    /// Emergency pause platform (owner only)
-    #[method]
-    pub fn emergency_pause(&self) -> bool {
-        if !self.is_platform_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only platform owner can pause"));
-            return false;
-        }
+    /// Emergency pause (owner only)
+    pub fn emergency_pause(ctx: Context<AdminAction>) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let platform = &mut ctx.accounts.platform;
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone(); Storage::put(storage_clone, self.emergency_pause_key.clone(), ByteString::from_literal("true"));
+        let mut platform_data = get_platform_data(&storage)?;
 
-        Runtime::notify(ByteString::from_literal("EmergencyPause"), Array::new());
-        true
+        require!(owner.key() == platform_data.owner, "Unauthorized: Not platform owner");
+
+        platform_data.is_paused = true;
+        Storage::put(storage, ByteString::from_literal("platform_data"), platform_data.serialize());
+
+        emit!(PlatformPaused {});
+        Ok(())
     }
 
-    /// Resume platform (owner only)
-    #[method]
-    pub fn resume_platform(&self) -> bool {
-        if !self.is_platform_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only platform owner can resume"));
-            return false;
-        }
-
+    /// Get campaign info
+    pub fn get_campaign(ctx: Context<View>, campaign_id: u32) -> Result<Campaign> {
         let storage = Storage::get_context();
-        let storage_clone = storage.clone(); Storage::delete(storage_clone, self.emergency_pause_key.clone());
-
-        Runtime::notify(ByteString::from_literal("PlatformResumed"), Array::new());
-        true
-    }
-
-    fn is_platform_owner(&self) -> bool {
-        let owner = self.get_platform_owner();
-        if owner == H160::zero() {
-            return false;
+        let campaign_key = format!("campaign_{}", campaign_id);
+        
+        match Storage::get(storage, ByteString::from_str(&campaign_key)) {
+            Some(data) => Campaign::deserialize(data),
+            None => Err(ErrorCode::CampaignNotFound.into()),
         }
-        Runtime::check_witness(owner)
     }
+
+    /// Get platform stats
+    pub fn get_platform_stats(ctx: Context<View>) -> Result<PlatformData> {
+        let storage = Storage::get_context();
+        get_platform_data(&storage)
+    }
+}
+
+// Helper functions
+fn get_platform_data(storage: &Storage) -> Result<PlatformData> {
+    match Storage::get(storage.clone(), ByteString::from_literal("platform_data")) {
+        Some(data) => PlatformData::deserialize(data),
+        None => Err(ErrorCode::PlatformNotInitialized.into()),
+    }
+}
+
+fn serialize_contributor_list(contributors: &Array<H160>) -> ByteString {
+    let mut result = ByteString::empty();
+    let len = contributors.size() as u32;
+    result = result.concat(&ByteString::from_bytes(&len.to_le_bytes()));
+    
+    for i in 0..contributors.size() {
+        let contributor = contributors.get(i);
+        result = result.concat(&contributor.into_byte_string());
+    }
+    
+    result
+}
+
+fn deserialize_contributor_list(data: ByteString) -> Array<H160> {
+    let bytes = data.to_bytes();
+    let mut contributors = Array::new();
+    
+    if bytes.len() < 4 {
+        return contributors;
+    }
+    
+    let len = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
+    let mut offset = 4;
+    
+    for _ in 0..len {
+        if offset + 20 <= bytes.len() {
+            let contributor = H160::from_byte_string(ByteString::from_bytes(&bytes[offset..offset + 20]));
+            contributors.push(contributor);
+            offset += 20;
+        }
+    }
+    
+    contributors
+}
+
+// Events
+#[event]
+pub struct PlatformInitialized {
+    pub owner: H160,
+    pub platform_fee_bp: Int256,
+}
+
+#[event]
+pub struct CampaignCreated {
+    pub campaign_id: u32,
+    pub creator: H160,
+    pub title: ByteString,
+    pub goal_amount: Int256,
+    pub deadline: u64,
+}
+
+#[event]
+pub struct ContributionMade {
+    pub campaign_id: u32,
+    pub contributor: H160,
+    pub amount: Int256,
+    pub total_raised: Int256,
+}
+
+#[event]
+pub struct CampaignSuccessful {
+    pub campaign_id: u32,
+    pub total_raised: Int256,
+}
+
+#[event]
+pub struct FundsWithdrawn {
+    pub campaign_id: u32,
+    pub milestone_id: u32,
+    pub creator: H160,
+    pub amount: Int256,
+    pub platform_fee: Int256,
+}
+
+#[event]
+pub struct RefundProcessed {
+    pub campaign_id: u32,
+    pub contributor: H160,
+    pub amount: Int256,
+}
+
+#[event]
+pub struct CampaignCancelled {
+    pub campaign_id: u32,
+}
+
+#[event]
+pub struct PlatformPaused {}
+
+// Error codes
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Platform not initialized")]
+    PlatformNotInitialized,
+    #[msg("Campaign not found")]
+    CampaignNotFound,
+    #[msg("Unauthorized")]
+    Unauthorized,
+    #[msg("Campaign not active")]
+    CampaignNotActive,
+    #[msg("Campaign deadline passed")]
+    DeadlinePassed,
+    #[msg("Goal not reached")]
+    GoalNotReached,
+    #[msg("No contribution found")]
+    NoContribution,
+    #[msg("Platform paused")]
+    PlatformPaused,
+    #[msg("Invalid amount")]
+    InvalidAmount,
+    #[msg("Milestone already released")]
+    MilestoneAlreadyReleased,
 }

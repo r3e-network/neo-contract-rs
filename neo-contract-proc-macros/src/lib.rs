@@ -3,6 +3,7 @@
 
 mod contract;
 mod structs;
+mod program;
 
 /// It exports the MyContract methods as no_mangle methods:
 /// ```rust
@@ -433,6 +434,105 @@ pub fn gas_limit(_args: proc_macro::TokenStream, input: proc_macro::TokenStream)
     };
 
     TokenStream::from(expanded).into()
+}
+
+/// Solana-style program macro for Neo N3 smart contracts
+///
+/// # Example
+///
+/// ```
+/// declare_id!("NeoContractAddress123...");
+///
+/// #[program]
+/// pub mod my_neo_program {
+///     use super::*;
+///
+///     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+///         // Implementation...
+///     }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn program(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    program::expand_program(input)
+}
+
+/// Derive macro for Solana-style account validation in Neo N3
+///
+/// # Example
+///
+/// ```
+/// #[derive(Accounts)]
+/// pub struct Initialize<'info> {
+///     #[account(init, payer = user, space = 8 + 64)]
+///     pub data_account: Account<'info, DataAccount>,
+///     #[account(mut)]
+///     pub user: Signer<'info>,
+///     pub system_program: Program<'info, System>,
+/// }
+/// ```
+#[proc_macro_derive(Accounts, attributes(account))]
+pub fn Accounts(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    program::expand_derive_accounts(input)
+}
+
+/// Marks a struct as a Solana-style account data structure
+///
+/// # Example
+///
+/// ```
+/// #[account]
+/// pub struct DataAccount {
+///     pub authority: Pubkey,
+///     pub value: u64,
+///     pub timestamp: i64,
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn account(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    program::expand_account(input)
+}
+
+/// Declares the program ID for a Neo N3 smart contract
+///
+/// # Example
+///
+/// ```
+/// declare_id!("NeoContractAddress123...");
+/// ```
+#[proc_macro]
+pub fn declare_id(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    program::expand_declare_id(input)
+}
+
+/// Generates error codes and handling for contract errors
+///
+/// # Example
+///
+/// ```
+/// #[derive(ErrorCode)]
+/// pub enum MyError {
+///     #[msg("Account not found")]
+///     AccountNotFound,
+///     #[msg("Insufficient funds")]
+///     InsufficientFunds,
+/// }
+/// ```
+#[proc_macro_derive(ErrorCode, attributes(msg))]
+pub fn ErrorCode(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    program::expand_error_code(input)
+}
+
+/// Event attribute for Solana-style events
+#[proc_macro_attribute]
+pub fn event(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    input
+}
+
+/// Macro to mark init_if_needed accounts
+#[proc_macro_attribute]
+pub fn init_if_needed(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    input
 }
 
 /// Marks a method as a contract initialization method

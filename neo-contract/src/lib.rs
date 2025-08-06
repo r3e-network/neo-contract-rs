@@ -14,8 +14,15 @@ pub mod smart_contract;
 pub mod storage;
 pub mod types;
 pub mod native;
+pub mod context;
+pub mod account;
+pub mod error;
 
-pub use neo_contract_proc_macros::{contract, structs};
+pub use neo_contract_proc_macros::{contract, structs, program, account as account_attr, declare_id, event, init_if_needed};
+
+// Re-export derive macros
+pub use neo_contract_proc_macros::Accounts;
+pub use neo_contract_proc_macros::ErrorCode;
 
 // Export contract annotations
 pub use neo_contract_proc_macros::{
@@ -69,9 +76,18 @@ pub mod prelude {
     // Types
     pub use crate::types::{
         Array, Bytes, H160, Int256, Map, ByteString,
-        Any, CallFlags, FindOptions, Notification, PublicKey, Signer, TriggerType, Tx,
+        Any, CallFlags, FindOptions, Notification, PublicKey, TriggerType, Tx,
     };
 
     // Macros
     pub use neo_contract_proc_macros::*;
+    
+    // Solana-style imports
+    pub use crate::context::{Context, AccountInfo, Account, Signer, SystemAccount, Program, System, Token, Result, Pubkey, Clock, Rent, CpiContext, Pda};
+    pub use crate::account::{AccountSerialize, AccountDeserialize, AccountLoader, AccountMeta, ToAccountInfo, ToAccountMetas};
+    pub use crate::error::ContractError;
+    
+    // Re-export derive macros and macros
+    pub use neo_contract_proc_macros::{Accounts, ErrorCode, program, account as account_attr, declare_id, event, init_if_needed};
+    pub use crate::{require, require_eq, require_neq, require_gt, require_gte, require_keys_eq, require_keys_neq};
 }

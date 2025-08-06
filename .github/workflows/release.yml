@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Ctarget-feature=+multivalue -Clink-arg=--initial-memory=2097152"
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+  build-and-upload:
+    name: Build and Upload
+    needs: create-release
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary_name: neo-compiler
+            asset_name: neo-compiler-linux-amd64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary_name: neo-compiler.exe
+            asset_name: neo-compiler-windows-amd64.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary_name: neo-compiler
+            asset_name: neo-compiler-darwin-amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: ${{ matrix.target }}
+          override: true
+      
+      - name: Build neo-compiler
+        run: cargo build -p neo-compiler --release --target ${{ matrix.target }}
+      
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+          asset_name: ${{ matrix.asset_name }}
+          asset_content_type: application/octet-stream
+
+  build-contracts:
+    name: Build Example Contracts
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          override: true
+      
+      - name: Build all examples
+        run: |
+          for dir in examples/*/; do
+            if [ -f "$dir/Cargo.toml" ]; then
+              echo "Building $dir"
+              (cd "$dir" && cargo build --target wasm32-unknown-unknown --release)
+            fi
+          done
+      
+      - name: Build neo-compiler
+        run: cargo build -p neo-compiler --release
+      
+      - name: Compile contracts to NEF
+        run: |
+          mkdir -p build
+          for wasm in examples/*/target/wasm32-unknown-unknown/release/*.wasm; do
+            if [ -f "$wasm" ] && [[ "$wasm" != *"deps"* ]]; then
+              echo "Compiling $wasm to NEF"
+              ./target/release/neo-compiler compile "$wasm" --output build || true
+            fi
+          done
+      
+      - name: Create contracts archive
+        run: |
+          tar czf neo-contracts.tar.gz build/*.nef build/*.manifest.json
+      
+      - name: Upload contracts archive
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./neo-contracts.tar.gz
+          asset_name: neo-contracts.tar.gz
+          asset_content_type: application/gzip
+
+  publish-crates:
+    name: Publish to crates.io
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      
+      - name: Publish neo-contract-proc-macros
+        run: cargo publish -p neo-contract-proc-macros --token ${{ secrets.CARGO_TOKEN }}
+        continue-on-error: true
+      
+      - name: Wait for crates.io to update
+        run: sleep 30
+      
+      - name: Publish neo-contract
+        run: cargo publish -p neo-contract --token ${{ secrets.CARGO_TOKEN }}
+        continue-on-error: true
+      
+      - name: Wait for crates.io to update
+        run: sleep 30
+      
+      - name: Publish neo-compiler
+        run: cargo publish -p neo-compiler --token ${{ secrets.CARGO_TOKEN }}
+        continue-on-error: true

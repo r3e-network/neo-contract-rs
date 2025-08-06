@@ -17,9 +17,12 @@
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
 
+declare_id!("StakingContract1111111111111111111111111112");
+
 /// Staking pool information
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct StakingPool {
+    pub pool_id: u32,
     pub stake_token: H160,      // Token to be staked
     pub reward_token: H160,     // Token given as reward
     pub reward_rate: u32,       // Reward rate in basis points per year
@@ -30,136 +33,152 @@ pub struct StakingPool {
 }
 
 /// User stake information
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UserStake {
+    pub pool_id: u32,
+    pub user: H160,
     pub amount: Int256,         // Staked amount
     pub stake_time: u64,        // When stake was created
     pub last_claim_time: u64,   // Last reward claim time
     pub accumulated_rewards: Int256, // Unclaimed rewards
 }
 
-/// Token staking contract with multiple pools and reward mechanisms
-#[contract_author("Neo Rust Framework", "dev@neo.org")]
-#[contract_version("1.0.0")]
-#[contract_standards("")]
-#[contract_permission("*", "*")]
-#[contract_meta("description", "Multi-pool token staking with yield farming")]
-#[contract_meta("category", "DeFi")]
-pub struct Staking {
-    // Pool management
-    pool_prefix: ByteString,           // pool_id -> pool info
-    pool_count_key: ByteString,        // total number of pools
-
-    // User stakes
-    stake_prefix: ByteString,          // pool_id + user -> stake info
-    user_pools_prefix: ByteString,     // user -> list of pool_ids
-
-    // Rewards tracking
-    total_rewards_prefix: ByteString,  // pool_id -> total rewards distributed
-    reward_balance_prefix: ByteString, // pool_id -> available reward balance
-
-    // Administrative
-    owner_key: ByteString,
-    operators_prefix: ByteString,      // authorized operators
-
-    // Configuration
-    paused_key: ByteString,
-    emergency_key: ByteString,         // emergency withdrawal enabled
-    min_stake_key: ByteString,         // minimum stake amount
-    max_pools_key: ByteString,         // maximum number of pools
+/// Platform data
+#[derive(Clone, Debug)]
+pub struct StakingPlatform {
+    pub owner: H160,
+    pub pool_count: u32,
+    pub total_value_locked: Int256,
+    pub is_paused: bool,
 }
 
-#[contract_impl]
-impl Staking {
-    /// Initialize the staking contract
-    pub fn init() -> Self {
-        Self {
-            pool_prefix: ByteString::from_literal("pool_"),
-            pool_count_key: ByteString::from_literal("pool_count"),
-            stake_prefix: ByteString::from_literal("stake_"),
-            user_pools_prefix: ByteString::from_literal("user_pools_"),
-            total_rewards_prefix: ByteString::from_literal("total_rewards_"),
-            reward_balance_prefix: ByteString::from_literal("reward_balance_"),
-            owner_key: ByteString::from_literal("owner"),
-            operators_prefix: ByteString::from_literal("operator_"),
-            paused_key: ByteString::from_literal("paused"),
-            emergency_key: ByteString::from_literal("emergency"),
-            min_stake_key: ByteString::from_literal("min_stake"),
-            max_pools_key: ByteString::from_literal("max_pools"),
-        }
-    }
+/// Initialize context
+#[derive(Accounts)]
+pub struct Initialize<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(init)]
+    pub platform: AccountInfo<'info>,
+}
+
+/// Create pool context
+#[derive(Accounts)]
+pub struct CreatePool<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(mut)]
+    pub platform: AccountInfo<'info>,
+    #[account(init)]
+    pub pool: AccountInfo<'info>,
+}
+
+/// Stake context
+#[derive(Accounts)]
+pub struct Stake<'info> {
+    #[account(signer)]
+    pub user: AccountInfo<'info>,
+    #[account(mut)]
+    pub pool: AccountInfo<'info>,
+    #[account(mut)]
+    pub user_stake_account: AccountInfo<'info>,
+    #[account(mut)]
+    pub platform: AccountInfo<'info>,
+}
+
+/// Unstake context
+#[derive(Accounts)]
+pub struct Unstake<'info> {
+    #[account(signer)]
+    pub user: AccountInfo<'info>,
+    #[account(mut)]
+    pub pool: AccountInfo<'info>,
+    #[account(mut)]
+    pub user_stake_account: AccountInfo<'info>,
+    #[account(mut)]
+    pub platform: AccountInfo<'info>,
+}
+
+/// Claim rewards context
+#[derive(Accounts)]
+pub struct ClaimRewards<'info> {
+    #[account(signer)]
+    pub user: AccountInfo<'info>,
+    #[account(mut)]
+    pub pool: AccountInfo<'info>,
+    #[account(mut)]
+    pub user_stake_account: AccountInfo<'info>,
+}
+
+/// Admin context
+#[derive(Accounts)]
+pub struct AdminAction<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(mut)]
+    pub platform: AccountInfo<'info>,
+}
+
+/// View context
+#[derive(Accounts)]
+pub struct View<'info> {
+    pub account: AccountInfo<'info>,
+}
+
+#[program]
+pub mod staking {
+    use super::*;
 
     /// Initialize the staking platform
-    #[method]
-    pub fn initialize(&self, owner: H160, min_stake_amount: Int256) -> bool {
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let platform = &mut ctx.accounts.platform;
+
+        // Initialize platform data
+        let platform_data = StakingPlatform {
+            owner: owner.key(),
+            pool_count: 0,
+            total_value_locked: Int256::zero(),
+            is_paused: false,
+        };
+
+        // Store platform data
         let storage = Storage::get_context();
+        Storage::put(storage, ByteString::from_literal("staking_platform"), platform_data.serialize());
 
-        // Check if already initialized
-        if Storage::get(storage.clone(), self.owner_key.clone()).is_some() {
-            Runtime::log(ByteString::from_literal("Already initialized"));
-            return false;
-        }
-
-        // Verify authorization
-        if !Runtime::check_witness(owner) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return false;
-        }
-
-        // Store configuration
-        Storage::put(storage.clone(), self.owner_key.clone(), owner.into_byte_string());
-        Storage::put(storage.clone(), self.pool_count_key.clone(), Int256::zero().into_byte_string());
-        Storage::put(storage.clone(), self.min_stake_key.clone(), min_stake_amount.into_byte_string());
-        Storage::put(storage.clone(), self.max_pools_key.clone(), Int256::new(100).into_byte_string()); // Max 100 pools
-
-        let mut event_data = Array::new(); event_data.push(owner.into_any()); Runtime::notify(ByteString::from_literal("StakingInitialized"), event_data);
-        true
+        emit!(PlatformInitialized { owner: owner.key() });
+        Ok(())
     }
 
     /// Create a new staking pool
-    #[method]
     pub fn create_pool(
-        &self,
+        ctx: Context<CreatePool>,
         stake_token: H160,
         reward_token: H160,
         reward_rate: u32,
         lock_period: u64,
         penalty_rate: u32
-    ) -> Int256 {
-        if !self.is_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only owner can create pools"));
-            return Int256::new(-1);
-        }
+    ) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let platform = &mut ctx.accounts.platform;
+        let pool = &mut ctx.accounts.pool;
 
         // Validate parameters
-        if reward_rate > 10000 { // Max 100% APY
-            Runtime::log(ByteString::from_literal("Reward rate too high (max 100%)"));
-            return Int256::new(-1);
-        }
-
-        if penalty_rate > 5000 { // Max 50% penalty
-            Runtime::log(ByteString::from_literal("Penalty rate too high (max 50%)"));
-            return Int256::new(-1);
-        }
-
-        if lock_period > 31536000 { // Max 1 year lock
-            Runtime::log(ByteString::from_literal("Lock period too long (max 1 year)"));
-            return Int256::new(-1);
-        }
+        require!(reward_rate <= 100000, "Reward rate too high (max 1000%)");
+        require!(penalty_rate <= 5000, "Penalty rate too high (max 50%)");
+        require!(lock_period <= 31536000, "Lock period too long (max 1 year)");
 
         let storage = Storage::get_context();
+        let mut platform_data = get_platform_data(&storage)?;
 
-        // Check pool limit
-        let pool_count = self.get_pool_count();
-        let max_pools = self.get_max_pools();
-        if pool_count >= max_pools {
-            Runtime::log(ByteString::from_literal("Maximum number of pools reached"));
-            return Int256::new(-1);
-        }
+        require!(owner.key() == platform_data.owner, "Unauthorized: Not platform owner");
+        require!(!platform_data.is_paused, "Platform is paused");
 
         // Create new pool
-        let pool_id = pool_count.checked_add(&Int256::one());
-        let pool = StakingPool {
+        platform_data.pool_count += 1;
+        let pool_id = platform_data.pool_count;
+
+        let pool_data = StakingPool {
+            pool_id,
             stake_token,
             reward_token,
             reward_rate,
@@ -169,690 +188,364 @@ impl Staking {
             is_active: true,
         };
 
-        // Store pool
-        let pool_key = self.pool_prefix.concat(&pool_id.into_byte_string());
-        let serialized_pool = self.serialize_pool(pool);
-        Storage::put(storage.clone(), pool_key, serialized_pool);
+        // Store pool data
+        let pool_key = format!("staking_pool_{}", pool_id);
+        Storage::put(storage.clone(), ByteString::from_str(&pool_key), pool_data.serialize());
 
-        // Update pool count
-        Storage::put(storage.clone(), self.pool_count_key.clone(), pool_id.into_byte_string());
+        // Update platform data
+        Storage::put(storage, ByteString::from_literal("staking_platform"), platform_data.serialize());
 
-        // Initialize pool balances
-        let reward_balance_key = self.reward_balance_prefix.concat(&pool_id.into_byte_string());
-        Storage::put(storage.clone(), reward_balance_key, Int256::zero().into_byte_string());
-
-        let total_rewards_key = self.total_rewards_prefix.concat(&pool_id.into_byte_string());
-        Storage::put(storage.clone(), total_rewards_key, Int256::zero().into_byte_string());
-
-        let mut event_data = Array::new();
-        event_data.push(pool_id.into_any());
-        event_data.push(stake_token.into_any());
-        event_data.push(reward_token.into_any());
-        event_data.push(Int256::new(reward_rate as i64).into_any());
-        Runtime::notify(ByteString::from_literal("PoolCreated"), event_data);
-
-        pool_id
+        emit!(PoolCreated {
+            pool_id,
+            stake_token,
+            reward_token,
+            reward_rate,
+            lock_period,
+        });
+        Ok(())
     }
 
     /// Stake tokens in a pool
-    #[method]
-    pub fn stake(&self, pool_id: Int256, user: H160, amount: Int256) -> bool {
-        // Validate inputs
-        if amount <= Int256::zero() {
-            Runtime::log(ByteString::from_literal("Invalid stake amount"));
-            return false;
-        }
+    pub fn stake_tokens(
+        ctx: Context<Stake>,
+        pool_id: u32,
+        amount: Int256
+    ) -> Result<()> {
+        let user = &ctx.accounts.user;
+        let pool = &mut ctx.accounts.pool;
+        let user_stake_account = &mut ctx.accounts.user_stake_account;
+        let platform = &mut ctx.accounts.platform;
 
-        // Check minimum stake
-        let min_stake = self.get_min_stake();
-        if amount < min_stake {
-            Runtime::log(ByteString::from_literal("Amount below minimum stake"));
-            return false;
-        }
-
-        // Verify authorization
-        if !Runtime::check_witness(user) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return false;
-        }
-
-        // Check if paused
-        if self.is_paused() {
-            Runtime::log(ByteString::from_literal("Staking is paused"));
-            return false;
-        }
-
-        // Get pool info
-        let pool = match self.get_pool(pool_id) {
-            Some(p) => p,
-            None => {
-                Runtime::log(ByteString::from_literal("Pool not found"));
-                return false;
-            }
-        };
-
-        if !pool.is_active {
-            Runtime::log(ByteString::from_literal("Pool is not active"));
-            return false;
-        }
+        require!(amount > Int256::zero(), "Amount must be positive");
 
         let storage = Storage::get_context();
-        let current_time = Runtime::get_time();
+        let platform_data = get_platform_data(&storage)?;
+        require!(!platform_data.is_paused, "Platform is paused");
 
-        // Get existing stake or create new one
-        let stake_key = self.get_stake_key(pool_id, user);
-        let mut user_stake = match Storage::get(storage.clone(), stake_key.clone()) {
-            Some(stake_data) => self.deserialize_stake(stake_data),
+        // Get pool data
+        let pool_key = format!("staking_pool_{}", pool_id);
+        let mut pool_data: StakingPool = match Storage::get(storage.clone(), ByteString::from_str(&pool_key)) {
+            Some(data) => StakingPool::deserialize(data)?,
+            None => return Err(ErrorCode::PoolNotFound.into()),
+        };
+
+        require!(pool_data.is_active, "Pool is not active");
+
+        // Get or create user stake
+        let stake_key = format!("user_stake_{}_{}", pool_id, user.key());
+        let mut user_stake = match Storage::get(storage.clone(), ByteString::from_str(&stake_key)) {
+            Some(data) => UserStake::deserialize(data)?,
             None => UserStake {
+                pool_id,
+                user: user.key(),
                 amount: Int256::zero(),
-                stake_time: current_time,
-                last_claim_time: current_time,
+                stake_time: Runtime::get_time(),
+                last_claim_time: Runtime::get_time(),
                 accumulated_rewards: Int256::zero(),
-            }
+            },
         };
 
         // Calculate pending rewards before updating stake
-        if user_stake.amount > Int256::zero() {
-            let pending_rewards = self.calculate_rewards(&pool, &user_stake, current_time);
-            user_stake.accumulated_rewards = user_stake.accumulated_rewards.checked_add(&pending_rewards);
-        }
+        let pending_rewards = calculate_rewards(&user_stake, &pool_data)?;
+        user_stake.accumulated_rewards = user_stake.accumulated_rewards.checked_add(&pending_rewards);
 
         // Update stake
         user_stake.amount = user_stake.amount.checked_add(&amount);
-        user_stake.last_claim_time = current_time;
-        if user_stake.stake_time == 0 {
-            user_stake.stake_time = current_time;
+        user_stake.last_claim_time = Runtime::get_time();
+        
+        // If this is a new stake, update stake time
+        if user_stake.stake_time == user_stake.last_claim_time {
+            user_stake.stake_time = Runtime::get_time();
         }
-
-        // Store updated stake
-        let serialized_stake = self.serialize_stake(user_stake);
-        Storage::put(storage.clone(), stake_key, serialized_stake);
 
         // Update pool total
-        let updated_pool = StakingPool {
-            total_staked: pool.total_staked.checked_add(&amount),
-            ..pool
-        };
-        let pool_key = self.pool_prefix.concat(&pool_id.into_byte_string());
-        Storage::put(storage.clone(), pool_key, self.serialize_pool(updated_pool));
+        pool_data.total_staked = pool_data.total_staked.checked_add(&amount);
 
-        // Add pool to user's pool list
-        self.add_user_pool(user, pool_id);
+        // Store updated data
+        Storage::put(storage.clone(), ByteString::from_str(&stake_key), user_stake.serialize());
+        Storage::put(storage, ByteString::from_str(&pool_key), pool_data.serialize());
 
-        let mut event_data = Array::new();
-        event_data.push(pool_id.into_any());
-        event_data.push(user.into_any());
-        event_data.push(amount.into_any());
-        Runtime::notify(ByteString::from_literal("TokensStaked"), event_data);
+        emit!(TokensStaked {
+            pool_id,
+            user: user.key(),
+            amount,
+            total_staked: user_stake.amount,
+        });
 
-        true
-    }
-
-    /// Claim rewards from a pool
-    #[method]
-    pub fn claim_rewards(&self, pool_id: Int256, user: H160) -> Int256 {
-        // Verify authorization
-        if !Runtime::check_witness(user) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return Int256::zero();
-        }
-
-        // Get pool and stake info
-        let pool = match self.get_pool(pool_id) {
-            Some(p) => p,
-            None => {
-                Runtime::log(ByteString::from_literal("Pool not found"));
-                return Int256::zero();
-            }
-        };
-
-        let storage = Storage::get_context();
-        let stake_key = self.get_stake_key(pool_id, user);
-        let mut user_stake = match Storage::get(storage.clone(), stake_key.clone()) {
-            Some(stake_data) => self.deserialize_stake(stake_data),
-            None => {
-                Runtime::log(ByteString::from_literal("No stake found"));
-                return Int256::zero();
-            }
-        };
-
-        if user_stake.amount <= Int256::zero() {
-            Runtime::log(ByteString::from_literal("No tokens staked"));
-            return Int256::zero();
-        }
-
-        let current_time = Runtime::get_time();
-
-        // Calculate total rewards
-        let pending_rewards = self.calculate_rewards(&pool, &user_stake, current_time);
-        let total_rewards = user_stake.accumulated_rewards.checked_add(&pending_rewards);
-
-        if total_rewards <= Int256::zero() {
-            Runtime::log(ByteString::from_literal("No rewards to claim"));
-            return Int256::zero();
-        }
-
-        // Check reward balance
-        let reward_balance = self.get_reward_balance(pool_id);
-        if reward_balance < total_rewards {
-            Runtime::log(ByteString::from_literal("Insufficient reward balance"));
-            return Int256::zero();
-        }
-
-        // Update stake
-        user_stake.accumulated_rewards = Int256::zero();
-        user_stake.last_claim_time = current_time;
-        Storage::put(storage.clone(), stake_key, self.serialize_stake(user_stake));
-
-        // Update reward balance
-        let new_reward_balance = reward_balance.checked_sub(&total_rewards);
-        let reward_balance_key = self.reward_balance_prefix.concat(&pool_id.into_byte_string());
-        Storage::put(storage.clone(), reward_balance_key, new_reward_balance.into_byte_string());
-
-        // Update total rewards distributed
-        let total_rewards_key = self.total_rewards_prefix.concat(&pool_id.into_byte_string());
-        let current_total = match Storage::get(storage.clone(), total_rewards_key.clone()) {
-            Some(total_bytes) => Int256::from_byte_string(total_bytes),
-            None => Int256::zero(),
-        };
-        let new_total = current_total.checked_add(&total_rewards);
-        Storage::put(storage.clone(), total_rewards_key, new_total.into_byte_string());
-
-        let mut event_data = Array::new();
-        event_data.push(pool_id.into_any());
-        event_data.push(user.into_any());
-        event_data.push(total_rewards.into_any());
-        Runtime::notify(ByteString::from_literal("RewardsClaimed"), event_data);
-
-        total_rewards
+        Ok(())
     }
 
     /// Unstake tokens from a pool
-    #[method]
-    pub fn unstake(&self, pool_id: Int256, user: H160, amount: Int256) -> bool {
-        // Validate inputs
-        if amount <= Int256::zero() {
-            Runtime::log(ByteString::from_literal("Invalid unstake amount"));
-            return false;
-        }
+    pub fn unstake_tokens(
+        ctx: Context<Unstake>,
+        pool_id: u32,
+        amount: Int256
+    ) -> Result<()> {
+        let user = &ctx.accounts.user;
+        let pool = &mut ctx.accounts.pool;
+        let user_stake_account = &mut ctx.accounts.user_stake_account;
+        let platform = &mut ctx.accounts.platform;
 
-        // Verify authorization
-        if !Runtime::check_witness(user) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return false;
-        }
-
-        // Get pool and stake info
-        let pool = match self.get_pool(pool_id) {
-            Some(p) => p,
-            None => {
-                Runtime::log(ByteString::from_literal("Pool not found"));
-                return false;
-            }
-        };
+        require!(amount > Int256::zero(), "Amount must be positive");
 
         let storage = Storage::get_context();
-        let stake_key = self.get_stake_key(pool_id, user);
-        let mut user_stake = match Storage::get(storage.clone(), stake_key.clone()) {
-            Some(stake_data) => self.deserialize_stake(stake_data),
-            None => {
-                Runtime::log(ByteString::from_literal("No stake found"));
-                return false;
-            }
+        let platform_data = get_platform_data(&storage)?;
+
+        // Get pool data
+        let pool_key = format!("staking_pool_{}", pool_id);
+        let mut pool_data: StakingPool = match Storage::get(storage.clone(), ByteString::from_str(&pool_key)) {
+            Some(data) => StakingPool::deserialize(data)?,
+            None => return Err(ErrorCode::PoolNotFound.into()),
         };
 
-        if user_stake.amount < amount {
-            Runtime::log(ByteString::from_literal("Insufficient staked amount"));
-            return false;
-        }
+        // Get user stake
+        let stake_key = format!("user_stake_{}_{}", pool_id, user.key());
+        let mut user_stake: UserStake = match Storage::get(storage.clone(), ByteString::from_str(&stake_key)) {
+            Some(data) => UserStake::deserialize(data)?,
+            None => return Err(ErrorCode::StakeNotFound.into()),
+        };
 
-        let current_time = Runtime::get_time();
-        let lock_end_time = user_stake.stake_time + pool.lock_period;
-        let mut penalty_amount = Int256::zero();
-
-        // Calculate penalty for early withdrawal
-        if current_time < lock_end_time && !self.is_emergency_enabled() {
-            penalty_amount = amount
-                .checked_mul(&Int256::new(pool.penalty_rate as i64))
-                .checked_div(&Int256::new(10000));
-        }
+        require!(user_stake.amount >= amount, "Insufficient staked amount");
 
         // Calculate pending rewards
-        let pending_rewards = self.calculate_rewards(&pool, &user_stake, current_time);
+        let pending_rewards = calculate_rewards(&user_stake, &pool_data)?;
         user_stake.accumulated_rewards = user_stake.accumulated_rewards.checked_add(&pending_rewards);
+
+        // Check if lock period has passed
+        let current_time = Runtime::get_time();
+        let mut final_amount = amount;
+        let mut penalty = Int256::zero();
+
+        if current_time < user_stake.stake_time + pool_data.lock_period {
+            // Apply early withdrawal penalty
+            penalty = amount.checked_mul(&Int256::new(pool_data.penalty_rate as i64))
+                .checked_div(&Int256::new(10000));
+            final_amount = amount.checked_sub(&penalty);
+        }
 
         // Update stake
         user_stake.amount = user_stake.amount.checked_sub(&amount);
         user_stake.last_claim_time = current_time;
 
-        if user_stake.amount == Int256::zero() {
-            // Remove stake completely
-            Storage::delete(storage.clone(), stake_key);
-            self.remove_user_pool(user, pool_id);
-        } else {
-            // Update stake
-            Storage::put(storage.clone(), stake_key, self.serialize_stake(user_stake));
-        }
-
         // Update pool total
-        let updated_pool = StakingPool {
-            total_staked: pool.total_staked.checked_sub(&amount),
-            ..pool
-        };
-        let pool_key = self.pool_prefix.concat(&pool_id.into_byte_string());
-        Storage::put(storage.clone(), pool_key, self.serialize_pool(updated_pool));
+        pool_data.total_staked = pool_data.total_staked.checked_sub(&amount);
 
-        let final_amount = amount.checked_sub(&penalty_amount);
+        // Store updated data
+        if user_stake.amount == Int256::zero() {
+            Storage::delete(storage.clone(), ByteString::from_str(&stake_key));
+        } else {
+            Storage::put(storage.clone(), ByteString::from_str(&stake_key), user_stake.serialize());
+        }
+        Storage::put(storage, ByteString::from_str(&pool_key), pool_data.serialize());
 
-        let mut event_data = Array::new();
-        event_data.push(pool_id.into_any());
-        event_data.push(user.into_any());
-        event_data.push(amount.into_any());
-        event_data.push(penalty_amount.into_any());
-        event_data.push(final_amount.into_any());
-        Runtime::notify(ByteString::from_literal("TokensUnstaked"), event_data);
+        emit!(TokensUnstaked {
+            pool_id,
+            user: user.key(),
+            amount: final_amount,
+            penalty,
+            remaining_staked: user_stake.amount,
+        });
 
-        true
+        Ok(())
     }
 
-    /// Get user's stake information
-    #[method]
-    #[safe]
-    pub fn get_user_stake(&self, pool_id: Int256, user: H160) -> Map<ByteString, Any> {
-        let mut result = Map::new();
+    /// Claim accumulated rewards
+    pub fn claim_rewards(
+        ctx: Context<ClaimRewards>,
+        pool_id: u32
+    ) -> Result<()> {
+        let user = &ctx.accounts.user;
+        let pool = &mut ctx.accounts.pool;
+        let user_stake_account = &mut ctx.accounts.user_stake_account;
 
-        let stake_key = self.get_stake_key(pool_id, user);
         let storage = Storage::get_context();
 
-        match Storage::get(storage.clone(), stake_key) {
-            Some(stake_data) => {
-                let user_stake = self.deserialize_stake(stake_data);
-                let pool = self.get_pool(pool_id).unwrap_or_else(|| StakingPool {
-                    stake_token: H160::zero(),
-                    reward_token: H160::zero(),
-                    reward_rate: 0,
-                    lock_period: 0,
-                    penalty_rate: 0,
-                    total_staked: Int256::zero(),
-                    is_active: false,
-                });
+        // Get pool data
+        let pool_key = format!("staking_pool_{}", pool_id);
+        let pool_data: StakingPool = match Storage::get(storage.clone(), ByteString::from_str(&pool_key)) {
+            Some(data) => StakingPool::deserialize(data)?,
+            None => return Err(ErrorCode::PoolNotFound.into()),
+        };
 
-                let current_time = Runtime::get_time();
-                let pending_rewards = self.calculate_rewards(&pool, &user_stake, current_time);
-                let total_rewards = user_stake.accumulated_rewards.checked_add(&pending_rewards);
+        // Get user stake
+        let stake_key = format!("user_stake_{}_{}", pool_id, user.key());
+        let mut user_stake: UserStake = match Storage::get(storage.clone(), ByteString::from_str(&stake_key)) {
+            Some(data) => UserStake::deserialize(data)?,
+            None => return Err(ErrorCode::StakeNotFound.into()),
+        };
 
-                result.put(ByteString::from_literal("staked_amount"), user_stake.amount.into_any());
-                result.put(ByteString::from_literal("stake_time"), Int256::new(user_stake.stake_time as i64).into_any());
-                result.put(ByteString::from_literal("last_claim_time"), Int256::new(user_stake.last_claim_time as i64).into_any());
-                result.put(ByteString::from_literal("accumulated_rewards"), user_stake.accumulated_rewards.into_any());
-                result.put(ByteString::from_literal("pending_rewards"), pending_rewards.into_any());
-                result.put(ByteString::from_literal("total_rewards"), total_rewards.into_any());
-                result.put(ByteString::from_literal("lock_end_time"), Int256::new((user_stake.stake_time + pool.lock_period) as i64).into_any());
-            },
-            None => {
-                result.put(ByteString::from_literal("error"), ByteString::from_literal("No stake found").into_any());
-            }
-        }
+        // Calculate total claimable rewards
+        let pending_rewards = calculate_rewards(&user_stake, &pool_data)?;
+        let total_rewards = user_stake.accumulated_rewards.checked_add(&pending_rewards);
 
-        result
+        require!(total_rewards > Int256::zero(), "No rewards to claim");
+
+        // Reset accumulated rewards and update claim time
+        user_stake.accumulated_rewards = Int256::zero();
+        user_stake.last_claim_time = Runtime::get_time();
+
+        // Store updated stake
+        Storage::put(storage, ByteString::from_str(&stake_key), user_stake.serialize());
+
+        emit!(RewardsClaimed {
+            pool_id,
+            user: user.key(),
+            amount: total_rewards,
+        });
+
+        Ok(())
+    }
+
+    /// Emergency pause (owner only)
+    pub fn emergency_pause(ctx: Context<AdminAction>) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let platform = &mut ctx.accounts.platform;
+
+        let storage = Storage::get_context();
+        let mut platform_data = get_platform_data(&storage)?;
+
+        require!(owner.key() == platform_data.owner, "Unauthorized: Not platform owner");
+
+        platform_data.is_paused = true;
+        Storage::put(storage, ByteString::from_literal("staking_platform"), platform_data.serialize());
+
+        emit!(PlatformPaused {});
+        Ok(())
     }
 
     /// Get pool information
-    #[method]
-    #[safe]
-    pub fn get_pool(&self, pool_id: Int256) -> Option<StakingPool> {
+    pub fn get_pool_info(ctx: Context<View>, pool_id: u32) -> Result<StakingPool> {
         let storage = Storage::get_context();
-        let pool_key = self.pool_prefix.concat(&pool_id.into_byte_string());
-
-        match Storage::get(storage.clone(), pool_key) {
-            Some(pool_data) => Some(self.deserialize_pool(pool_data)),
-            None => None,
-        }
-    }
-
-    /// Get pool count
-    #[method]
-    #[safe]
-    pub fn get_pool_count(&self) -> Int256 {
-        let storage = Storage::get_context();
-        match Storage::get(storage.clone(), self.pool_count_key.clone()) {
-            Some(count_bytes) => Int256::from_byte_string(count_bytes),
-            None => Int256::zero(),
-        }
-    }
-
-    /// Add rewards to a pool
-    #[method]
-    pub fn add_rewards(&self, pool_id: Int256, amount: Int256) -> bool {
-        if !self.is_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only owner can add rewards"));
-            return false;
-        }
-
-        if amount <= Int256::zero() {
-            Runtime::log(ByteString::from_literal("Invalid reward amount"));
-            return false;
-        }
-
-        // Verify pool exists
-        if self.get_pool(pool_id).is_none() {
-            Runtime::log(ByteString::from_literal("Pool not found"));
-            return false;
-        }
-
-        let storage = Storage::get_context();
-        let reward_balance_key = self.reward_balance_prefix.concat(&pool_id.into_byte_string());
-
-        let current_balance = self.get_reward_balance(pool_id);
-        let new_balance = current_balance.checked_add(&amount);
-        Storage::put(storage.clone(), reward_balance_key, new_balance.into_byte_string());
-
-        let mut event_data = Array::new();
-        event_data.push(pool_id.into_any());
-        event_data.push(amount.into_any());
-        Runtime::notify(ByteString::from_literal("RewardsAdded"), event_data);
-
-        true
-    }
-
-    /// Enable emergency withdrawal
-    #[method]
-    pub fn enable_emergency(&self) -> bool {
-        if !self.is_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only owner can enable emergency"));
-            return false;
-        }
-
-        let storage = Storage::get_context();
-        Storage::put(storage.clone(), self.emergency_key.clone(), ByteString::from_literal("true"));
-
-        Runtime::notify(ByteString::from_literal("EmergencyEnabled"), Array::new());
-        true
-    }
-
-    /// Check if emergency withdrawal is enabled
-    #[method]
-    #[safe]
-    pub fn is_emergency_enabled(&self) -> bool {
-        let storage = Storage::get_context();
-        Storage::get(storage.clone(), self.emergency_key.clone()).is_some()
-    }
-
-    /// Check if contract is paused
-    #[method]
-    #[safe]
-    pub fn is_paused(&self) -> bool {
-        let storage = Storage::get_context();
-        Storage::get(storage.clone(), self.paused_key.clone()).is_some()
-    }
-
-    /// Get contract owner
-    #[method]
-    #[safe]
-    pub fn get_owner(&self) -> H160 {
-        let storage = Storage::get_context();
-        match Storage::get(storage.clone(), self.owner_key.clone()) {
-            Some(owner_bytes) => H160::from_byte_string(owner_bytes),
-            None => H160::zero(),
-        }
-    }
-
-    // Helper functions
-
-    fn is_owner(&self) -> bool {
-        let owner = self.get_owner();
-        if owner == H160::zero() {
-            return false;
-        }
-        Runtime::check_witness(owner)
-    }
-
-    fn get_min_stake(&self) -> Int256 {
-        let storage = Storage::get_context();
-        match Storage::get(storage.clone(), self.min_stake_key.clone()) {
-            Some(min_bytes) => Int256::from_byte_string(min_bytes),
-            None => Int256::new(1000000), // Default 1 token with 6 decimals
-        }
-    }
-
-    fn get_max_pools(&self) -> Int256 {
-        let storage = Storage::get_context();
-        match Storage::get(storage.clone(), self.max_pools_key.clone()) {
-            Some(max_bytes) => Int256::from_byte_string(max_bytes),
-            None => Int256::new(100),
-        }
-    }
-
-    fn get_reward_balance(&self, pool_id: Int256) -> Int256 {
-        let storage = Storage::get_context();
-        let reward_balance_key = self.reward_balance_prefix.concat(&pool_id.into_byte_string());
-
-        match Storage::get(storage.clone(), reward_balance_key) {
-            Some(balance_bytes) => Int256::from_byte_string(balance_bytes),
-            None => Int256::zero(),
-        }
-    }
-
-    fn get_stake_key(&self, pool_id: Int256, user: H160) -> ByteString {
-        self.stake_prefix
-            .concat(&pool_id.into_byte_string())
-            .concat(&ByteString::from_literal("_"))
-            .concat(&user.into_byte_string())
-    }
-
-    fn calculate_rewards(&self, pool: &StakingPool, stake: &UserStake, current_time: u64) -> Int256 {
-        if stake.amount <= Int256::zero() || current_time <= stake.last_claim_time {
-            return Int256::zero();
-        }
-
-        let time_diff = current_time - stake.last_claim_time;
-        let seconds_per_year = 31536000u64; // 365 * 24 * 60 * 60
-
-        // Calculate rewards: (staked_amount * reward_rate * time_diff) / (10000 * seconds_per_year)
-        let rewards = stake.amount
-            .checked_mul(&Int256::new(pool.reward_rate as i64))
-            .checked_mul(&Int256::new(time_diff as i64))
-            .checked_div(&Int256::new(10000))
-            .checked_div(&Int256::new(seconds_per_year as i64));
-
-        rewards
-    }
-
-    fn add_user_pool(&self, user: H160, pool_id: Int256) {
-        let storage = Storage::get_context();
-        let user_pools_key = self.user_pools_prefix.concat(&user.into_byte_string());
+        let pool_key = format!("staking_pool_{}", pool_id);
         
-        // Get existing pools for user
-        let mut user_pools = match Storage::get(storage.clone(), user_pools_key.clone()) {
-            Some(pools_data) => self.deserialize_user_pools(pools_data),
-            None => Array::new(),
+        match Storage::get(storage, ByteString::from_str(&pool_key)) {
+            Some(data) => StakingPool::deserialize(data),
+            None => Err(ErrorCode::PoolNotFound.into()),
+        }
+    }
+
+    /// Get user stake information
+    pub fn get_user_stake(ctx: Context<View>, pool_id: u32, user: H160) -> Result<UserStake> {
+        let storage = Storage::get_context();
+        let stake_key = format!("user_stake_{}_{}", pool_id, user);
+        
+        match Storage::get(storage, ByteString::from_str(&stake_key)) {
+            Some(data) => UserStake::deserialize(data),
+            None => Err(ErrorCode::StakeNotFound.into()),
+        }
+    }
+
+    /// Calculate pending rewards for user
+    pub fn get_pending_rewards(ctx: Context<View>, pool_id: u32, user: H160) -> Result<Int256> {
+        let storage = Storage::get_context();
+
+        // Get pool data
+        let pool_key = format!("staking_pool_{}", pool_id);
+        let pool_data: StakingPool = match Storage::get(storage.clone(), ByteString::from_str(&pool_key)) {
+            Some(data) => StakingPool::deserialize(data)?,
+            None => return Err(ErrorCode::PoolNotFound.into()),
         };
-        
-        // Add new pool if not already present
-        let mut pool_exists = false;
-        for i in 0..user_pools.size() {
-            let existing_pool_id = user_pools.get(i);
-            if existing_pool_id == pool_id {
-                pool_exists = true;
-                break;
-            }
-        }
-        
-        if !pool_exists {
-            user_pools.push(pool_id);
-            let serialized_pools = self.serialize_user_pools(&user_pools);
-            Storage::put(storage, user_pools_key, serialized_pools);
-        }
-        
-        let mut event_data = Array::new();
-        event_data.push(user.into_any());
-        event_data.push(pool_id.into_any());
-        Runtime::notify(ByteString::from_literal("UserPoolAdded"), event_data);
-    }
 
-    fn remove_user_pool(&self, user: H160, pool_id: Int256) {
-        let storage = Storage::get_context();
-        let user_pools_key = self.user_pools_prefix.concat(&user.into_byte_string());
-        
-        // Get existing pools for user
-        let mut user_pools = match Storage::get(storage.clone(), user_pools_key.clone()) {
-            Some(pools_data) => self.deserialize_user_pools(pools_data),
-            None => return, // No pools to remove
+        // Get user stake
+        let stake_key = format!("user_stake_{}_{}", pool_id, user);
+        let user_stake: UserStake = match Storage::get(storage, ByteString::from_str(&stake_key)) {
+            Some(data) => UserStake::deserialize(data)?,
+            None => return Ok(Int256::zero()),
         };
-        
-        // Remove pool if present
-        let mut new_pools = Array::new();
-        for i in 0..user_pools.size() {
-            let existing_pool_id = user_pools.get(i);
-            if existing_pool_id != pool_id {
-                new_pools.push(existing_pool_id);
-            }
-        }
-        
-        // Update storage
-        if new_pools.size() == 0 {
-            Storage::delete(storage, user_pools_key);
-        } else {
-            let serialized_pools = self.serialize_user_pools(&new_pools);
-            Storage::put(storage, user_pools_key, serialized_pools);
-        }
-        
-        let mut event_data = Array::new();
-        event_data.push(user.into_any());
-        event_data.push(pool_id.into_any());
-        Runtime::notify(ByteString::from_literal("UserPoolRemoved"), event_data);
+
+        let pending = calculate_rewards(&user_stake, &pool_data)?;
+        Ok(user_stake.accumulated_rewards.checked_add(&pending))
+    }
+}
+
+// Helper functions
+fn get_platform_data(storage: &Storage) -> Result<StakingPlatform> {
+    match Storage::get(storage.clone(), ByteString::from_literal("staking_platform")) {
+        Some(data) => StakingPlatform::deserialize(data),
+        None => Err(ErrorCode::PlatformNotInitialized.into()),
+    }
+}
+
+fn calculate_rewards(user_stake: &UserStake, pool: &StakingPool) -> Result<Int256> {
+    if user_stake.amount == Int256::zero() {
+        return Ok(Int256::zero());
     }
 
-    fn serialize_pool(&self, pool: StakingPool) -> ByteString {
-        // Simplified serialization
-        let mut data = pool.stake_token.into_byte_string();
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&pool.reward_token.into_byte_string());
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&ByteString::from_bytes(&pool.reward_rate.to_le_bytes()));
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&ByteString::from_bytes(&pool.lock_period.to_le_bytes()));
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&ByteString::from_bytes(&pool.penalty_rate.to_le_bytes()));
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&pool.total_staked.into_byte_string());
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&ByteString::from_bytes(&[if pool.is_active { 1u8 } else { 0u8 }]));
-        data
-    }
+    let current_time = Runtime::get_time();
+    let time_elapsed = current_time - user_stake.last_claim_time;
+    
+    // Calculate rewards: (amount * rate * time) / (365 * 24 * 3600 * 10000)
+    let annual_seconds = Int256::new(31536000); // 365 * 24 * 3600
+    let basis_points = Int256::new(10000);
+    
+    let rewards = user_stake.amount
+        .checked_mul(&Int256::new(pool.reward_rate as i64))
+        .checked_mul(&Int256::new(time_elapsed as i64))
+        .checked_div(&annual_seconds)
+        .checked_div(&basis_points);
 
-    fn deserialize_pool(&self, data: ByteString) -> StakingPool {
-        let bytes = data.to_bytes();
-        
-        if bytes.len() < 100 { // Minimum size check
-            return StakingPool {
-                stake_token: H160::zero(),
-                reward_token: H160::zero(),
-                reward_rate: 0,
-                lock_period: 0,
-                penalty_rate: 0,
-                total_staked: Int256::zero(),
-                is_active: false,
-            };
-        }
-        
-        let mut offset = 0;
-        
-        // Deserialize stake_token (20 bytes)
-        let stake_token = H160::from_byte_string(ByteString::from_bytes(&bytes[offset..offset + 20]));
-        offset += 20;
+    Ok(rewards)
+}
 
-        // Deserialize reward_token (20 bytes)
-        let reward_token = H160::from_byte_string(ByteString::from_bytes(&bytes[offset..offset + 20]));
-        offset += 20;
+// Events
+#[event]
+pub struct PlatformInitialized {
+    pub owner: H160,
+}
 
-        // Deserialize total_staked (32 bytes)
-        let total_staked = Int256::from_byte_string(ByteString::from_bytes(&bytes[offset..offset + 32]));
-        offset += 32;
-        
-        // Deserialize reward_rate (32 bytes)
-        let reward_rate = u32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
-        offset += 4;
-        
-        // Deserialize lock_period (8 bytes)
-        let lock_period = u64::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3],
-            bytes[offset+4], bytes[offset+5], bytes[offset+6], bytes[offset+7]]);
-        offset += 8;
-        
-        // Deserialize penalty_rate (32 bytes)
-        let penalty_rate = u32::from_le_bytes([bytes[offset], bytes[offset+1], bytes[offset+2], bytes[offset+3]]);
-        offset += 4;
-        
-        // Deserialize is_active (1 byte)
-        let is_active = bytes[offset] != 0;
-        offset += 1;
-        
-        StakingPool {
-            stake_token,
-            reward_token,
-            reward_rate,
-            lock_period,
-            penalty_rate,
-            total_staked,
-            is_active,
-        }
-    }
+#[event]
+pub struct PoolCreated {
+    pub pool_id: u32,
+    pub stake_token: H160,
+    pub reward_token: H160,
+    pub reward_rate: u32,
+    pub lock_period: u64,
+}
 
-    fn serialize_stake(&self, stake: UserStake) -> ByteString {
-        // Simplified serialization
-        let mut data = stake.amount.into_byte_string();
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&ByteString::from_bytes(&stake.stake_time.to_le_bytes()));
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&ByteString::from_bytes(&stake.last_claim_time.to_le_bytes()));
-        data = data.concat(&ByteString::from_literal("|"));
-        data = data.concat(&stake.accumulated_rewards.into_byte_string());
-        data
-    }
+#[event]
+pub struct TokensStaked {
+    pub pool_id: u32,
+    pub user: H160,
+    pub amount: Int256,
+    pub total_staked: Int256,
+}
 
-    fn deserialize_stake(&self, __data: ByteString) -> UserStake {
-        // Simplified deserialization - in production, use proper parsing
-        UserStake {
-            amount: Int256::zero(),
-            stake_time: 0,
-            last_claim_time: 0,
-            accumulated_rewards: Int256::zero(),
-        }
-    }
+#[event]
+pub struct TokensUnstaked {
+    pub pool_id: u32,
+    pub user: H160,
+    pub amount: Int256,
+    pub penalty: Int256,
+    pub remaining_staked: Int256,
+}
 
-    fn deserialize_user_pools(&self, data: ByteString) -> Array<Int256> {
-        let bytes = data.to_bytes();
-        let mut pools = Array::new();
-        
-        if bytes.len() < 4 {
-            return pools;
-        }
-        
-        let count = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
-        let mut offset = 4;
-        
-        for _ in 0..count {
-            if offset + 32 <= bytes.len() {
-                let pool_bytes = &bytes[offset..offset + 32];
-                let pool_id = Int256::from_byte_string(ByteString::from_bytes(pool_bytes));
-                pools.push(pool_id);
-                offset += 32;
-            }
-        }
-        
-        pools
-    }
+#[event]
+pub struct RewardsClaimed {
+    pub pool_id: u32,
+    pub user: H160,
+    pub amount: Int256,
+}
 
-    fn serialize_user_pools(&self, pools: &Array<Int256>) -> ByteString {
-        let count = pools.size() as u32;
-        let mut result = ByteString::from_bytes(&count.to_le_bytes());
-        
-        for i in 0..pools.size() {
-            let pool_id = pools.get(i);
-            let pool_bytes = pool_id.into_byte_string();
-            result = result.concat(&pool_bytes);
-        }
-        
-        result
-    }
+#[event]
+pub struct PlatformPaused {}
+
+// Error codes
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Platform not initialized")]
+    PlatformNotInitialized,
+    #[msg("Pool not found")]
+    PoolNotFound,
+    #[msg("Stake not found")]
+    StakeNotFound,
+    #[msg("Pool not active")]
+    PoolNotActive,
+    #[msg("Insufficient staked amount")]
+    InsufficientStake,
+    #[msg("Platform paused")]
+    PlatformPaused,
+    #[msg("Unauthorized")]
+    Unauthorized,
+    #[msg("Invalid amount")]
+    InvalidAmount,
 }

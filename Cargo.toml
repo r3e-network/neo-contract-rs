@@ -7,9 +7,8 @@ resolver = "2"
 members = [
     "neo-contract",
     "neo-contract-proc-macros",
-    "neo-wasm/examples/hello-world",
-    "neo-wasm/examples/syscall-test",
-    # New comprehensive examples
+    "neo-compiler",
+    # Traditional style examples
     "examples/01-hello-world",
     "examples/02-simple-token",
     "examples/02-simple-storage",
@@ -24,6 +23,10 @@ members = [
     "examples/11-governance",
     "examples/12-oracle-price-feed",
     "examples/13-nft-marketplace",
+    # Solana-style examples
+    "examples/01-hello-world-solana-style-simple",
+    "examples/01-hello-world-solana-style",
+    "examples/04-nep17-token-solana-style",
 ]
 
 [profile.release]

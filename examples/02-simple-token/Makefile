@@ -1,5 +1,5 @@
 # Neo N3 Rust Smart Contract Makefile
-# Simple and reliable build automation
+# Unified build system using integrated neo-compiler
 
 # Project Configuration
 PROJECT_NAME := $(shell basename $(CURDIR))
@@ -9,13 +9,14 @@ BUILD_MODE := release
 # Directories and Files
 TARGET_DIR := ../../target/$(CARGO_TARGET)/$(BUILD_MODE)
 BUILD_DIR := build
-WASM_FILE := $(TARGET_DIR)/$(shell echo $(PROJECT_NAME) | tr '-' '_').wasm
+WASM_NAME := $(shell grep '^name = ' Cargo.toml | cut -d'"' -f2 | tr '-' '_')
+WASM_FILE := $(TARGET_DIR)/$(WASM_NAME).wasm
 NEF_FILE := $(BUILD_DIR)/$(PROJECT_NAME).nef
 MANIFEST_FILE := $(BUILD_DIR)/$(PROJECT_NAME).manifest.json
 
 # Tools
 CARGO := cargo
-NEO_WASM := ../../neo-wasm/neo-wasm
+NEO_COMPILER := cd ../.. && cargo run -p neo-compiler --
 RUSTUP := rustup
 
 # Build flags
@@ -29,15 +30,24 @@ YELLOW := \033[1;33m
 BLUE := \033[0;34m
 NC := \033[0m
 
-.PHONY: all compile wasm nef manifest clean check test help install-deps info
+.PHONY: all build compile deploy clean check test help install-deps info
 
 # Default target
-all: nef manifest
+all: compile
 
 # Help
 help:
 	@echo "$(BLUE)Neo N3 Rust Smart Contract Build System$(NC)"
-	@echo "Available targets: all, compile, wasm, nef, manifest, clean, check, test, help, info"
+	@echo "$(YELLOW)Available targets:$(NC)"
+	@echo "  $(GREEN)all$(NC)          - Build and compile to NEF (default)"
+	@echo "  $(GREEN)build$(NC)        - Build WASM file"
+	@echo "  $(GREEN)compile$(NC)      - Compile WASM to NEF and manifest"
+	@echo "  $(GREEN)deploy$(NC)       - Deploy to Neo Express"
+	@echo "  $(GREEN)clean$(NC)        - Clean build artifacts"
+	@echo "  $(GREEN)check$(NC)        - Check code for errors"
+	@echo "  $(GREEN)test$(NC)         - Run tests"
+	@echo "  $(GREEN)install-deps$(NC) - Install dependencies"
+	@echo "  $(GREEN)info$(NC)         - Show build information"
 
 # Install dependencies
 install-deps:
@@ -49,80 +59,59 @@ install-deps:
 check:
 	@echo "$(YELLOW)Checking $(PROJECT_NAME)...$(NC)"
 	@RUSTFLAGS="$(RUSTFLAGS)" $(CARGO) check $(CARGO_FLAGS)
-	@echo "$(GREEN)Check completed!$(NC)"
+	@echo "$(GREEN)✅ Check completed!$(NC)"
 
 # Run tests
 test:
-	@echo "$(YELLOW)Running tests...$(NC)"
+	@echo "$(YELLOW)Running tests for $(PROJECT_NAME)...$(NC)"
 	@$(CARGO) test
-	@echo "$(GREEN)Tests completed!$(NC)"
+	@echo "$(GREEN)✅ Tests completed!$(NC)"
 
-# Compile to WASM
-compile:
-	@echo "$(YELLOW)Compiling $(PROJECT_NAME) to WASM...$(NC)"
-	@$(RUSTUP) target add $(CARGO_TARGET) || true
-	@RUSTFLAGS="$(RUSTFLAGS)" $(RUSTUP) run nightly $(CARGO) build $(CARGO_FLAGS)
-	@echo "$(GREEN)✅ Compilation completed!$(NC)"
+# Build WASM
+build:
+	@echo "$(YELLOW)Building $(PROJECT_NAME) to WASM...$(NC)"
+	@$(RUSTUP) target add $(CARGO_TARGET) 2>/dev/null || true
+	@RUSTFLAGS="$(RUSTFLAGS)" $(CARGO) build $(CARGO_FLAGS)
+	@echo "$(GREEN)✅ Build completed: $(WASM_FILE)$(NC)"
 
-# Verify WASM
-wasm: compile
-	@echo "$(YELLOW)Verifying WASM file...$(NC)"
-	@if [ -f "$(WASM_FILE)" ]; then \
-		echo "$(GREEN)✅ WASM file found: $(WASM_FILE)$(NC)"; \
-		ls -la "$(WASM_FILE)"; \
-	else \
-		FOUND_WASM=$$(find ../../target -name "*.wasm" -type f | head -1); \
-		if [ -n "$$FOUND_WASM" ]; then \
-			echo "$(GREEN)✅ WASM file found: $$FOUND_WASM$(NC)"; \
+# Compile to NEF
+compile: build
+	@mkdir -p $(BUILD_DIR)
+	@echo "$(YELLOW)Compiling to NEF format...$(NC)"
+	@if [ ! -f "$(WASM_FILE)" ]; then \
+		echo "$(RED)❌ WASM file not found: $(WASM_FILE)$(NC)"; \
+		echo "$(YELLOW)Looking for WASM files...$(NC)"; \
+		find $(TARGET_DIR) -name "*.wasm" -type f 2>/dev/null || true; \
+		exit 1; \
+	fi
+	@$(NEO_COMPILER) compile examples/$(PROJECT_NAME)/$(WASM_FILE) --output examples/$(PROJECT_NAME)/$(BUILD_DIR)
+	@echo "$(GREEN)✅ NEF generated: $(NEF_FILE)$(NC)"
+	@echo "$(GREEN)✅ Manifest generated: $(MANIFEST_FILE)$(NC)"
+
+# Deploy to Neo Express
+deploy: compile
+	@echo "$(YELLOW)Deploying $(PROJECT_NAME) to Neo Express...$(NC)"
+	@if command -v neoxp > /dev/null 2>&1; then \
+		if [ -f "$(NEF_FILE)" ] && [ -f "$(MANIFEST_FILE)" ]; then \
+			echo "$(YELLOW)Starting Neo Express if not running...$(NC)"; \
+			pgrep -f "neo-express" > /dev/null || (neoxp run -s 1 > /tmp/neoxp.log 2>&1 &); \
+			sleep 3; \
+			echo "$(YELLOW)Deploying contract...$(NC)"; \
+			neoxp contract deploy $(NEF_FILE) alice || true; \
+			echo "$(GREEN)✅ Deployment complete!$(NC)"; \
 		else \
-			echo "$(RED)❌ No WASM file found!$(NC)"; \
+			echo "$(RED)❌ NEF or manifest file not found!$(NC)"; \
 			exit 1; \
-		fi; \
-	fi
-
-# Generate NEF
-nef: wasm
-	@mkdir -p $(BUILD_DIR)
-	@echo "$(YELLOW)Generating NEF file...$(NC)"
-	@WASM_PATH=$$(find ../../target -name "*.wasm" -type f | head -1); \
-	if [ -z "$$WASM_PATH" ]; then \
-		echo "$(RED)❌ No WASM file found!$(NC)"; \
-		exit 1; \
-	fi; \
-	echo "$(YELLOW)Using WASM: $$WASM_PATH$(NC)"; \
-	if [ -f "$(NEO_WASM)" ]; then \
-		$(NEO_WASM) translate --input "$$WASM_PATH" --output $(NEF_FILE) --source-code src/lib.rs && \
-		echo "$(GREEN)✅ NEF generated: $(NEF_FILE)$(NC)" || \
-		($(NEO_WASM) translate --input "$$WASM_PATH" --output $(NEF_FILE) && \
-		echo "$(GREEN)✅ NEF generated: $(NEF_FILE)$(NC)"); \
+		fi \
 	else \
-		echo "$(RED)❌ neo-wasm not found!$(NC)"; \
-		exit 1; \
-	fi
-
-# Generate manifest
-manifest: wasm
-	@mkdir -p $(BUILD_DIR)
-	@echo "$(YELLOW)Generating manifest file...$(NC)"
-	@WASM_PATH=$$(find ../../target -name "*.wasm" -type f | head -1); \
-	if [ -z "$$WASM_PATH" ]; then \
-		echo "$(RED)❌ No WASM file found!$(NC)"; \
-		exit 1; \
-	fi; \
-	echo "$(YELLOW)Using WASM: $$WASM_PATH$(NC)"; \
-	if [ -f "$(NEO_WASM)" ]; then \
-		$(NEO_WASM) translate --input "$$WASM_PATH" --manifest $(MANIFEST_FILE) --source-code src/lib.rs && \
-		echo "$(GREEN)✅ Manifest generated: $(MANIFEST_FILE)$(NC)" || \
-		($(NEO_WASM) translate --input "$$WASM_PATH" --manifest $(MANIFEST_FILE) && \
-		echo "$(GREEN)✅ Manifest generated: $(MANIFEST_FILE)$(NC)"); \
-	else \
-		echo "$(RED)❌ neo-wasm not found!$(NC)"; \
+		echo "$(RED)❌ Neo Express not installed!$(NC)"; \
+		echo "Install with: dotnet tool install Neo.Express -g"; \
 		exit 1; \
 	fi
 
 # Clean
 clean:
-	@echo "$(YELLOW)Cleaning...$(NC)"
+	@echo "$(YELLOW)Cleaning $(PROJECT_NAME)...$(NC)"
 	@$(CARGO) clean
 	@rm -rf $(BUILD_DIR)
 	@echo "$(GREEN)✅ Clean completed!$(NC)"
@@ -130,9 +119,10 @@ clean:
 # Info
 info:
 	@echo "$(BLUE)Build Information$(NC)"
-	@echo "Project: $(PROJECT_NAME)"
-	@echo "Target: $(CARGO_TARGET)"
-	@echo "Mode: $(BUILD_MODE)"
-	@echo "WASM: $(WASM_FILE)"
-	@echo "NEF: $(NEF_FILE)"
-	@echo "Manifest: $(MANIFEST_FILE)"
+	@echo "  Project: $(PROJECT_NAME)"
+	@echo "  Target: $(CARGO_TARGET)"
+	@echo "  Mode: $(BUILD_MODE)"
+	@echo "  WASM Name: $(WASM_NAME)"
+	@echo "  WASM: $(WASM_FILE)"
+	@echo "  NEF: $(NEF_FILE)"
+	@echo "  Manifest: $(MANIFEST_FILE)"

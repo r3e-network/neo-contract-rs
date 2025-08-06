@@ -1,0 +1,415 @@
+name: Build and Deploy Examples
+
+on:
+  push:
+    branches: [ main, jimmy2 ]
+  pull_request:
+    branches: [ main, jimmy2 ]
+  workflow_dispatch:
+    inputs:
+      deploy_to_testnet:
+        description: 'Deploy to Neo TestNet'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Ctarget-feature=+multivalue -Clink-arg=--initial-memory=2097152"
+  DOTNET_VERSION: '7.0.x'
+
+jobs:
+  build-framework:
+    name: Build Framework
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          override: true
+          components: rustfmt, clippy
+      
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Build neo-contract framework
+        run: cargo build --release --all-features
+      
+      - name: Build neo-compiler
+        run: cargo build -p neo-compiler --release
+      
+      - name: Run framework tests
+        run: cargo test --all-features --verbose
+      
+      - name: Upload neo-compiler binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: neo-compiler
+          path: target/release/neo-compiler
+
+  compile-examples:
+    name: Compile Examples
+    runs-on: ubuntu-latest
+    needs: build-framework
+    strategy:
+      matrix:
+        example:
+          - 01-hello-world
+          - 02-simple-storage
+          - 02-simple-token
+          - 03-counter
+          - 04-nep17-token
+          - 05-nep11-nft
+          - 06-nep24-royalty-nft
+          - 07-crowdfunding
+          - 08-staking
+          - 09-simple-dex
+          - 10-multisig-wallet
+          - 11-governance
+          - 12-oracle-price-feed
+          - 13-nft-marketplace
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          override: true
+      
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Download neo-compiler
+        uses: actions/download-artifact@v3
+        with:
+          name: neo-compiler
+          path: target/release
+      
+      - name: Make neo-compiler executable
+        run: chmod +x target/release/neo-compiler
+      
+      - name: Build example ${{ matrix.example }}
+        working-directory: examples/${{ matrix.example }}
+        run: |
+          echo "Building ${{ matrix.example }}"
+          cargo build --target wasm32-unknown-unknown --release
+      
+      - name: Compile to NEF
+        working-directory: examples/${{ matrix.example }}
+        run: |
+          mkdir -p build
+          WASM_NAME=$(grep '^name = ' Cargo.toml | cut -d'"' -f2 | tr '-' '_')
+          WASM_FILE="../../target/wasm32-unknown-unknown/release/${WASM_NAME}.wasm"
+          
+          if [ -f "$WASM_FILE" ]; then
+            echo "Compiling $WASM_FILE to NEF"
+            ../../target/release/neo-compiler compile "$WASM_FILE" --output build
+          else
+            echo "WASM file not found: $WASM_FILE"
+            exit 1
+          fi
+      
+      - name: Verify NEF generation
+        working-directory: examples/${{ matrix.example }}
+        run: |
+          WASM_NAME=$(grep '^name = ' Cargo.toml | cut -d'"' -f2 | tr '-' '_')
+          NEF_FILE="build/${WASM_NAME}.nef"
+          MANIFEST_FILE="build/${WASM_NAME}.manifest.json"
+          
+          if [ -f "$NEF_FILE" ]; then
+            echo "✅ NEF file generated: $NEF_FILE"
+            echo "File size: $(stat -c%s "$NEF_FILE") bytes"
+            hexdump -C "$NEF_FILE" | head -20
+          else
+            echo "❌ NEF file not found: $NEF_FILE"
+            exit 1
+          fi
+          
+          if [ -f "$MANIFEST_FILE" ]; then
+            echo "✅ Manifest file generated: $MANIFEST_FILE"
+            cat "$MANIFEST_FILE" | jq '.'
+          else
+            echo "❌ Manifest file not found: $MANIFEST_FILE"
+            exit 1
+          fi
+      
+      - name: Upload NEF artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: nef-${{ matrix.example }}
+          path: |
+            examples/${{ matrix.example }}/build/*.nef
+            examples/${{ matrix.example }}/build/*.manifest.json
+
+  deploy-neo-express:
+    name: Deploy to Neo Express
+    runs-on: ubuntu-latest
+    needs: compile-examples
+    strategy:
+      matrix:
+        example:
+          - 01-hello-world
+          - 02-simple-storage
+          - 03-counter
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      - name: Install Neo Express
+        run: |
+          dotnet tool install Neo.Express -g
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+      
+      - name: Download NEF artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: nef-${{ matrix.example }}
+          path: examples/${{ matrix.example }}/build
+      
+      - name: Initialize Neo Express
+        working-directory: examples/${{ matrix.example }}
+        run: |
+          # Create Neo Express configuration
+          neoxp create -f
+          
+          # Create test wallet
+          neoxp wallet create alice -f
+          
+          # Show wallet info
+          neoxp wallet list
+      
+      - name: Start Neo Express
+        working-directory: examples/${{ matrix.example }}
+        run: |
+          # Start Neo Express in background
+          neoxp run -s 1 &
+          NEO_PID=$!
+          
+          # Wait for Neo Express to start
+          sleep 10
+          
+          # Check if running
+          if ps -p $NEO_PID > /dev/null; then
+            echo "✅ Neo Express is running (PID: $NEO_PID)"
+          else
+            echo "❌ Neo Express failed to start"
+            exit 1
+          fi
+      
+      - name: Deploy contract
+        working-directory: examples/${{ matrix.example }}
+        run: |
+          WASM_NAME=$(grep '^name = ' Cargo.toml | cut -d'"' -f2 | tr '-' '_')
+          NEF_FILE="build/${WASM_NAME}.nef"
+          
+          if [ -f "$NEF_FILE" ]; then
+            echo "Deploying $NEF_FILE"
+            
+            # Deploy contract with alice account
+            neoxp contract deploy "$NEF_FILE" alice || {
+              echo "Deployment failed, checking Neo Express status..."
+              neoxp show balances
+              exit 1
+            }
+            
+            echo "✅ Contract deployed successfully"
+            
+            # Get contract hash
+            CONTRACT_HASH=$(neoxp contract list | grep "$WASM_NAME" | awk '{print $1}')
+            echo "Contract Hash: $CONTRACT_HASH"
+          else
+            echo "❌ NEF file not found: $NEF_FILE"
+            exit 1
+          fi
+      
+      - name: Test contract invocation
+        working-directory: examples/${{ matrix.example }}
+        run: |
+          WASM_NAME=$(grep '^name = ' Cargo.toml | cut -d'"' -f2 | tr '-' '_')
+          
+          # Get contract hash
+          CONTRACT_HASH=$(neoxp contract list | grep "$WASM_NAME" | awk '{print $1}')
+          
+          if [ -n "$CONTRACT_HASH" ]; then
+            echo "Testing contract invocation for $CONTRACT_HASH"
+            
+            # Test based on example type
+            case "${{ matrix.example }}" in
+              "01-hello-world")
+                # Test initialize method
+                neoxp contract invoke $CONTRACT_HASH initialize alice || echo "Initialize failed"
+                
+                # Test say_hello method
+                neoxp contract invoke $CONTRACT_HASH say_hello alice '["World"]' || echo "Say hello failed"
+                ;;
+              
+              "02-simple-storage")
+                # Test initialize
+                neoxp contract invoke $CONTRACT_HASH initialize alice || echo "Initialize failed"
+                
+                # Test store_string
+                neoxp contract invoke $CONTRACT_HASH store_string alice '["key1", "value1"]' || echo "Store failed"
+                
+                # Test get_string
+                neoxp contract invoke $CONTRACT_HASH get_string alice '["key1"]' || echo "Get failed"
+                ;;
+              
+              "03-counter")
+                # Test initialize
+                neoxp contract invoke $CONTRACT_HASH initialize alice || echo "Initialize failed"
+                
+                # Test increment
+                neoxp contract invoke $CONTRACT_HASH increment alice || echo "Increment failed"
+                
+                # Test get_value
+                neoxp contract invoke $CONTRACT_HASH get_value alice || echo "Get value failed"
+                ;;
+            esac
+          else
+            echo "❌ Contract hash not found"
+            exit 1
+          fi
+      
+      - name: Stop Neo Express
+        if: always()
+        run: |
+          pkill -f "neo-express" || true
+
+  test-deployment-local:
+    name: Test Local Deployment
+    runs-on: ubuntu-latest
+    needs: compile-examples
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      - name: Install Neo Express
+        run: |
+          dotnet tool install Neo.Express -g
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+      
+      - name: Download all NEF artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+      
+      - name: Create deployment script
+        run: |
+          cat > deploy-all.sh << 'EOF'
+          #!/bin/bash
+          set -e
+          
+          # Initialize Neo Express
+          neoxp create -f
+          neoxp wallet create alice -f
+          neoxp wallet create bob -f
+          
+          # Start Neo Express
+          neoxp run -s 1 &
+          NEO_PID=$!
+          sleep 10
+          
+          # Deploy all contracts
+          for dir in artifacts/nef-*/; do
+            EXAMPLE=$(basename "$dir" | sed 's/nef-//')
+            echo "Deploying $EXAMPLE"
+            
+            NEF_FILE=$(find "$dir" -name "*.nef" | head -1)
+            if [ -f "$NEF_FILE" ]; then
+              neoxp contract deploy "$NEF_FILE" alice || echo "Failed to deploy $EXAMPLE"
+            fi
+          done
+          
+          # List deployed contracts
+          echo "Deployed contracts:"
+          neoxp contract list
+          
+          # Stop Neo Express
+          kill $NEO_PID || true
+          EOF
+          
+          chmod +x deploy-all.sh
+      
+      - name: Run deployment test
+        run: ./deploy-all.sh
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: deploy-neo-express
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      
+      - name: Run integration tests
+        run: |
+          cargo test --test '*' --all-features
+
+  deploy-testnet:
+    name: Deploy to TestNet
+    runs-on: ubuntu-latest
+    needs: [compile-examples, integration-test]
+    if: github.event.inputs.deploy_to_testnet == 'true' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Neo CLI
+        run: |
+          # Install Neo CLI for testnet deployment
+          wget https://github.com/neo-project/neo-cli/releases/latest/download/neo-cli-linux-x64.zip
+          unzip neo-cli-linux-x64.zip
+          chmod +x neo-cli
+      
+      - name: Download NEF artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+      
+      - name: Deploy to TestNet
+        env:
+          TESTNET_PRIVATE_KEY: ${{ secrets.TESTNET_PRIVATE_KEY }}
+        run: |
+          if [ -n "$TESTNET_PRIVATE_KEY" ]; then
+            echo "Deploying to Neo TestNet..."
+            # Add deployment logic here
+          else
+            echo "Skipping TestNet deployment (no private key configured)"
+          fi

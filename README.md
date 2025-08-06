@@ -11,6 +11,13 @@ A comprehensive, enterprise-grade framework that enables developers to build sec
 
 ## 🌟 Why Choose Neo N3 Rust Framework?
 
+### **🎯 NEW: Solana-Style Syntax Support**
+- **Familiar Anchor-like patterns** for Solana developers
+- **Type-safe account validation** with `#[derive(Accounts)]`
+- **Declarative constraints** for secure state management
+- **Built-in error handling** with custom error codes
+- **[Complete Migration Guide](docs/SOLANA_STYLE_GUIDE.md)** for easy transition
+
 ### **🔒 Memory Safety & Performance**
 - **Zero-cost abstractions** with Rust's ownership system
 - **Compile-time safety** preventing common smart contract vulnerabilities
@@ -108,6 +115,47 @@ export RUSTFLAGS="-Ctarget-feature=+multivalue -Clink-arg=--initial-memory=20971
 
 ---
 
+## 🚀 Quick Start: Solana-Style Development
+
+### **Create Your First Solana-Style Contract**
+
+```rust
+#![no_std]
+#![no_main]
+
+use neo_contract::prelude::*;
+
+declare_id!("MyNeoProgram");
+
+#[program]
+pub mod my_contract {
+    use super::*;
+    
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+        let state = &mut ctx.accounts.state;
+        state.is_initialized = true;
+        msg!("Contract initialized!");
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct Initialize<'info> {
+    #[account(init, payer = authority, space = 8 + 32)]
+    pub state: Account<'info, StateAccount>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[account]
+pub struct StateAccount {
+    pub is_initialized: bool,
+}
+```
+
+For complete documentation, see the **[Solana-Style Development Guide](docs/SOLANA_STYLE_GUIDE.md)**.
+
 ## 📚 Complete Example Library
 
 ### **🎓 Learning Path: Beginner → Advanced**
@@ -115,6 +163,7 @@ export RUSTFLAGS="-Ctarget-feature=+multivalue -Clink-arg=--initial-memory=20971
 | Example | Complexity | Description | Key Features |
 |---------|------------|-------------|--------------|
 | **[01-hello-world](examples/01-hello-world/)** | 🟢 Beginner | Contract basics | Storage, events, authorization |
+| **[01-hello-world-solana-style](examples/01-hello-world-solana-style-simple/)** | 🟢 Beginner | Solana-style basics | Context pattern, account validation |
 | **[02-simple-storage](examples/02-simple-storage/)** | 🟢 Beginner | Advanced storage | Multiple data types, serialization |
 | **[03-counter](examples/03-counter/)** | 🟡 Intermediate | State management | Access control, statistics |
 | **[04-nep17-token](examples/04-nep17-token/)** | 🟡 Intermediate | Fungible tokens | Full NEP-17 compliance |

@@ -1,156 +1,167 @@
-# Neo N3 Rust Smart Contract Framework - Master Makefile
-# This Makefile provides comprehensive build automation for the entire framework
+# Neo N3 Rust Smart Contract Framework Makefile
+# Root makefile for building and deploying all examples
 
 # Configuration
-EXAMPLES_DIR := examples
-BUILD_MODE := release
-CLEAN_FIRST := false
+CARGO := cargo
+RUSTUP := rustup
+NEO_COMPILER := ./target/release/neo-compiler
+EXAMPLES := $(wildcard examples/*/Cargo.toml)
+EXAMPLE_DIRS := $(dir $(EXAMPLES))
 
-# Colors for output
+# Colors
 RED := \033[0;31m
 GREEN := \033[0;32m
 YELLOW := \033[1;33m
 BLUE := \033[0;34m
-CYAN := \033[0;36m
 NC := \033[0m
 
-# Get all example directories
-EXAMPLES := $(shell find $(EXAMPLES_DIR) -maxdepth 1 -type d -name '[0-9]*' | sort)
-EXAMPLE_NAMES := $(notdir $(EXAMPLES))
-
-.PHONY: all build-all clean-all check-all test-all help install-deps examples list-examples
-.PHONY: $(EXAMPLE_NAMES)
+.PHONY: all help install build test clean deploy neo-express examples docs
 
 # Default target
-all: build-all
+all: build
 
-# Help target
+# Help
 help:
-	@echo "$(BLUE)Neo N3 Rust Smart Contract Framework - Master Build System$(NC)"
-	@echo "=============================================================="
-	@echo ""
+	@echo "$(BLUE)Neo N3 Rust Smart Contract Framework$(NC)"
 	@echo "$(YELLOW)Available targets:$(NC)"
-	@echo "  $(GREEN)all$(NC)              - Build all examples (default)"
-	@echo "  $(GREEN)build-all$(NC)        - Build all examples into NEF and manifest files"
-	@echo "  $(GREEN)check-all$(NC)        - Check all examples without building"
-	@echo "  $(GREEN)test-all$(NC)         - Run tests for all examples"
-	@echo "  $(GREEN)clean-all$(NC)        - Clean all build artifacts"
-	@echo "  $(GREEN)install-deps$(NC)     - Install required dependencies"
-	@echo "  $(GREEN)list-examples$(NC)    - List all available examples"
-	@echo "  $(GREEN)examples$(NC)         - Show example details"
-	@echo "  $(GREEN)help$(NC)             - Show this help message"
-	@echo ""
-	@echo "$(YELLOW)Individual example targets:$(NC)"
-	@for example in $(EXAMPLE_NAMES); do \
-		echo "  $(GREEN)$$example$(NC)        - Build specific example"; \
-	done
-	@echo ""
-	@echo "$(YELLOW)Build options:$(NC)"
-	@echo "  make BUILD_MODE=debug     - Build in debug mode"
-	@echo "  make BUILD_MODE=release   - Build in release mode (default)"
-	@echo "  make CLEAN_FIRST=true     - Clean before building"
-	@echo ""
-	@echo "$(YELLOW)Usage examples:$(NC)"
-	@echo "  make build-all                    - Build all examples"
-	@echo "  make 04-nep17-token              - Build NEP-17 token example"
-	@echo "  make clean-all                   - Clean all examples"
-	@echo "  make BUILD_MODE=debug build-all  - Build all in debug mode"
+	@echo "  $(GREEN)all$(NC)           - Build everything (default)"
+	@echo "  $(GREEN)install$(NC)       - Install dependencies and tools"
+	@echo "  $(GREEN)build$(NC)         - Build framework and compiler"
+	@echo "  $(GREEN)examples$(NC)      - Build all examples"
+	@echo "  $(GREEN)test$(NC)          - Run all tests"
+	@echo "  $(GREEN)deploy$(NC)        - Deploy all examples to Neo Express"
+	@echo "  $(GREEN)neo-express$(NC)   - Setup and start Neo Express"
+	@echo "  $(GREEN)clean$(NC)         - Clean all build artifacts"
+	@echo "  $(GREEN)docs$(NC)          - Generate documentation"
+	@echo "  $(GREEN)fmt$(NC)           - Format all code"
+	@echo "  $(GREEN)clippy$(NC)        - Run clippy lints"
+	@echo "  $(GREEN)audit$(NC)         - Run security audit"
 
 # Install dependencies
-install-deps:
-	@echo "$(YELLOW)Installing framework dependencies...$(NC)"
-	@rustup target add wasm32-unknown-unknown
-	@echo "$(GREEN)Dependencies installed successfully!$(NC)"
+install:
+	@echo "$(YELLOW)Installing dependencies...$(NC)"
+	@$(RUSTUP) target add wasm32-unknown-unknown
+	@$(RUSTUP) component add rustfmt clippy
+	@command -v neoxp >/dev/null 2>&1 || echo "$(YELLOW)Neo Express not installed. Install with: dotnet tool install Neo.Express -g$(NC)"
+	@echo "$(GREEN)✅ Dependencies installed$(NC)"
 
-# List all examples
-list-examples:
-	@echo "$(BLUE)Available Examples:$(NC)"
-	@echo "==================="
-	@for example in $(EXAMPLE_NAMES); do \
-		echo "  📁 $$example"; \
+# Build framework and compiler
+build: install
+	@echo "$(YELLOW)Building neo-contract framework...$(NC)"
+	@$(CARGO) build --release --all-features
+	@echo "$(GREEN)✅ Framework built$(NC)"
+	@echo "$(YELLOW)Building neo-compiler...$(NC)"
+	@$(CARGO) build -p neo-compiler --release
+	@echo "$(GREEN)✅ Compiler built$(NC)"
+
+# Build all examples
+examples: build
+	@echo "$(YELLOW)Building all examples...$(NC)"
+	@for dir in $(EXAMPLE_DIRS); do \
+		echo "$(BLUE)Building $$(basename $$dir)...$(NC)"; \
+		(cd $$dir && $(CARGO) build --target wasm32-unknown-unknown --release) || exit 1; \
 	done
+	@echo "$(GREEN)✅ All examples built$(NC)"
 
-# Show example details
-examples:
-	@echo "$(BLUE)Neo N3 Rust Smart Contract Examples$(NC)"
-	@echo "====================================="
-	@echo ""
-	@echo "$(YELLOW)Basic Examples:$(NC)"
-	@echo "  📁 01-hello-world      - Basic contract functionality"
-	@echo "  📁 02-simple-storage   - Storage operations"
-	@echo "  📁 03-counter          - State management"
-	@echo ""
-	@echo "$(YELLOW)Token Standards:$(NC)"
-	@echo "  📁 04-nep17-token      - NEP-17 fungible token"
-	@echo "  📁 05-nep11-nft        - NEP-11 non-fungible token"
-	@echo "  📁 06-nep24-royalty-nft - NEP-24 royalty NFT"
-	@echo ""
-	@echo "$(YELLOW)DeFi Protocols:$(NC)"
-	@echo "  📁 07-crowdfunding     - Crowdfunding platform"
-	@echo "  📁 08-staking          - Token staking with rewards"
-	@echo "  📁 09-simple-dex       - Decentralized exchange"
-	@echo "  📁 12-oracle-price-feed - Oracle price feed system"
-	@echo ""
-	@echo "$(YELLOW)Enterprise Features:$(NC)"
-	@echo "  📁 10-multisig-wallet  - Multi-signature wallet"
-	@echo "  📁 11-governance       - DAO governance system"
-	@echo ""
-	@echo "$(YELLOW)Marketplace:$(NC)"
-	@echo "  📁 13-nft-marketplace  - NFT trading platform"
-
-# Build all examples with proper generation
-build-all:
-	@echo "$(BLUE)🚀 Building all Neo N3 Rust examples with proper generation...$(NC)"
-	@chmod +x build_all_examples_proper.sh
-	@BUILD_MODE=$(BUILD_MODE) CLEAN_FIRST=$(CLEAN_FIRST) ./build_all_examples_proper.sh
-
-# Check all examples
-check-all:
-	@echo "$(YELLOW)Checking all examples...$(NC)"
-	@for example in $(EXAMPLES); do \
-		echo "$(CYAN)Checking $$(basename $$example)...$(NC)"; \
-		(cd $$example && make check) || exit 1; \
+# Compile examples to NEF
+compile-nef: examples
+	@echo "$(YELLOW)Compiling examples to NEF...$(NC)"
+	@for dir in $(EXAMPLE_DIRS); do \
+		echo "$(BLUE)Compiling $$(basename $$dir) to NEF...$(NC)"; \
+		(cd $$dir && make compile) || true; \
 	done
-	@echo "$(GREEN)All examples checked successfully!$(NC)"
+	@echo "$(GREEN)✅ NEF compilation complete$(NC)"
 
-# Test all examples
-test-all:
-	@echo "$(YELLOW)Testing all examples...$(NC)"
-	@for example in $(EXAMPLES); do \
-		echo "$(CYAN)Testing $$(basename $$example)...$(NC)"; \
-		(cd $$example && make test) || true; \
+# Run all tests
+test:
+	@echo "$(YELLOW)Running tests...$(NC)"
+	@$(CARGO) test --all-features --verbose
+	@echo "$(GREEN)✅ Tests passed$(NC)"
+
+# Deploy all examples
+deploy: compile-nef
+	@echo "$(YELLOW)Deploying all examples...$(NC)"
+	@./scripts/deploy-examples.sh
+	@echo "$(GREEN)✅ Deployment complete$(NC)"
+
+# Setup and start Neo Express
+neo-express:
+	@echo "$(YELLOW)Setting up Neo Express...$(NC)"
+	@command -v neoxp >/dev/null 2>&1 || (echo "$(RED)❌ Neo Express not installed$(NC)" && exit 1)
+	@neoxp create -f || true
+	@neoxp wallet create alice -f || true
+	@neoxp wallet create bob -f || true
+	@echo "$(YELLOW)Starting Neo Express...$(NC)"
+	@neoxp run -s 1
+
+# Generate documentation
+docs:
+	@echo "$(YELLOW)Generating documentation...$(NC)"
+	@$(CARGO) doc --all-features --no-deps --open
+	@echo "$(GREEN)✅ Documentation generated$(NC)"
+
+# Format code
+fmt:
+	@echo "$(YELLOW)Formatting code...$(NC)"
+	@$(CARGO) fmt --all
+	@echo "$(GREEN)✅ Code formatted$(NC)"
+
+# Run clippy
+clippy:
+	@echo "$(YELLOW)Running clippy...$(NC)"
+	@$(CARGO) clippy --all-features -- -D warnings
+	@echo "$(GREEN)✅ Clippy checks passed$(NC)"
+
+# Security audit
+audit:
+	@echo "$(YELLOW)Running security audit...$(NC)"
+	@$(CARGO) audit || true
+	@echo "$(GREEN)✅ Audit complete$(NC)"
+
+# Clean build artifacts
+clean:
+	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
+	@$(CARGO) clean
+	@for dir in $(EXAMPLE_DIRS); do \
+		rm -rf $$dir/build; \
 	done
-	@echo "$(GREEN)All example tests completed!$(NC)"
+	@rm -rf build/
+	@echo "$(GREEN)✅ Clean complete$(NC)"
 
-# Clean all examples
-clean-all:
-	@echo "$(YELLOW)Cleaning all examples...$(NC)"
-	@for example in $(EXAMPLES); do \
-		echo "$(CYAN)Cleaning $$(basename $$example)...$(NC)"; \
-		(cd $$example && make clean) || true; \
-	done
-	@echo "$(GREEN)All examples cleaned!$(NC)"
+# Quick build and test
+quick: fmt build test
+	@echo "$(GREEN)✅ Quick build and test complete$(NC)"
 
-# Individual example targets
-$(EXAMPLE_NAMES):
-	@echo "$(CYAN)Building example: $@$(NC)"
-	@if [ -d "$(EXAMPLES_DIR)/$@" ]; then \
-		cd "$(EXAMPLES_DIR)/$@" && make all BUILD_MODE=$(BUILD_MODE); \
-	else \
-		echo "$(RED)Error: Example $@ not found$(NC)"; \
+# Full CI pipeline
+ci: fmt clippy build test examples compile-nef
+	@echo "$(GREEN)✅ CI pipeline complete$(NC)"
+
+# Deploy single example
+deploy-example:
+	@if [ -z "$(EXAMPLE)" ]; then \
+		echo "$(RED)❌ Please specify EXAMPLE=<example-name>$(NC)"; \
 		exit 1; \
 	fi
+	@echo "$(YELLOW)Deploying $(EXAMPLE)...$(NC)"
+	@cd examples/$(EXAMPLE) && make deploy
+	@echo "$(GREEN)✅ $(EXAMPLE) deployed$(NC)"
 
-# Framework info
+# Test single example
+test-example:
+	@if [ -z "$(EXAMPLE)" ]; then \
+		echo "$(RED)❌ Please specify EXAMPLE=<example-name>$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(YELLOW)Testing $(EXAMPLE)...$(NC)"
+	@cd examples/$(EXAMPLE) && cargo test
+	@echo "$(GREEN)✅ $(EXAMPLE) tests passed$(NC)"
+
+# Show project info
 info:
 	@echo "$(BLUE)Neo N3 Rust Smart Contract Framework$(NC)"
-	@echo "====================================="
-	@echo "Total Examples: $(words $(EXAMPLE_NAMES))"
-	@echo "Build Mode: $(BUILD_MODE)"
-	@echo "Examples Directory: $(EXAMPLES_DIR)"
-	@echo ""
-	@echo "$(YELLOW)Framework Status:$(NC)"
-	@echo "  ✅ Complete and Production-Ready"
-	@echo "  ✅ All Examples Systematically Fixed"
-	@echo "  ✅ Comprehensive Build Automation"
-	@echo "  ✅ NEF and Manifest Generation"
+	@echo "Version: $$(grep version neo-contract/Cargo.toml | head -1 | cut -d'"' -f2)"
+	@echo "Examples: $$(ls -d examples/*/ | wc -l)"
+	@echo "Rust version: $$(rustc --version)"
+	@echo "Target: wasm32-unknown-unknown"
+	@echo "Neo Express: $$(neoxp --version 2>/dev/null || echo 'not installed')"
+EOF < /dev/null

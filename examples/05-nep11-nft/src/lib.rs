@@ -1,6 +1,6 @@
 //! # NEP-11 Non-Fungible Token Contract
 //!
-//! A complete implementation of the NEP-11 non-fungible token standard for Neo N3.
+//! A complete implementation of the NEP-11 non-fungible token standard.
 //! This contract demonstrates:
 //! - Full NEP-11 compliance with all required methods
 //! - Unique token creation and management
@@ -19,720 +19,688 @@
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
 
-/// NEP-11 compliant non-fungible token contract
-#[contract_author("Neo Rust Framework", "dev@neo.org")]
-#[contract_version("1.0.0")]
-#[contract_standards("NEP-11")]
-#[contract_permission("*", "*")]
-#[contract_meta("description", "Production-ready NEP-11 non-fungible token")]
-#[contract_meta("website", "https://github.com/R3E-Network/neo-contract-rs")]
-pub struct Nep11Token {
-    // Token metadata
-    symbol_key: ByteString,
-    total_supply_key: ByteString,
+declare_id!("Nep11Token11111111111111111111111111111112");
 
-    // Storage prefixes
-    owner_prefix: ByteString,        // token_id -> owner
-    balance_prefix: ByteString,      // owner -> balance count
-    token_prefix: ByteString,        // owner -> list of token_ids
-    properties_prefix: ByteString,   // token_id -> properties
-    approved_prefix: ByteString,     // token_id -> approved_address
-
-    // Administrative keys
-    contract_owner_key: ByteString,
-    minters_prefix: ByteString,
-
-    // Configuration
-    paused_key: ByteString,
-    base_uri_key: ByteString,
-
-    // Token enumeration
-    all_tokens_key: ByteString,
-    token_index_prefix: ByteString,  // token_id -> index
+/// NFT account data
+#[derive(Clone, Debug)]
+pub struct NftAccount {
+    pub mint: H160,
+    pub owner: H160,
+    pub token_id: ByteString,
+    pub properties: Map<ByteString, Any>,
 }
 
-#[contract_impl]
-impl Nep11Token {
-    /// Initialize the NFT contract
-    pub fn init() -> Self {
-        Self {
-            symbol_key: ByteString::from_literal("symbol"),
-            total_supply_key: ByteString::from_literal("total_supply"),
-            owner_prefix: ByteString::from_literal("owner_"),
-            balance_prefix: ByteString::from_literal("balance_"),
-            token_prefix: ByteString::from_literal("tokens_"),
-            properties_prefix: ByteString::from_literal("props_"),
-            approved_prefix: ByteString::from_literal("approved_"),
-            contract_owner_key: ByteString::from_literal("contract_owner"),
-            minters_prefix: ByteString::from_literal("minter_"),
-            paused_key: ByteString::from_literal("paused"),
-            base_uri_key: ByteString::from_literal("base_uri"),
-            all_tokens_key: ByteString::from_literal("all_tokens"),
-            token_index_prefix: ByteString::from_literal("index_"),
-        }
-    }
+/// Collection account data
+#[derive(Clone, Debug)]
+pub struct CollectionAccount {
+    pub symbol: ByteString,
+    pub total_supply: Int256,
+    pub mint_authority: H160,
+    pub freeze_authority: H160,
+    pub base_uri: ByteString,
+    pub is_frozen: bool,
+}
+
+/// Owner account data (tracks NFTs owned)
+#[derive(Clone, Debug)]
+pub struct OwnerAccount {
+    pub owner: H160,
+    pub balance: Int256,
+    pub token_ids: Array<ByteString>,
+}
+
+/// Deploy context
+#[derive(Accounts)]
+pub struct Deploy<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(init)]
+    pub collection: AccountInfo<'info>,
+}
+
+/// Transfer context
+#[derive(Accounts)]
+pub struct Transfer<'info> {
+    #[account(signer)]
+    pub owner_or_approved: AccountInfo<'info>,
+    #[account(mut)]
+    pub nft_account: AccountInfo<'info>,
+    #[account(mut)]
+    pub from_owner_account: AccountInfo<'info>,
+    #[account(mut)]
+    pub to_owner_account: AccountInfo<'info>,
+}
+
+/// Mint context
+#[derive(Accounts)]
+pub struct Mint<'info> {
+    #[account(signer)]
+    pub authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub collection: AccountInfo<'info>,
+    #[account(init)]
+    pub nft_account: AccountInfo<'info>,
+    #[account(mut)]
+    pub owner_account: AccountInfo<'info>,
+}
+
+/// Burn context
+#[derive(Accounts)]
+pub struct Burn<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(mut)]
+    pub nft_account: AccountInfo<'info>,
+    #[account(mut)]
+    pub owner_account: AccountInfo<'info>,
+    #[account(mut)]
+    pub collection: AccountInfo<'info>,
+}
+
+/// Approve context
+#[derive(Accounts)]
+pub struct Approve<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(mut)]
+    pub nft_account: AccountInfo<'info>,
+}
+
+/// Admin context
+#[derive(Accounts)]
+pub struct AdminAction<'info> {
+    #[account(signer)]
+    pub owner: AccountInfo<'info>,
+    #[account(mut)]
+    pub collection: AccountInfo<'info>,
+}
+
+/// View context
+#[derive(Accounts)]
+pub struct View<'info> {
+    pub account: AccountInfo<'info>,
+}
+
+#[program]
+pub mod nep11_token {
+    use super::*;
 
     /// Deploy the NFT contract with initial parameters
-    #[method]
     pub fn deploy(
-        &self,
-        owner: H160,
+        ctx: Context<Deploy>,
         symbol: ByteString,
         base_uri: ByteString
-    ) -> bool {
-        let storage = Storage::get_context();
-
-        // Check if already deployed
-        if Storage::get(storage.clone(), self.contract_owner_key.clone()).is_some() {
-            Runtime::log(ByteString::from_literal("Contract already deployed"));
-            return false;
-        }
+    ) -> Result<()> {
+        let collection = &mut ctx.accounts.collection;
+        let owner = &ctx.accounts.owner;
 
         // Validate parameters
-        if symbol.is_empty() || symbol.len() > 16 {
-            Runtime::log(ByteString::from_literal("Invalid symbol: must be 1-16 characters"));
-            return false;
-        }
+        require!(!symbol.is_empty() && symbol.len() <= 16, "Invalid symbol: must be 1-16 characters");
 
-        // Verify deployer authorization
-        if !Runtime::check_witness(owner) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Invalid witness"));
-            return false;
-        }
+        // Initialize collection account
+        let collection_data = CollectionAccount {
+            symbol: symbol.clone(),
+            total_supply: Int256::zero(),
+            mint_authority: owner.key(),
+            freeze_authority: owner.key(),
+            base_uri,
+            is_frozen: false,
+        };
 
-        // Store contract metadata
-        Storage::put(storage.clone(), self.symbol_key.clone(), symbol.clone());
-        Storage::put(storage.clone(), self.contract_owner_key.clone(), owner.into_byte_string());
-        Storage::put(storage.clone(), self.total_supply_key.clone(), Int256::zero().into_byte_string());
+        // Store collection data
+        let storage = Storage::get_context();
+        Storage::put(storage, ByteString::from_literal("collection_data"), collection_data.serialize());
 
-        if !base_uri.is_empty() {
-            Storage::put(storage.clone(), self.base_uri_key.clone(), base_uri);
-        }
-
-        // Initialize empty token list
-        let storage_clone = storage.clone();
-        Storage::put(storage_clone, self.all_tokens_key.clone(), ByteString::empty());
-
-        let mut event_data = Array::new(); event_data.push(symbol.into_any()); Runtime::notify(ByteString::from_literal("ContractDeployed"), event_data);
-        true
+        // Emit deployment event
+        emit!(ContractDeployed { symbol });
+        Ok(())
     }
 
     /// Get token symbol (NEP-11 required)
-    #[method]
-    #[safe]
-    pub fn symbol(&self) -> ByteString {
+    pub fn symbol(ctx: Context<View>) -> Result<ByteString> {
         let storage = Storage::get_context();
-        match Storage::get(storage, self.symbol_key.clone()) {
-            Some(symbol) => symbol,
-            None => ByteString::from_literal("UNKNOWN"),
-        }
+        let collection_data = get_collection_data(&storage)?;
+        Ok(collection_data.symbol)
     }
 
     /// Get number of decimals (always 0 for NFTs) (NEP-11 required)
-    #[method]
-    #[safe]
-    pub fn decimals(&self) -> u32 {
-        0 // NFTs are non-divisible
+    pub fn decimals(_ctx: Context<View>) -> Result<u32> {
+        Ok(0) // NFTs are non-divisible
     }
 
     /// Get total token supply (NEP-11 required)
-    #[method]
-    #[safe]
-    pub fn total_supply(&self) -> Int256 {
+    pub fn total_supply(ctx: Context<View>) -> Result<Int256> {
         let storage = Storage::get_context();
-        match Storage::get(storage, self.total_supply_key.clone()) {
-            Some(supply_bytes) => Int256::from_byte_string(supply_bytes),
-            None => Int256::zero(),
-        }
+        let collection_data = get_collection_data(&storage)?;
+        Ok(collection_data.total_supply)
     }
 
     /// Get balance of an account (number of tokens owned) (NEP-11 required)
-    #[method]
-    #[safe]
-    pub fn balance_of(&self, owner: H160) -> Int256 {
+    pub fn balance_of(ctx: Context<View>, owner: H160) -> Result<Int256> {
         let storage = Storage::get_context();
-        let balance_key = self.balance_prefix.concat(&owner.into_byte_string());
-
-        match Storage::get(storage, balance_key) {
-            Some(balance_bytes) => Int256::from_byte_string(balance_bytes),
-            None => Int256::zero(),
+        let owner_key = format!("owner_account_{}", owner);
+        
+        match Storage::get(storage, ByteString::from_str(&owner_key)) {
+            Some(owner_data) => {
+                let owner_account: OwnerAccount = OwnerAccount::deserialize(owner_data)?;
+                Ok(owner_account.balance)
+            },
+            None => Ok(Int256::zero()),
         }
     }
 
     /// Get owner of a specific token (NEP-11 required)
-    #[method]
-    #[safe]
-    pub fn owner_of(&self, token_id: ByteString) -> H160 {
+    pub fn owner_of(ctx: Context<View>, token_id: ByteString) -> Result<H160> {
         let storage = Storage::get_context();
-        let owner_key = self.owner_prefix.concat(&token_id);
-
-        match Storage::get(storage, owner_key) {
-            Some(owner_bytes) => H160::from_byte_string(owner_bytes),
-            None => H160::zero(),
+        let nft_key = format!("nft_{}", token_id);
+        
+        match Storage::get(storage, ByteString::from_str(&nft_key)) {
+            Some(nft_data) => {
+                let nft_account: NftAccount = NftAccount::deserialize(nft_data)?;
+                Ok(nft_account.owner)
+            },
+            None => Ok(H160::zero()),
         }
     }
 
     /// Get tokens owned by an account (NEP-11 required)
-    #[method]
-    #[safe]
-    pub fn tokens_of(&self, owner: H160) -> Array<ByteString> {
+    pub fn tokens_of(ctx: Context<View>, owner: H160) -> Result<Array<ByteString>> {
         let storage = Storage::get_context();
-        let tokens_key = self.token_prefix.concat(&owner.into_byte_string());
-
-        match Storage::get(storage, tokens_key) {
-            Some(tokens_data) => self.deserialize_token_list(tokens_data),
-            None => Array::new(),
+        let owner_key = format!("owner_account_{}", owner);
+        
+        match Storage::get(storage, ByteString::from_str(&owner_key)) {
+            Some(owner_data) => {
+                let owner_account: OwnerAccount = OwnerAccount::deserialize(owner_data)?;
+                Ok(owner_account.token_ids)
+            },
+            None => Ok(Array::new()),
         }
     }
 
     /// Transfer a token (NEP-11 required)
-    #[method]
-    pub fn transfer(&self, to: H160, token_id: ByteString, data: Any) -> bool {
-        // Get current owner
-        let from = self.owner_of(token_id.clone());
-        if from == H160::zero() {
-            Runtime::log(ByteString::from_literal("Token does not exist"));
-            return false;
-        }
+    pub fn transfer(
+        ctx: Context<Transfer>,
+        to: H160,
+        token_id: ByteString,
+        _data: Vec<u8>
+    ) -> Result<()> {
+        let owner_or_approved = &ctx.accounts.owner_or_approved;
+        let nft_account = &mut ctx.accounts.nft_account;
+        let from_owner_account = &mut ctx.accounts.from_owner_account;
+        let to_owner_account = &mut ctx.accounts.to_owner_account;
 
-        // Check authorization (owner or approved)
-        if !self.is_authorized_for_token(from, token_id.clone()) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Not owner or approved"));
-            return false;
-        }
+        let storage = Storage::get_context();
 
         // Check if contract is paused
-        if self.is_paused() {
-            Runtime::log(ByteString::from_literal("Contract is paused"));
-            return false;
+        let collection_data = get_collection_data(&storage)?;
+        require!(!collection_data.is_frozen, "Contract is paused");
+
+        // Get NFT data
+        let nft_key = format!("nft_{}", token_id);
+        let mut nft_data: NftAccount = match Storage::get(storage.clone(), ByteString::from_str(&nft_key)) {
+            Some(data) => NftAccount::deserialize(data)?,
+            None => return Err(ErrorCode::TokenNotFound.into()),
+        };
+
+        let from = nft_data.owner;
+
+        // Check authorization (owner or approved)
+        require!(
+            owner_or_approved.key() == from || is_approved_for_token(&storage, &token_id, owner_or_approved.key())?,
+            "Unauthorized: Not owner or approved"
+        );
+
+        // Update NFT owner
+        nft_data.owner = to;
+        Storage::put(storage.clone(), ByteString::from_str(&nft_key), nft_data.serialize());
+
+        // Clear approval
+        let approval_key = format!("approval_{}", token_id);
+        Storage::delete(storage.clone(), ByteString::from_str(&approval_key));
+
+        // Update from owner account
+        let from_key = format!("owner_account_{}", from);
+        let mut from_account_data: OwnerAccount = match Storage::get(storage.clone(), ByteString::from_str(&from_key)) {
+            Some(data) => OwnerAccount::deserialize(data)?,
+            None => return Err(ErrorCode::OwnerAccountNotFound.into()),
+        };
+
+        from_account_data.balance = from_account_data.balance.checked_sub(&Int256::one());
+        remove_token_from_list(&mut from_account_data.token_ids, &token_id);
+
+        if from_account_data.balance == Int256::zero() {
+            Storage::delete(storage.clone(), ByteString::from_str(&from_key));
+        } else {
+            Storage::put(storage.clone(), ByteString::from_str(&from_key), from_account_data.serialize());
         }
 
-        // Perform transfer
-        self.transfer_token(from, to, token_id.clone());
+        // Update to owner account
+        let to_key = format!("owner_account_{}", to);
+        let mut to_account_data: OwnerAccount = match Storage::get(storage.clone(), ByteString::from_str(&to_key)) {
+            Some(data) => OwnerAccount::deserialize(data)?,
+            None => OwnerAccount {
+                owner: to,
+                balance: Int256::zero(),
+                token_ids: Array::new(),
+            },
+        };
 
-        // Call onNEP11Payment if recipient is a contract
-        self.on_payment_callback(from, Int256::one(), token_id, data);
+        to_account_data.balance = to_account_data.balance.checked_add(&Int256::one());
+        to_account_data.token_ids.push(token_id.clone());
+        Storage::put(storage, ByteString::from_str(&to_key), to_account_data.serialize());
 
-        true
+        // Emit Transfer event
+        emit!(TransferEvent {
+            from,
+            to,
+            amount: Int256::one(),
+            token_id: token_id.clone(),
+        });
+
+        Ok(())
     }
 
     /// Get properties of a token (NEP-11 optional)
-    #[method]
-    #[safe]
-    pub fn properties(&self, token_id: ByteString) -> Map<ByteString, Any> {
+    pub fn properties(ctx: Context<View>, token_id: ByteString) -> Result<Map<ByteString, Any>> {
         let storage = Storage::get_context();
-        let props_key = self.properties_prefix.concat(&token_id);
-
-        match Storage::get(storage, props_key) {
-            Some(props_data) => self.deserialize_properties(props_data),
-            None => Map::new(),
+        let nft_key = format!("nft_{}", token_id);
+        
+        match Storage::get(storage, ByteString::from_str(&nft_key)) {
+            Some(nft_data) => {
+                let nft_account: NftAccount = NftAccount::deserialize(nft_data)?;
+                Ok(nft_account.properties)
+            },
+            None => Ok(Map::new()),
         }
     }
 
     /// Approve another address to transfer a specific token
-    #[method]
-    pub fn approve(&self, to: H160, token_id: ByteString) -> bool {
-        let owner = self.owner_of(token_id.clone());
-        if owner == H160::zero() {
-            Runtime::log(ByteString::from_literal("Token does not exist"));
-            return false;
-        }
+    pub fn approve(
+        ctx: Context<Approve>,
+        to: H160,
+        token_id: ByteString
+    ) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let nft_account = &ctx.accounts.nft_account;
 
-        // Verify authorization
-        if !Runtime::check_witness(owner) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Not token owner"));
-            return false;
-        }
-
-        // Set approval
         let storage = Storage::get_context();
-        let approved_key = self.approved_prefix.concat(&token_id);
 
+        // Verify token exists and get owner
+        let nft_key = format!("nft_{}", token_id);
+        let nft_data: NftAccount = match Storage::get(storage.clone(), ByteString::from_str(&nft_key)) {
+            Some(data) => NftAccount::deserialize(data)?,
+            None => return Err(ErrorCode::TokenNotFound.into()),
+        };
+
+        require!(nft_data.owner == owner.key(), "Unauthorized: Not token owner");
+
+        // Set or clear approval
+        let approval_key = format!("approval_{}", token_id);
         if to == H160::zero() {
-            let storage_clone = storage.clone(); Storage::delete(storage_clone, approved_key);
+            Storage::delete(storage, ByteString::from_str(&approval_key));
         } else {
-            let storage_clone = storage.clone(); Storage::put(storage_clone, approved_key, to.into_byte_string());
+            Storage::put(storage, ByteString::from_str(&approval_key), to.into_byte_string());
         }
 
         // Emit Approval event
-        let mut event_data = Array::new();
-        event_data.push(owner.into_any());
-        event_data.push(to.into_any());
-        event_data.push(token_id.into_any());
-        Runtime::notify(ByteString::from_literal("Approval"), event_data);
+        emit!(ApprovalEvent {
+            owner: nft_data.owner,
+            approved: to,
+            token_id,
+        });
 
-        true
+        Ok(())
     }
 
     /// Get approved address for a token
-    #[method]
-    #[safe]
-    pub fn get_approved(&self, token_id: ByteString) -> H160 {
+    pub fn get_approved(ctx: Context<View>, token_id: ByteString) -> Result<H160> {
         let storage = Storage::get_context();
-        let approved_key = self.approved_prefix.concat(&token_id);
-
-        match Storage::get(storage, approved_key) {
-            Some(approved_bytes) => H160::from_byte_string(approved_bytes),
-            None => H160::zero(),
+        let approval_key = format!("approval_{}", token_id);
+        
+        match Storage::get(storage, ByteString::from_str(&approval_key)) {
+            Some(approved_bytes) => Ok(H160::from_byte_string(approved_bytes)),
+            None => Ok(H160::zero()),
         }
     }
 
     /// Mint a new token (authorized minter only)
-    #[method]
-    pub fn mint(&self, to: H160, token_id: ByteString, properties: Map<ByteString, Any>) -> bool {
-        if !self.is_authorized_minter() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Not authorized to mint"));
-            return false;
-        }
+    pub fn mint(
+        ctx: Context<Mint>,
+        to: H160,
+        token_id: ByteString,
+        properties: Map<ByteString, Any>
+    ) -> Result<()> {
+        let authority = &ctx.accounts.authority;
+        let collection = &mut ctx.accounts.collection;
+        let nft_account = &mut ctx.accounts.nft_account;
+        let owner_account = &mut ctx.accounts.owner_account;
 
-        if token_id.is_empty() || token_id.len() > 64 {
-            Runtime::log(ByteString::from_literal("Invalid token ID: must be 1-64 characters"));
-            return false;
-        }
-
-        // Check if token already exists
-        if self.owner_of(token_id.clone()) != H160::zero() {
-            Runtime::log(ByteString::from_literal("Token already exists"));
-            return false;
-        }
+        require!(!token_id.is_empty() && token_id.len() <= 64, "Invalid token ID: must be 1-64 characters");
 
         let storage = Storage::get_context();
+        let mut collection_data = get_collection_data(&storage)?;
 
-        // Set token owner
-        let owner_key = self.owner_prefix.concat(&token_id);
-        Storage::put(storage.clone(), owner_key, to.into_byte_string());
+        require!(
+            authority.key() == collection_data.mint_authority || is_authorized_minter(&storage, authority.key())?,
+            "Unauthorized: Not authorized to mint"
+        );
 
-        // Update owner's balance
-        let current_balance = self.balance_of(to);
-        let new_balance = current_balance.checked_add(&Int256::one());
-        let balance_key = self.balance_prefix.concat(&to.into_byte_string());
-        Storage::put(storage.clone(), balance_key, new_balance.into_byte_string());
+        // Check if token already exists
+        let nft_key = format!("nft_{}", token_id);
+        require!(
+            Storage::get(storage.clone(), ByteString::from_str(&nft_key)).is_none(),
+            "Token already exists"
+        );
 
-        // Add token to owner's token list
-        self.add_token_to_owner(to, token_id.clone());
+        // Create NFT account
+        let nft_data = NftAccount {
+            mint: collection.key(),
+            owner: to,
+            token_id: token_id.clone(),
+            properties,
+        };
+        Storage::put(storage.clone(), ByteString::from_str(&nft_key), nft_data.serialize());
 
-        // Store properties if provided
-        if properties.size() > 0 {
-            let props_key = self.properties_prefix.concat(&token_id);
-            let serialized_props = self.serialize_properties(properties);
-            Storage::put(storage.clone(), props_key, serialized_props);
-        }
+        // Update owner account
+        let owner_key = format!("owner_account_{}", to);
+        let mut owner_data: OwnerAccount = match Storage::get(storage.clone(), ByteString::from_str(&owner_key)) {
+            Some(data) => OwnerAccount::deserialize(data)?,
+            None => OwnerAccount {
+                owner: to,
+                balance: Int256::zero(),
+                token_ids: Array::new(),
+            },
+        };
 
-        // Update total supply
-        let current_supply = self.total_supply();
-        let new_supply = current_supply.checked_add(&Int256::one());
-        let storage_clone = storage.clone(); Storage::put(storage_clone, self.total_supply_key.clone(), new_supply.into_byte_string());
+        owner_data.balance = owner_data.balance.checked_add(&Int256::one());
+        owner_data.token_ids.push(token_id.clone());
+        Storage::put(storage.clone(), ByteString::from_str(&owner_key), owner_data.serialize());
 
-        // Add to global token list
-        self.add_token_to_global_list(token_id.clone());
+        // Update collection
+        collection_data.total_supply = collection_data.total_supply.checked_add(&Int256::one());
+        Storage::put(storage, ByteString::from_literal("collection_data"), collection_data.serialize());
 
         // Emit Transfer event (from null address)
-        self.emit_transfer(H160::zero(), to, Int256::one(), token_id.clone());
+        emit!(TransferEvent {
+            from: H160::zero(),
+            to,
+            amount: Int256::one(),
+            token_id: token_id.clone(),
+        });
 
-        let mut event_data = Array::new(); event_data.push(token_id.into_any()); Runtime::notify(ByteString::from_literal("TokenMinted"), event_data);
-        true
+        emit!(TokenMinted { token_id });
+        Ok(())
     }
 
     /// Burn a token (token owner only)
-    #[method]
-    pub fn burn(&self, token_id: ByteString) -> bool {
-        let owner = self.owner_of(token_id.clone());
-        if owner == H160::zero() {
-            Runtime::log(ByteString::from_literal("Token does not exist"));
-            return false;
-        }
-
-        // Verify authorization
-        if !Runtime::check_witness(owner) {
-            Runtime::log(ByteString::from_literal("Unauthorized: Not token owner"));
-            return false;
-        }
+    pub fn burn(
+        ctx: Context<Burn>,
+        token_id: ByteString
+    ) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let nft_account = &mut ctx.accounts.nft_account;
+        let owner_account = &mut ctx.accounts.owner_account;
+        let collection = &mut ctx.accounts.collection;
 
         let storage = Storage::get_context();
 
-        // Remove token owner
-        let owner_key = self.owner_prefix.concat(&token_id);
-        Storage::delete(storage.clone(), owner_key);
+        // Get NFT data
+        let nft_key = format!("nft_{}", token_id);
+        let nft_data: NftAccount = match Storage::get(storage.clone(), ByteString::from_str(&nft_key)) {
+            Some(data) => NftAccount::deserialize(data)?,
+            None => return Err(ErrorCode::TokenNotFound.into()),
+        };
+
+        require!(nft_data.owner == owner.key(), "Unauthorized: Not token owner");
+
+        // Remove NFT account
+        Storage::delete(storage.clone(), ByteString::from_str(&nft_key));
 
         // Remove approval if exists
-        let approved_key = self.approved_prefix.concat(&token_id);
-        Storage::delete(storage.clone(), approved_key);
+        let approval_key = format!("approval_{}", token_id);
+        Storage::delete(storage.clone(), ByteString::from_str(&approval_key));
 
-        // Remove properties if exist
-        let props_key = self.properties_prefix.concat(&token_id);
-        Storage::delete(storage.clone(), props_key);
+        // Update owner account
+        let owner_key = format!("owner_account_{}", nft_data.owner);
+        let mut owner_data: OwnerAccount = match Storage::get(storage.clone(), ByteString::from_str(&owner_key)) {
+            Some(data) => OwnerAccount::deserialize(data)?,
+            None => return Err(ErrorCode::OwnerAccountNotFound.into()),
+        };
 
-        // Update owner's balance
-        let current_balance = self.balance_of(owner);
-        let new_balance = current_balance.checked_sub(&Int256::one());
-        let balance_key = self.balance_prefix.concat(&owner.into_byte_string());
+        owner_data.balance = owner_data.balance.checked_sub(&Int256::one());
+        remove_token_from_list(&mut owner_data.token_ids, &token_id);
 
-        if new_balance == Int256::zero() {
-            Storage::delete(storage.clone(), balance_key);
+        if owner_data.balance == Int256::zero() {
+            Storage::delete(storage.clone(), ByteString::from_str(&owner_key));
         } else {
-            Storage::put(storage.clone(), balance_key, new_balance.into_byte_string());
+            Storage::put(storage.clone(), ByteString::from_str(&owner_key), owner_data.serialize());
         }
 
-        // Remove token from owner's token list
-        self.remove_token_from_owner(owner, token_id.clone());
-
-        // Update total supply
-        let current_supply = self.total_supply();
-        let new_supply = current_supply.checked_sub(&Int256::one());
-        let storage_clone = storage.clone(); Storage::put(storage_clone, self.total_supply_key.clone(), new_supply.into_byte_string());
-
-        // Remove from global token list
-        self.remove_token_from_global_list(token_id.clone());
+        // Update collection
+        let mut collection_data = get_collection_data(&storage)?;
+        collection_data.total_supply = collection_data.total_supply.checked_sub(&Int256::one());
+        Storage::put(storage, ByteString::from_literal("collection_data"), collection_data.serialize());
 
         // Emit Transfer event (to null address)
-        self.emit_transfer(owner, H160::zero(), Int256::one(), token_id.clone());
+        emit!(TransferEvent {
+            from: nft_data.owner,
+            to: H160::zero(),
+            amount: Int256::one(),
+            token_id: token_id.clone(),
+        });
 
-        let mut event_data = Array::new(); event_data.push(token_id.into_any()); Runtime::notify(ByteString::from_literal("TokenBurned"), event_data);
-        true
+        emit!(TokenBurned { token_id });
+        Ok(())
     }
 
     /// Get contract owner
-    #[method]
-    #[safe]
-    pub fn get_owner(&self) -> H160 {
+    pub fn get_owner(ctx: Context<View>) -> Result<H160> {
         let storage = Storage::get_context();
-        match Storage::get(storage, self.contract_owner_key.clone()) {
-            Some(owner_bytes) => H160::from_byte_string(owner_bytes),
-            None => H160::zero(),
-        }
+        let collection_data = get_collection_data(&storage)?;
+        Ok(collection_data.mint_authority)
     }
 
     /// Add authorized minter (owner only)
-    #[method]
-    pub fn add_minter(&self, minter: H160) -> bool {
-        if !self.is_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only owner can add minters"));
-            return false;
-        }
+    pub fn add_minter(
+        ctx: Context<AdminAction>,
+        minter: H160
+    ) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let collection = &ctx.accounts.collection;
 
         let storage = Storage::get_context();
-        let minter_key = self.minters_prefix.concat(&minter.into_byte_string());
-        let storage_clone = storage.clone(); Storage::put(storage_clone, minter_key, ByteString::from_literal("true"));
+        let collection_data = get_collection_data(&storage)?;
+        require!(owner.key() == collection_data.mint_authority, "Unauthorized: Only owner can add minters");
 
-        let mut event_data = Array::new(); event_data.push(minter.into_any()); Runtime::notify(ByteString::from_literal("MinterAdded"), event_data);
-        true
+        let minter_key = format!("minter_{}", minter);
+        Storage::put(storage, ByteString::from_str(&minter_key), ByteString::from_literal("true"));
+
+        emit!(MinterAdded { minter });
+        Ok(())
     }
 
     /// Set base URI for token metadata (owner only)
-    #[method]
-    pub fn set_base_uri(&self, base_uri: ByteString) -> bool {
-        if !self.is_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only owner can set base URI"));
-            return false;
-        }
+    pub fn set_base_uri(
+        ctx: Context<AdminAction>,
+        base_uri: ByteString
+    ) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let collection = &ctx.accounts.collection;
 
         let storage = Storage::get_context();
-        if base_uri.is_empty() {
-            let storage_clone = storage.clone(); Storage::delete(storage_clone, self.base_uri_key.clone());
-        } else {
-            let storage_clone = storage.clone();
-            Storage::put(storage_clone, self.base_uri_key.clone(), base_uri.clone());
-        }
+        let mut collection_data = get_collection_data(&storage)?;
+        require!(owner.key() == collection_data.mint_authority, "Unauthorized: Only owner can set base URI");
 
-        let mut event_data = Array::new(); event_data.push(base_uri.into_any()); Runtime::notify(ByteString::from_literal("BaseURISet"), event_data);
-        true
+        collection_data.base_uri = base_uri.clone();
+        Storage::put(storage, ByteString::from_literal("collection_data"), collection_data.serialize());
+
+        emit!(BaseURISet { base_uri });
+        Ok(())
     }
 
     /// Get base URI
-    #[method]
-    #[safe]
-    pub fn get_base_uri(&self) -> ByteString {
+    pub fn get_base_uri(ctx: Context<View>) -> Result<ByteString> {
         let storage = Storage::get_context();
-        match Storage::get(storage, self.base_uri_key.clone()) {
-            Some(uri) => uri,
-            None => ByteString::empty(),
-        }
+        let collection_data = get_collection_data(&storage)?;
+        Ok(collection_data.base_uri)
     }
 
     /// Get token URI (base_uri + token_id)
-    #[method]
-    #[safe]
-    pub fn token_uri(&self, token_id: ByteString) -> ByteString {
-        if self.owner_of(token_id.clone()) == H160::zero() {
-            return ByteString::empty();
-        }
+    pub fn token_uri(ctx: Context<View>, token_id: ByteString) -> Result<ByteString> {
+        let storage = Storage::get_context();
 
-        let base_uri = self.get_base_uri();
-        if base_uri.is_empty() {
-            return token_id;
-        }
+        // Check if token exists
+        let nft_key = format!("nft_{}", token_id);
+        require!(
+            Storage::get(storage.clone(), ByteString::from_str(&nft_key)).is_some(),
+            "Token does not exist"
+        );
 
-        base_uri.concat(&token_id)
+        let collection_data = get_collection_data(&storage)?;
+        if collection_data.base_uri.is_empty() {
+            Ok(token_id)
+        } else {
+            Ok(collection_data.base_uri.concat(&token_id))
+        }
     }
 
     /// Pause contract (owner only)
-    #[method]
-    pub fn pause(&self) -> bool {
-        if !self.is_owner() {
-            Runtime::log(ByteString::from_literal("Unauthorized: Only owner can pause"));
-            return false;
-        }
+    pub fn pause(ctx: Context<AdminAction>) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let collection = &ctx.accounts.collection;
 
         let storage = Storage::get_context();
-        let storage_clone = storage.clone(); Storage::put(storage_clone, self.paused_key.clone(), ByteString::from_literal("true"));
+        let mut collection_data = get_collection_data(&storage)?;
+        require!(owner.key() == collection_data.freeze_authority, "Unauthorized: Only owner can pause");
 
-        Runtime::notify(ByteString::from_literal("ContractPaused"), Array::new());
-        true
+        collection_data.is_frozen = true;
+        Storage::put(storage, ByteString::from_literal("collection_data"), collection_data.serialize());
+
+        emit!(ContractPaused {});
+        Ok(())
+    }
+
+    /// Unpause contract (owner only)
+    pub fn unpause(ctx: Context<AdminAction>) -> Result<()> {
+        let owner = &ctx.accounts.owner;
+        let collection = &ctx.accounts.collection;
+
+        let storage = Storage::get_context();
+        let mut collection_data = get_collection_data(&storage)?;
+        require!(owner.key() == collection_data.freeze_authority, "Unauthorized: Only owner can unpause");
+
+        collection_data.is_frozen = false;
+        Storage::put(storage, ByteString::from_literal("collection_data"), collection_data.serialize());
+
+        emit!(ContractUnpaused {});
+        Ok(())
     }
 
     /// Check if contract is paused
-    #[method]
-    #[safe]
-    pub fn is_paused(&self) -> bool {
+    pub fn is_paused(ctx: Context<View>) -> Result<bool> {
         let storage = Storage::get_context();
-        Storage::get(storage, self.paused_key.clone()).is_some()
+        let collection_data = get_collection_data(&storage)?;
+        Ok(collection_data.is_frozen)
     }
+}
 
-    // Helper functions
-
-    fn is_owner(&self) -> bool {
-        let owner = self.get_owner();
-        if owner == H160::zero() {
-            return false;
-        }
-        Runtime::check_witness(owner)
+// Helper functions
+fn get_collection_data(storage: &Storage) -> Result<CollectionAccount> {
+    match Storage::get(storage.clone(), ByteString::from_literal("collection_data")) {
+        Some(data) => CollectionAccount::deserialize(data),
+        None => Err(ErrorCode::CollectionNotInitialized.into()),
     }
+}
 
-    fn is_authorized_minter(&self) -> bool {
-        if self.is_owner() {
-            return true;
-        }
+fn is_authorized_minter(storage: &Storage, address: H160) -> Result<bool> {
+    let minter_key = format!("minter_{}", address);
+    Ok(Storage::get(storage.clone(), ByteString::from_str(&minter_key)).is_some())
+}
 
-        let caller = Runtime::get_calling_script_hash();
-        let storage = Storage::get_context();
-        let minter_key = self.minters_prefix.concat(&caller.into_byte_string());
-        Storage::get(storage, minter_key).is_some()
+fn is_approved_for_token(storage: &Storage, token_id: &ByteString, address: H160) -> Result<bool> {
+    let approval_key = format!("approval_{}", token_id);
+    match Storage::get(storage.clone(), ByteString::from_str(&approval_key)) {
+        Some(approved_bytes) => {
+            let approved = H160::from_byte_string(approved_bytes);
+            Ok(approved == address)
+        },
+        None => Ok(false),
     }
+}
 
-    fn is_authorized_for_token(&self, owner: H160, token_id: ByteString) -> bool {
-        // Check if caller is the owner
-        if Runtime::check_witness(owner) {
-            return true;
-        }
-
-        // Check if caller is approved for this token
-        let approved = self.get_approved(token_id);
-        if approved != H160::zero() && Runtime::check_witness(approved) {
-            return true;
-        }
-
-        false
-    }
-
-    fn transfer_token(&self, from: H160, to: H160, token_id: ByteString) {
-        let storage = Storage::get_context();
-
-        // Update token owner
-        let owner_key = self.owner_prefix.concat(&token_id);
-        Storage::put(storage.clone(), owner_key, to.into_byte_string());
-
-        // Clear approval
-        let approved_key = self.approved_prefix.concat(&token_id);
-        Storage::delete(storage.clone(), approved_key);
-
-        // Update balances
-        let from_balance = self.balance_of(from);
-        let new_from_balance = from_balance.checked_sub(&Int256::one());
-        let from_balance_key = self.balance_prefix.concat(&from.into_byte_string());
-
-        if new_from_balance == Int256::zero() {
-            Storage::delete(storage.clone(), from_balance_key);
-        } else {
-            Storage::put(storage.clone(), from_balance_key, new_from_balance.into_byte_string());
-        }
-
-        let to_balance = self.balance_of(to);
-        let new_to_balance = to_balance.checked_add(&Int256::one());
-        let to_balance_key = self.balance_prefix.concat(&to.into_byte_string());
-        let storage_clone = storage.clone();
-        Storage::put(storage_clone, to_balance_key, new_to_balance.into_byte_string());
-
-        // Update token lists
-        self.remove_token_from_owner(from, token_id.clone());
-        self.add_token_to_owner(to, token_id.clone());
-
-        // Emit Transfer event
-        self.emit_transfer(from, to, Int256::one(), token_id);
-    }
-
-    fn add_token_to_owner(&self, owner: H160, token_id: ByteString) {
-        let storage = Storage::get_context();
-        let tokens_key = self.token_prefix.concat(&owner.into_byte_string());
-
-        let mut tokens = match Storage::get(storage.clone(), tokens_key.clone()) {
-            Some(tokens_data) => self.deserialize_token_list(tokens_data),
-            None => Array::new(),
-        };
-
-        tokens.push(token_id);
-        let serialized = self.serialize_token_list(tokens);
-        let storage_clone = storage.clone();
-        Storage::put(storage_clone, tokens_key, serialized);
-    }
-
-    fn remove_token_from_owner(&self, owner: H160, token_id: ByteString) {
-        let storage = Storage::get_context();
-        let tokens_key = self.token_prefix.concat(&owner.into_byte_string());
-
-        let tokens = match Storage::get(storage.clone(), tokens_key.clone()) {
-            Some(tokens_data) => self.deserialize_token_list(tokens_data),
-            None => return,
-        };
-
-        let mut new_tokens = Array::new();
-        for i in 0..tokens.size() {
-            let token = tokens.get(i).clone();
-            if token != token_id {
-                new_tokens.push(token);
-            }
-        }
-
-        if new_tokens.size() == 0 {
-            let storage_clone = storage.clone(); Storage::delete(storage_clone, tokens_key);
-        } else {
-            let serialized = self.serialize_token_list(new_tokens);
-            let storage_clone = storage.clone();
-            Storage::put(storage_clone, tokens_key, serialized);
+fn remove_token_from_list(token_ids: &mut Array<ByteString>, token_id: &ByteString) {
+    let mut new_tokens = Array::new();
+    for i in 0..token_ids.size() {
+        let token = token_ids.get(i).clone();
+        if token != *token_id {
+            new_tokens.push(token);
         }
     }
+    *token_ids = new_tokens;
+}
 
-    fn add_token_to_global_list(&self, token_id: ByteString) {
-        let storage = Storage::get_context();
-        let current_supply = self.total_supply();
-        let index_key = self.token_index_prefix.concat(&token_id);
-        let storage_clone = storage.clone(); Storage::put(storage_clone, index_key, current_supply.into_byte_string());
-    }
+// Events
+#[event]
+pub struct ContractDeployed {
+    pub symbol: ByteString,
+}
 
-    fn remove_token_from_global_list(&self, token_id: ByteString) {
-        let storage = Storage::get_context();
-        let index_key = self.token_index_prefix.concat(&token_id);
-        let storage_clone = storage.clone(); Storage::delete(storage_clone, index_key);
-    }
+#[event]
+pub struct TransferEvent {
+    pub from: H160,
+    pub to: H160,
+    pub amount: Int256,
+    pub token_id: ByteString,
+}
 
-    fn emit_transfer(&self, from: H160, to: H160, amount: Int256, token_id: ByteString) {
-        let mut event_data = Array::new();
-        event_data.push(from.into_any());
-        event_data.push(to.into_any());
-        event_data.push(amount.into_any());
-        event_data.push(token_id.into_any());
-        Runtime::notify(ByteString::from_literal("Transfer"), event_data);
-    }
+#[event]
+pub struct ApprovalEvent {
+    pub owner: H160,
+    pub approved: H160,
+    pub token_id: ByteString,
+}
 
-    fn on_payment_callback(&self, from: H160, amount: Int256, token_id: ByteString, data: Any) {
-        // This would call onNEP11Payment on the recipient contract if it's a contract
-        let mut event_data = Array::new();
-        event_data.push(from.into_any());
-        event_data.push(amount.into_any());
-        event_data.push(token_id.into_any());
-        event_data.push(data);
-        Runtime::notify(ByteString::from_literal("PaymentCallback"), event_data);
-    }
+#[event]
+pub struct TokenMinted {
+    pub token_id: ByteString,
+}
 
-    fn serialize_token_list(&self, tokens: Array<ByteString>) -> ByteString {
-        let mut serialized = ByteString::empty();
-        let len = tokens.size();
+#[event]
+pub struct TokenBurned {
+    pub token_id: ByteString,
+}
 
-        // Store array length
-        serialized = serialized.concat(&ByteString::from_bytes(&(len as u32).to_le_bytes()));
+#[event]
+pub struct MinterAdded {
+    pub minter: H160,
+}
 
-        // Store each token ID with its length
-        for i in 0..len {
-            let token = tokens.get(i);
-            let token_bytes = token.to_bytes();
-            serialized = serialized.concat(&ByteString::from_bytes(&(token_bytes.len() as u32).to_le_bytes()));
-            serialized = serialized.concat(&token);
-        }
+#[event]
+pub struct BaseURISet {
+    pub base_uri: ByteString,
+}
 
-        serialized
-    }
+#[event]
+pub struct ContractPaused {}
 
-    fn deserialize_token_list(&self, serialized: ByteString) -> Array<ByteString> {
-        let bytes = serialized.to_bytes();
-        let mut tokens = Array::new();
+#[event]
+pub struct ContractUnpaused {}
 
-        if bytes.len() < 4 {
-            return tokens;
-        }
-
-        let len = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
-        let mut offset = 4;
-
-        for _ in 0..len {
-            if offset + 4 > bytes.len() {
-                break;
-            }
-
-            let token_len = u32::from_le_bytes([
-                bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]
-            ]) as usize;
-            offset += 4;
-
-            if offset + token_len > bytes.len() {
-                break;
-            }
-
-            let token_bytes = &bytes[offset..offset + token_len];
-            let token = ByteString::from_bytes(token_bytes);
-            tokens.push(token);
-            offset += token_len;
-        }
-
-        tokens
-    }
-
-    fn serialize_properties(&self, properties: Map<ByteString, Any>) -> ByteString {
-        // Production-ready serialization format
-        // Since Map doesn't support iteration in the current API, we store the map directly
-        // This is a limitation of the current Map implementation
-        let mut serialized = ByteString::empty();
-        let size = properties.size();
-
-        // Store map size (4 bytes) - for future compatibility when iteration is supported
-        serialized = serialized.concat(&ByteString::from_bytes(&(size as u32).to_le_bytes()));
-
-        // For now, we can't iterate over Map entries due to API limitations
-        // In a production environment, you would either:
-        // 1. Use a different data structure that supports iteration
-        // 2. Maintain a separate list of keys
-        // 3. Use the Map as-is and handle serialization differently
-
-        // Store a marker indicating this is a Map that needs special handling
-        serialized = serialized.concat(&ByteString::from_literal("MAP_PLACEHOLDER"));
-
-        serialized
-    }
-
-    fn deserialize_properties(&self, serialized: ByteString) -> Map<ByteString, Any> {
-        let properties = Map::new();
-        let bytes = serialized.to_bytes();
-
-        if bytes.len() < 4 {
-            return properties;
-        }
-
-        let _len = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
-
-        // Check for MAP_PLACEHOLDER marker
-        let marker_start = 4;
-        let marker = ByteString::from_literal("MAP_PLACEHOLDER");
-        let marker_bytes = marker.to_bytes();
-
-        if bytes.len() >= marker_start + marker_bytes.len() {
-            let serialized_marker = &bytes[marker_start..marker_start + marker_bytes.len()];
-            if serialized_marker == marker_bytes {
-                // This is a placeholder map - return empty map
-                // Complete implementation with proper deserialization
-                // based on your specific requirements
-                return properties;
-            }
-        }
-
-        // For backward compatibility, return empty map
-        properties
-    }
+// Error codes
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Collection not initialized")]
+    CollectionNotInitialized,
+    #[msg("Token not found")]
+    TokenNotFound,
+    #[msg("Owner account not found")]
+    OwnerAccountNotFound,
+    #[msg("Unauthorized")]
+    Unauthorized,
+    #[msg("Token already exists")]
+    TokenAlreadyExists,
+    #[msg("Contract is paused")]
+    ContractPaused,
+    #[msg("Invalid token ID")]
+    InvalidTokenId,
 }

@@ -1,0 +1,20 @@
+[package]
+name = "nep17-token-solana-style"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+neo-contract = { path = "../../neo-contract" }
+
+[features]
+default = []
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

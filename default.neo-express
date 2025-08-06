@@ -1,0 +1,84 @@
+{
+  "magic": 1752785649,
+  "consensus-nodes": [
+    {
+      "tcp-port": 20333,
+      "ws-port": 20334,
+      "rpc-port": 20332,
+      "wallet": {
+        "name": "consensus",
+        "accounts": [
+          {
+            "private-key": "KxyjQ8eUa4FHa4Y7YNLGyyJHVHMKnuNPPa4YxX9tch1XTcBKGzJ",
+            "script-hash": "NfULvV8xMJhJf8YTvJM4JfLx5zHGnF4E2R",
+            "label": "consensus",
+            "is-default": true,
+            "contract": {
+              "script": "0c21026ff03b949241ce1824315d91cf7b639ac5b59d064bc1dc4ddb7e5360737c787b4156e7b327",
+              "parameters": [
+                "Signature"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "wallets": [
+    {
+      "name": "alice",
+      "accounts": [
+        {
+          "private-key": "KxPBRgKjzttNKi9JrZCYC9nQvq8mVDk3hWHNCH7XqBmgJYUxDF1s",
+          "script-hash": "NcphtjgTye3c3ZL5J5nDZhsf3UJMGxjpYa",
+          "label": "alice",
+          "is-default": true,
+          "contract": {
+            "script": "0c2102f1cc7f5e893674e7ffe8961640f557a693a163fb6b3c2a8e3bbac7a7e4e2d8f54156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "bob",
+      "accounts": [
+        {
+          "private-key": "KyHwMsqRJqauxRPw2NKfYZQB3U6XJjdTjqkPAFLPPqWqYotFm2LM",
+          "script-hash": "NXg94HBFPxmYeG8BYsKKZJpzPFZeZLYaNP",
+          "label": "bob",
+          "is-default": true,
+          "contract": {
+            "script": "0c2103b209fd1d1bf8e73189f9a6b84d6cf2a1000a67cf675f2440049e2adea8b7b2d4156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "owner",
+      "accounts": [
+        {
+          "private-key": "L1QqQJnkBwk8m4v8vvHBxRPmNBo6UKEHHkJEQs1X2s9jFEUVaNV1",
+          "script-hash": "NVVwFU6Pvkau5uEHY5u7K97n9daPtmaxHQ",
+          "label": "owner",
+          "is-default": true,
+          "contract": {
+            "script": "0c210217c7f7dd8ef5eacd6e943d8c8f3c6f45c66d1b9e5e7a1506a8cf2aef7adc87574156e7b327",
+            "parameters": [
+              "Signature"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "seconds-per-block": 1,
+    "validators-count": 1
+  }
+}
