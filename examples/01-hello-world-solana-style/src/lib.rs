@@ -2,8 +2,6 @@
 #![no_main]
 
 use neo_contract::prelude::*;
-use neo_contract::types::builtin::IntoAny;
-use neo_contract::serialize::{Serialize, Deserialize};
 
 declare_id!("NeoHelloWorldContract123456789");
 
@@ -15,10 +13,10 @@ pub mod hello_world {
         let greeting_account = &mut ctx.accounts.greeting_account;
         let authority = &ctx.accounts.authority;
         
-        greeting_account.authority = *authority.key();
-        greeting_account.greeting = greeting;
-        greeting_account.visitor_count = Int256::zero();
-        greeting_account.is_initialized = true;
+        greeting_account.data.authority = authority.key();
+        greeting_account.data.greeting = greeting;
+        greeting_account.data.visitor_count = Int256::zero();
+        greeting_account.data.is_initialized = true;
         
         Runtime::notify(
             ByteString::from_literal("GreetingInitialized"),
@@ -28,10 +26,9 @@ pub mod hello_world {
         Ok(())
     }
     
-    #[safe_attr]
     pub fn get_greeting(ctx: Context<GetGreeting>) -> Result<ByteString> {
         let greeting_account = &ctx.accounts.greeting_account;
-        Ok(greeting_account.greeting.clone())
+        Ok(greeting_account.data.greeting.clone())
     }
     
     pub fn set_greeting(ctx: Context<SetGreeting>, new_greeting: ByteString) -> Result<()> {
@@ -39,12 +36,12 @@ pub mod hello_world {
         let authority = &ctx.accounts.authority;
         
         require_keys_eq!(
-            greeting_account.authority,
-            *authority.key(),
+            greeting_account.data.authority,
+            authority.key(),
             ContractError::Unauthorized
         );
         
-        greeting_account.greeting = new_greeting.clone();
+        greeting_account.data.greeting = new_greeting.clone();
         
         Runtime::notify(
             ByteString::from_literal("GreetingChanged"),
@@ -57,7 +54,7 @@ pub mod hello_world {
     pub fn say_hello(ctx: Context<SayHello>, visitor_name: ByteString) -> Result<ByteString> {
         let greeting_account = &mut ctx.accounts.greeting_account;
         
-        greeting_account.visitor_count = greeting_account.visitor_count
+        greeting_account.data.visitor_count = greeting_account.data.visitor_count
             .checked_add(&Int256::one())
             .unwrap_or(Int256::zero());
         
@@ -100,10 +97,16 @@ pub struct SayHello<'info> {
     pub visitor: Signer<'info>,
 }
 
-#[account_attr]
+#[account]
 pub struct GreetingAccount {
     pub authority: H160,
     pub greeting: ByteString,
     pub visitor_count: Int256,
     pub is_initialized: bool,
+}
+
+#[error_code]
+pub enum ContractError {
+    #[msg("Unauthorized access")]
+    Unauthorized,
 }
