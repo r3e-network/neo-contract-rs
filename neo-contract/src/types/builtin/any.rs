@@ -4,7 +4,8 @@
 #[allow(unused_imports)]
 use crate::types::{
     placeholder::{Placeholder, IntoPlaceholder, FromPlaceholder},
-    builtin::{buffer::Buffer, h160::H160, h256::H256, int256::Int256, interop::Interop, string::ByteString, array::Array, map::Map, primitive::Primitive},
+    builtin::{buffer::Buffer, h160::H160, h256::H256, int256::Int256, interop::Interop, string::ByteString, array::Array, map::Map, primitive::Primitive, bytes::Bytes},
+    key::PublicKey,
 };
 
 #[cfg(target_family = "wasm")]
@@ -30,6 +31,11 @@ impl Any {
         {
             self.0.is::<T>()
         }
+    }
+    
+    /// Create a null Any value
+    pub fn null() -> Self {
+        Self::default()
     }
 
     #[inline(always)]
@@ -107,7 +113,7 @@ macro_rules! impl_into_any {
     };
 }
 
-impl_into_any!(Buffer, H160, H256, Int256, Interop, ByteString);
+impl_into_any!(Buffer, H160, H256, Int256, Interop, ByteString, Bytes, PublicKey);
 
 impl<T: 'static> IntoAny for Array<T> {
     #[inline(always)]

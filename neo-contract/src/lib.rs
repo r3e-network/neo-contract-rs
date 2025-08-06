@@ -17,6 +17,7 @@ pub mod native;
 pub mod context;
 pub mod account;
 pub mod error;
+pub mod neo_features;
 
 pub use neo_contract_proc_macros::{contract, structs, program, account as account_attr, declare_id, event, init_if_needed};
 
@@ -90,4 +91,12 @@ pub mod prelude {
     // Re-export derive macros and macros
     pub use neo_contract_proc_macros::{Accounts, ErrorCode, program, account as account_attr, declare_id, event, init_if_needed};
     pub use crate::{require, require_eq, require_neq, require_gt, require_gte, require_keys_eq, require_keys_neq};
+    
+    // Neo N3 Complete Features
+    pub use crate::neo_features::{
+        oracle,
+        native,
+        crypto as neo_crypto,
+        Block, Transaction, Contract as ContractInfo,
+    };
 }
