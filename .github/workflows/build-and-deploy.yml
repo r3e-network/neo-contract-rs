@@ -15,7 +15,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-Ctarget-feature=+multivalue -Clink-arg=--initial-memory=2097152"
   DOTNET_VERSION: '7.0.x'
 
 jobs:
@@ -109,6 +108,8 @@ jobs:
       
       - name: Build example ${{ matrix.example }}
         working-directory: examples/${{ matrix.example }}
+        env:
+          RUSTFLAGS: "-Ctarget-feature=+multivalue -Clink-arg=--initial-memory=2097152"
         run: |
           echo "Building ${{ matrix.example }}"
           cargo build --target wasm32-unknown-unknown --release

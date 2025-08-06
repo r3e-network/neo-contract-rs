@@ -8,7 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-Ctarget-feature=+multivalue -Clink-arg=--initial-memory=2097152"
 
 jobs:
   test:
@@ -83,6 +82,8 @@ jobs:
       
       - name: Build hello-world example
         working-directory: examples/01-hello-world
+        env:
+          RUSTFLAGS: "-Ctarget-feature=+multivalue -Clink-arg=--initial-memory=2097152"
         run: |
           echo "Building hello-world example..."
           cargo build --target wasm32-unknown-unknown --release 2>&1 || {
