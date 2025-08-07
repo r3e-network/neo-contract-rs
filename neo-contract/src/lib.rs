@@ -43,12 +43,17 @@ pub mod prelude {
     pub use crate::contract::{call, create_multi_signs_account, create_standard_account, get_call_flags};
     pub use crate::contract::nep17::{Nep17Token, PREFIX_BALANCE, TOTAL_SUPPLY_KEY};
     pub use crate::contract::nep11::{Nep11Token, TokenState};
+    pub use crate::contract::nep24::{NEP24, NEP24Implementation, RoyaltyInfo, RoyaltyPayment, RoyaltyRegistry};
+    pub use crate::contract::nep26_27::{NEP26Receiver, NEP27Receiver, TransferCallback, ReceiverContract};
 
     // Crypto module
     pub use crate::crypto::{check_multi_signs, check_sign};
 
     // Native contracts
     pub use crate::native::{gas, neo};
+    pub use crate::native::cryptolib::{CryptoLib, EcdsaCurve};
+    pub use crate::native::neo_governance::{NeoGovernance, AccountState, CandidateInfo};
+    pub use crate::native::stdlib_extended::StdLibExtended;
 
     // Runtime services
     pub use crate::runtime::{

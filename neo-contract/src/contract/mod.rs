@@ -8,8 +8,10 @@ pub(crate) mod nep;
 pub(crate) mod nep11;
 pub(crate) mod nep17;
 pub(crate) mod token;
+pub mod nep24;
+pub mod nep26_27;
 
-pub use {event::*, nep::*, nep11::*, nep17::*};
+pub use {event::*, nep::*, nep11::*, nep17::*, nep24::*, nep26_27::*};
 
 use crate::types::*;
 
