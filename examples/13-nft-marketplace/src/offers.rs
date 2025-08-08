@@ -3,7 +3,7 @@
 //! Functions for creating and managing offers on NFTs.
 
 use neo_contract::prelude::*;
-use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
+use neo_contract::types::builtin::IntoAny;
 
 impl crate::NftMarketplace {
     /// Make an offer on an NFT

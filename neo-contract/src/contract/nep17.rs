@@ -125,10 +125,10 @@ pub fn update_nep17_balance<const PREFIX: u8>(account: H160, amount: Int256) -> 
 
 pub fn update_nep17_total_supply<const KEY: u8>(amount: Int256) {
     #[cfg(target_family = "wasm")]
-    let key = ByteString::from_literal(&[KEY as char].iter().collect::<String>());
+    let key = ByteString::from_bytes(&[KEY]);
 
     #[cfg(not(target_family = "wasm"))]
-    let key = ByteString::new(vec![KEY]);
+    let key = ByteString::from_bytes(&[KEY]);
 
     let mut storage = StorageMap::new();
     let value = storage.get(key.clone());

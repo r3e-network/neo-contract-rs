@@ -1,6 +1,8 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
+
 #[allow(unused_imports)]
 use crate::{
     env,
@@ -9,7 +11,7 @@ use crate::{
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
-pub struct Buffer(Vec<u8>);
+pub struct Buffer(alloc::vec::Vec<u8>);
 
 #[cfg(target_family = "wasm")]
 #[repr(C)]
@@ -33,7 +35,7 @@ impl Buffer {
 #[cfg(not(target_family = "wasm"))]
 impl Buffer {
     pub fn new(size: usize) -> Self {
-        Self(vec![0; size])
+        Self(alloc::vec![0; size])
     }
 
     pub fn size(&self) -> usize {

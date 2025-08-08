@@ -19,12 +19,11 @@ impl CryptoLib {
         crate::services::contract::Contract::call(
             CRYPTO_LIB_HASH,
             ByteString::from_literal("sha256"),
+            crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![data.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// Computes RIPEMD160 hash
@@ -32,12 +31,11 @@ impl CryptoLib {
         crate::services::contract::Contract::call(
             CRYPTO_LIB_HASH,
             ByteString::from_literal("ripemd160"),
+            crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![data.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// Computes Keccak256 hash (used in Ethereum)
@@ -45,12 +43,11 @@ impl CryptoLib {
         crate::services::contract::Contract::call(
             CRYPTO_LIB_HASH,
             ByteString::from_literal("keccak256"),
+            crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![data.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// Computes Murmur32 hash
@@ -58,15 +55,14 @@ impl CryptoLib {
         crate::services::contract::Contract::call(
             CRYPTO_LIB_HASH,
             ByteString::from_literal("murmur32"),
+            crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![
                 data.into_any(),
                 Int256::from(seed as i64).into_any(),
             ]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// Verifies signature with ECDSA
@@ -79,15 +75,15 @@ impl CryptoLib {
         crate::services::contract::Contract::call(
             CRYPTO_LIB_HASH,
             ByteString::from_literal("verifyWithECDsa"),
+            crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![
                 message.into_any(),
                 pubkey.into_any(),
                 signature.into_any(),
                 Int256::from(curve as i64).into_any(),
             ]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .and_then(|v| v.as_bool())
+        .as_bool()
         .unwrap_or(false)
     }
 
@@ -96,12 +92,11 @@ impl CryptoLib {
         crate::services::contract::Contract::call(
             CRYPTO_LIB_HASH,
             ByteString::from_literal("bls12_381_add"),
+            crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![x.into_any(), y.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// BLS12-381 scalar multiplication
@@ -109,16 +104,15 @@ impl CryptoLib {
         crate::services::contract::Contract::call(
             CRYPTO_LIB_HASH,
             ByteString::from_literal("bls12_381_mul"),
+            crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![
                 x.into_any(),
                 mul.into_any(),
                 neg.into_any(),
             ]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// BLS12-381 pairing
@@ -126,12 +120,11 @@ impl CryptoLib {
         crate::services::contract::Contract::call(
             CRYPTO_LIB_HASH,
             ByteString::from_literal("bls12_381_pairing"),
+            crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![x.into_any(), y.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 }
 

@@ -1,6 +1,7 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
 use crate::types::builtin::{bytes::Bytes, string::ByteString, h160::H160, h256::H256, int256::Int256};
 
 /// Trait for types that can be serialized to and from Neo's binary format
@@ -27,7 +28,7 @@ pub enum SerializationError {
     /// Unsupported type
     UnsupportedType,
     /// Custom error message
-    Custom(String),
+    Custom(&'static str),
 }
 
 impl core::fmt::Display for SerializationError {
@@ -148,7 +149,7 @@ impl NeoSerializable for ByteString {
     fn to_bytes(&self) -> Bytes {
         // Neo format: length (varint) + data
         let data = self.as_bytes();
-        let mut result = Vec::new();
+        let mut result = alloc::vec::Vec::new();
 
         // Write length as varint
         write_varint(&mut result, data.len() as u64);
@@ -268,7 +269,7 @@ impl NeoSerializable for Int256 {
 }
 
 // Helper functions for varint encoding/decoding
-fn write_varint(buffer: &mut Vec<u8>, mut value: u64) {
+fn write_varint(buffer: &mut alloc::vec::Vec<u8>, mut value: u64) {
     while value >= 0x80 {
         buffer.push((value & 0x7F) as u8 | 0x80);
         value >>= 7;

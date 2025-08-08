@@ -21,7 +21,7 @@ pub trait AccountValidation {
 /// Account loader for lazy loading
 pub struct AccountLoader<'info, T> {
     acc_info: crate::context::AccountInfo<'info>,
-    _phantom: std::marker::PhantomData<T>,
+    _phantom: core::marker::PhantomData<T>,
 }
 
 impl<'info, T> AccountLoader<'info, T> 

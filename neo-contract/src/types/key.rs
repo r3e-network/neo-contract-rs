@@ -1,11 +1,12 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
 use crate::types::*;
 
 #[repr(C)]
 #[derive(Debug)]
-pub struct PublicKey(ByteString);
+pub struct PublicKey(pub ByteString);
 
 impl PublicKey {
     #[inline(always)]
@@ -31,7 +32,7 @@ impl PublicKey {
     }
 
     /// Returns the underlying bytes as a vector
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> alloc::vec::Vec<u8> {
         self.0.to_bytes()
     }
 }

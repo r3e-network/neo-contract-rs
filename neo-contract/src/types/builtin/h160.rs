@@ -1,6 +1,8 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
+
 #[allow(unused_imports)]
 use crate::{
     env,
@@ -10,7 +12,7 @@ use crate::{
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
 #[derive(Debug, Default)]
-pub struct H160([u8; 20]);
+pub struct H160(pub [u8; 20]);
 
 #[cfg(target_family = "wasm")]
 #[repr(C)]
@@ -33,7 +35,7 @@ impl H160 {
     pub fn hex_encode(&self) -> ByteString {
         let mut buf = self.0.clone();
         buf.reverse();
-        ByteString::new("0x".to_string() + &hex::encode(buf.as_slice()))
+        ByteString::from_literal("0x").concat(&ByteString::from(hex::encode(buf.as_slice()).as_bytes()))
     }
 
     #[cfg(not(target_family = "wasm"))]
@@ -52,7 +54,7 @@ impl H160 {
     }
 
     #[cfg(not(target_family = "wasm"))]
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> alloc::vec::Vec<u8> {
         self.0.to_vec()
     }
 
@@ -81,6 +83,13 @@ impl Clone for H160 {
     #[inline(always)]
     fn clone(&self) -> Self {
         Self(self.0.clone())
+    }
+}
+
+impl H160 {
+    /// Check if address is zero
+    pub fn is_zero(&self) -> bool {
+        self.0.iter().all(|&b| b == 0)
     }
 }
 

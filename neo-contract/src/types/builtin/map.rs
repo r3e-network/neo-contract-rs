@@ -5,13 +5,13 @@
 use crate::{env, types::{placeholder::*, *}};
 
 #[cfg(not(target_family = "wasm"))]
-use std::collections::HashMap;
+use alloc::collections::BTreeMap;
 
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
 #[derive(Clone)]
-pub struct Map<K: Primitive + std::hash::Hash + Eq + Clone, V: Clone> {
-    value: HashMap<K, V>,
+pub struct Map<K: Primitive + Ord + Clone, V: Clone> {
+    value: BTreeMap<K, V>,
 }
 
 #[cfg(target_family = "wasm")]
@@ -109,9 +109,9 @@ impl<K: Primitive + IntoPlaceholder + Clone, V: IntoPlaceholder + FromPlaceholde
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl<K: Primitive + std::hash::Hash + Eq + Clone, V: Clone> Map<K, V> {
+impl<K: Primitive + Ord + Clone, V: Clone> Map<K, V> {
     pub fn new() -> Self {
-        Self { value: HashMap::new() }
+        Self { value: BTreeMap::new() }
     }
 
     pub fn size(&self) -> usize {
@@ -176,7 +176,7 @@ impl<K: Primitive + Clone + 'static, V: Clone + 'static> IntoPlaceholder for Map
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl<K: Primitive + Clone + std::hash::Hash + Eq, V: Clone> Default for Map<K, V> {
+impl<K: Primitive + Clone + Ord, V: Clone> Default for Map<K, V> {
     fn default() -> Self {
         Self::new()
     }

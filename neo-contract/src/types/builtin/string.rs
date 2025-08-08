@@ -1,6 +1,8 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
+
 #[allow(unused_imports)]
 use crate::{env, types::{placeholder::*, *}};
 
@@ -8,7 +10,7 @@ use crate::{env, types::{placeholder::*, *}};
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ByteString(Vec<u8>);
+pub struct ByteString(alloc::vec::Vec<u8>);
 
 #[cfg(target_family = "wasm")]
 #[repr(C)]
@@ -35,10 +37,10 @@ impl ByteString {
     /// Note: For WASM target, this is a placeholder implementation
     /// In a full implementation, this would extract actual bytes
     #[inline(always)]
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> alloc::vec::Vec<u8> {
         // For WASM target, we'll need to implement this properly
         // For now, return empty vector as placeholder
-        vec![]
+        alloc::vec![]
     }
 
     /// Returns the underlying bytes as a slice (WASM version)
@@ -95,12 +97,12 @@ impl ByteString {
 
 #[cfg(not(target_family = "wasm"))]
 impl ByteString {
-    pub fn new(value: impl Into<Vec<u8>>) -> Self {
+    pub fn new(value: impl Into<alloc::vec::Vec<u8>>) -> Self {
         Self(value.into())
     }
 
     pub fn empty() -> Self {
-        Self(vec![])
+        Self(alloc::vec![])
     }
 
     pub(crate) fn with_bytes(bytes: &[u8]) -> Self {
@@ -122,7 +124,7 @@ impl ByteString {
     }
 
     /// Returns the underlying bytes as a vector
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> alloc::vec::Vec<u8> {
         self.0.clone()
     }
 
@@ -148,12 +150,14 @@ impl ByteString {
         Self(hex::encode(self.0.as_slice()).into_bytes())
     }
 
-    pub(crate) fn to_string(self) -> String {
-        String::from_utf8_lossy(&self.0).to_string()
+    pub(crate) fn to_string(self) -> alloc::string::String {
+        alloc::string::String::from_utf8_lossy(&self.0).into_owned()
     }
 
     pub fn from_literal(literal: &str) -> Self {
-        Self(literal.as_bytes().to_vec())
+        let mut v = alloc::vec::Vec::new();
+        v.extend_from_slice(literal.as_bytes());
+        Self(v)
     }
 
     pub fn extend(&mut self, other: ByteString) {
@@ -238,6 +242,25 @@ impl IntoPlaceholder for ByteString {
     #[inline(always)]
     fn into_placeholder(self) -> Placeholder {
         self.0
+    }
+}
+
+impl From<&[u8]> for ByteString {
+    fn from(bytes: &[u8]) -> Self {
+        ByteString::from_bytes(bytes)
+    }
+}
+
+impl From<alloc::vec::Vec<u8>> for ByteString {
+    fn from(bytes: alloc::vec::Vec<u8>) -> Self {
+        #[cfg(target_family = "wasm")]
+        {
+            ByteString::from_bytes(&bytes)
+        }
+        #[cfg(not(target_family = "wasm"))]
+        {
+            ByteString(bytes)
+        }
     }
 }
 

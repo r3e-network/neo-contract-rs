@@ -1,6 +1,8 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
+
 #[allow(unused_imports)]
 use crate::{
     env,
@@ -319,8 +321,14 @@ impl Int256 {
         Self(num256::Int256::from_le_bytes(&(unsigned << shift.into()).to_le_bytes()))
     }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> alloc::vec::Vec<u8> {
         self.0.to_le_bytes().to_vec()
+    }
+    
+    /// Convert to i32 if possible
+    pub fn to_i32(&self) -> Option<i32> {
+        use num_traits::ToPrimitive;
+        self.0.to_i32()
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Self {
@@ -414,5 +422,38 @@ impl FromByteString for Int256 {
             panic!("Int256::from_byte_string: source string is too long");
         }
         Int256(num256::Int256::from_le_bytes(src.as_bytes()))
+    }
+}
+
+// Add From trait implementations for common types
+impl From<i64> for Int256 {
+    #[inline(always)]
+    fn from(value: i64) -> Self {
+        #[cfg(target_family = "wasm")]
+        return Self::new(value);
+        
+        #[cfg(not(target_family = "wasm"))]
+        return Self(num256::Int256::from(value));
+    }
+}
+
+impl From<i32> for Int256 {
+    #[inline(always)]
+    fn from(value: i32) -> Self {
+        Self::from(value as i64)
+    }
+}
+
+impl From<u32> for Int256 {
+    #[inline(always)]
+    fn from(value: u32) -> Self {
+        Self::from(value as i64)
+    }
+}
+
+impl From<usize> for Int256 {
+    #[inline(always)]
+    fn from(value: usize) -> Self {
+        Self::from(value as i64)
     }
 }

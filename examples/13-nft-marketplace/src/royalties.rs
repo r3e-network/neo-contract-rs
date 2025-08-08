@@ -7,7 +7,6 @@ use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
 extern crate alloc;
 use alloc::vec::Vec;
 use crate::types::*;
-use crate::storage::*;
 
 /// Royalty payment record
 #[derive(Clone)]

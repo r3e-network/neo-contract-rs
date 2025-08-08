@@ -59,6 +59,18 @@ pub enum CallFlags {
     All = 0x01 | 0x02 | 0x04 | 0x08,
 }
 
+impl CallFlags {
+    // Aliases for backward compatibility
+    pub const NONE: CallFlags = CallFlags::None;
+    pub const READ_STATES: CallFlags = CallFlags::ReadStates;
+    pub const WRITE_STATES: CallFlags = CallFlags::WriteStates;
+    pub const ALLOW_CALL: CallFlags = CallFlags::AllowCall;
+    pub const ALLOW_NOTIFY: CallFlags = CallFlags::AllowNotify;
+    pub const STATES: CallFlags = CallFlags::States;
+    pub const READ_ONLY: CallFlags = CallFlags::ReadOnly;
+    pub const ALL: CallFlags = CallFlags::All;
+}
+
 impl Default for CallFlags {
     fn default() -> Self {
         CallFlags::All

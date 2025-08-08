@@ -19,12 +19,11 @@ impl StdLibExtended {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("serialize"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![item]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// Deserialize bytes to an object
@@ -32,10 +31,9 @@ impl StdLibExtended {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("deserialize"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![data.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
     }
 
     /// Base58 encode
@@ -43,12 +41,11 @@ impl StdLibExtended {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("base58Encode"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![data.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// Base58 decode
@@ -56,12 +53,11 @@ impl StdLibExtended {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("base58Decode"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![data.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// Base58 check encode (with checksum)
@@ -69,12 +65,11 @@ impl StdLibExtended {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("base58CheckEncode"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![data.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// Base58 check decode (verify checksum)
@@ -82,12 +77,11 @@ impl StdLibExtended {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("base58CheckDecode"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![data.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// Memory compare two byte arrays
@@ -95,10 +89,10 @@ impl StdLibExtended {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("memoryCompare"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![str1.into_any(), str2.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .and_then(|v| v.as_int())
+        .as_int()
         .map(|v| v.to_i32().unwrap_or(0))
         .unwrap_or(0)
     }
@@ -113,42 +107,41 @@ impl StdLibExtended {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("memorySearch"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![
                 str.into_any(),
                 substr.into_any(),
                 Int256::from(start as i64).into_any(),
                 backward.into_any(),
             ]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .and_then(|v| v.as_int())
+        .as_int()
         .map(|v| v.to_i32().unwrap_or(-1))
         .unwrap_or(-1)
     }
 
     /// String split
-    pub fn string_split(str: ByteString, separator: ByteString) -> Array {
+    pub fn string_split(str: ByteString, separator: ByteString) -> Array<ByteString> {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("stringSplit"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![str.into_any(), separator.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .and_then(|v| v.as_array())
+        .as_array()
         .unwrap_or_else(Array::new)
     }
 
     /// String concatenation (multiple strings)
-    pub fn string_concat(strings: Array) -> ByteString {
+    pub fn string_concat(strings: Array<ByteString>) -> ByteString {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("strConcat"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![strings.into_any()]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// Convert integer to string with specific base
@@ -156,15 +149,14 @@ impl StdLibExtended {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("itoa"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![
                 value.into_any(),
                 Int256::from(base as i64).into_any(),
             ]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .unwrap_or_default()
         .as_bytes()
-        .unwrap_or_default()
+        .unwrap_or_else(ByteString::empty)
     }
 
     /// Convert string to integer with specific base
@@ -172,13 +164,13 @@ impl StdLibExtended {
         crate::services::contract::Contract::call(
             STDLIB_HASH,
             ByteString::from_literal("atoi"),
+            crate::types::CallFlags::READ_ONLY,
             Array::from_vec(vec![
                 value.into_any(),
                 Int256::from(base as i64).into_any(),
             ]),
-            crate::services::contract::CallFlags::READ_ONLY,
         )
-        .and_then(|v| v.as_int())
+        .as_int()
         .unwrap_or_else(Int256::zero)
     }
 }

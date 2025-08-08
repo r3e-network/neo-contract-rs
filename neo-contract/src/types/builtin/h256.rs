@@ -1,6 +1,8 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
+
 #[allow(unused_imports)]
 use crate::{
     env,
@@ -10,7 +12,7 @@ use crate::{
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
 #[derive(Debug, Default)]
-pub struct H256([u8; 32]);
+pub struct H256(pub [u8; 32]);
 
 #[cfg(target_family = "wasm")]
 #[repr(C)]
@@ -33,7 +35,7 @@ impl H256 {
     pub fn hex_encode(&self) -> ByteString {
         let mut b = self.0.clone();
         b.reverse();
-        ByteString::new("0x".to_string() + &hex::encode(b.as_slice()))
+        ByteString::from_literal("0x").concat(&ByteString::from(hex::encode(b.as_slice()).as_bytes()))
     }
 
     #[cfg(not(target_family = "wasm"))]

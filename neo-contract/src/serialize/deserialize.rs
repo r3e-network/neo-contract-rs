@@ -1,6 +1,7 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
 use crate::types::{
     builtin::{
         string::ByteString,
@@ -25,14 +26,14 @@ pub fn deserialize_from_bytestring<T: NeoSerializable>(bytestring: &ByteString) 
 }
 
 /// Deserialize multiple values from a single byte array
-pub fn deserialize_multiple<T: NeoSerializable>(bytes: &[u8]) -> Result<Vec<T>, SerializationError> {
+pub fn deserialize_multiple<T: NeoSerializable>(bytes: &[u8]) -> Result<alloc::vec::Vec<T>, SerializationError> {
     let mut offset = 0;
 
     // Read count
     let (count, varint_size) = read_varint(&bytes[offset..])?;
     offset += varint_size;
 
-    let mut result = Vec::with_capacity(count as usize);
+    let mut result = alloc::vec::Vec::with_capacity(count as usize);
 
     // Read each value
     for _ in 0..count {
@@ -46,7 +47,7 @@ pub fn deserialize_multiple<T: NeoSerializable>(bytes: &[u8]) -> Result<Vec<T>, 
 }
 
 /// Deserialize a vector of values
-pub fn deserialize_vec<T: NeoSerializable>(bytes: &[u8]) -> Result<Vec<T>, SerializationError> {
+pub fn deserialize_vec<T: NeoSerializable>(bytes: &[u8]) -> Result<alloc::vec::Vec<T>, SerializationError> {
     deserialize_multiple(bytes)
 }
 
@@ -158,7 +159,7 @@ impl Deserialize for ByteString {
     }
 }
 
-impl<T: NeoSerializable> Deserialize for Vec<T> {
+impl<T: NeoSerializable> Deserialize for alloc::vec::Vec<T> {
     fn deserialize(bytes: &[u8]) -> Result<Self, SerializationError> {
         deserialize_vec(bytes)
     }

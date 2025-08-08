@@ -1,6 +1,7 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
 use crate::types::builtin::{bytes::Bytes, string::ByteString};
 use super::neo_serializable::{NeoSerializable, SerializationError};
 
@@ -23,7 +24,7 @@ pub fn serialize_to_bytestring<T: NeoSerializable>(value: &T) -> Result<ByteStri
 
 /// Serialize multiple values into a single byte array
 pub fn serialize_multiple<T: NeoSerializable>(values: &[T]) -> Result<Bytes, SerializationError> {
-    let mut result = Vec::new();
+    let mut result = alloc::vec::Vec::new();
 
     // Write count as varint
     write_varint(&mut result, values.len() as u64);
@@ -38,13 +39,13 @@ pub fn serialize_multiple<T: NeoSerializable>(values: &[T]) -> Result<Bytes, Ser
 }
 
 /// Serialize a vector of values
-pub fn serialize_vec<T: NeoSerializable>(values: &Vec<T>) -> Result<Bytes, SerializationError> {
+pub fn serialize_vec<T: NeoSerializable>(values: &alloc::vec::Vec<T>) -> Result<Bytes, SerializationError> {
     serialize_multiple(values.as_slice())
 }
 
 /// Serialize an optional value
 pub fn serialize_option<T: NeoSerializable>(value: &Option<T>) -> Result<Bytes, SerializationError> {
-    let mut result = Vec::new();
+    let mut result = alloc::vec::Vec::new();
 
     match value {
         Some(v) => {
@@ -65,7 +66,7 @@ pub fn serialize_tuple2<T1: NeoSerializable, T2: NeoSerializable>(
     value1: &T1,
     value2: &T2
 ) -> Result<Bytes, SerializationError> {
-    let mut result = Vec::new();
+    let mut result = alloc::vec::Vec::new();
 
     let serialized1 = value1.to_bytes();
     let serialized2 = value2.to_bytes();
@@ -82,7 +83,7 @@ pub fn serialize_tuple3<T1: NeoSerializable, T2: NeoSerializable, T3: NeoSeriali
     value2: &T2,
     value3: &T3
 ) -> Result<Bytes, SerializationError> {
-    let mut result = Vec::new();
+    let mut result = alloc::vec::Vec::new();
 
     let serialized1 = value1.to_bytes();
     let serialized2 = value2.to_bytes();
@@ -144,7 +145,7 @@ impl Serialize for ByteString {
     }
 }
 
-impl<T: NeoSerializable> Serialize for Vec<T> {
+impl<T: NeoSerializable> Serialize for alloc::vec::Vec<T> {
     fn serialize(&self) -> Result<Bytes, SerializationError> {
         serialize_vec(self)
     }
@@ -157,7 +158,7 @@ impl<T: NeoSerializable> Serialize for Option<T> {
 }
 
 // Helper function for varint encoding
-fn write_varint(buffer: &mut Vec<u8>, mut value: u64) {
+fn write_varint(buffer: &mut alloc::vec::Vec<u8>, mut value: u64) {
     while value >= 0x80 {
         buffer.push((value & 0x7F) as u8 | 0x80);
         value >>= 7;
@@ -213,7 +214,7 @@ mod tests {
 
     #[test]
     fn test_serialize_vec() {
-        let values = vec![1u32, 2u32, 3u32];
+        let values = alloc::vec![1u32, 2u32, 3u32];
         let serialized = serialize_vec(&values).unwrap();
 
         // Should start with count (3) as varint

@@ -529,6 +529,29 @@ pub fn event(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> 
     input
 }
 
+/// Alias for ErrorCode derive macro (for compatibility)
+#[proc_macro_attribute]
+pub fn error_code(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    use quote::quote;
+    use syn::parse_macro_input;
+    
+    let input = parse_macro_input!(input as syn::ItemEnum);
+    let name = &input.ident;
+    let attrs = &input.attrs;
+    let vis = &input.vis;
+    let variants = &input.variants;
+    
+    let expanded = quote! {
+        #[derive(ErrorCode)]
+        #(#attrs)*
+        #vis enum #name {
+            #variants
+        }
+    };
+    
+    expanded.into()
+}
+
 /// Macro to mark init_if_needed accounts
 #[proc_macro_attribute]
 pub fn init_if_needed(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {

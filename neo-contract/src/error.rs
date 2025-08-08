@@ -36,6 +36,8 @@ pub enum ContractError {
     InvalidArgument,
     /// Custom error with code and message
     Custom(u32, String),
+    /// Custom error with ByteString message
+    CustomString(ByteString),
 }
 
 impl ContractError {
@@ -55,9 +57,10 @@ impl ContractError {
             ContractError::ArithmeticOverflow => ByteString::from_literal("ArithmeticOverflow"),
             ContractError::Unauthorized => ByteString::from_literal("Unauthorized"),
             ContractError::InvalidArgument => ByteString::from_literal("InvalidArgument"),
-            ContractError::Custom(_code, _msg) => {
-                ByteString::from_literal("CustomError")
+            ContractError::Custom(_code, msg) => {
+                ByteString::from(msg.as_bytes())
             }
+            ContractError::CustomString(msg) => msg.clone(),
         }
     }
     
@@ -78,6 +81,7 @@ impl ContractError {
             ContractError::Unauthorized => 6012,
             ContractError::InvalidArgument => 6013,
             ContractError::Custom(code, _) => *code,
+            ContractError::CustomString(_) => 6014,
         }
     }
 }
@@ -85,6 +89,12 @@ impl ContractError {
 impl From<ContractError> for ByteString {
     fn from(err: ContractError) -> Self {
         err.to_byte_string()
+    }
+}
+
+impl From<ByteString> for ContractError {
+    fn from(msg: ByteString) -> Self {
+        ContractError::CustomString(msg)
     }
 }
 

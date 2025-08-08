@@ -1,6 +1,8 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
+
 #[allow(unused_imports)]
 use crate::{
     env,
@@ -10,7 +12,7 @@ use crate::{
 #[cfg(not(target_family = "wasm"))]
 #[repr(C)]
 pub struct Array<T> {
-    value: Vec<T>,
+    value: alloc::vec::Vec<T>,
     // _marker: core::marker::PhantomData<T>,
 }
 
@@ -50,10 +52,35 @@ impl<T: Default> Array<T> {
 
         array
     }
+    
+    #[inline(always)]
+    pub fn from_vec(items: alloc::vec::Vec<T>) -> Self
+    where
+        T: IntoPlaceholder,
+    {
+        let array = Self {
+            value: unsafe { env::asm::array_new() },
+            _marker: core::marker::PhantomData,
+        };
+
+        // Populate the array with items
+        for item in items {
+            unsafe {
+                env::asm::array_push(array.value, item.into_placeholder())
+            }
+        }
+
+        array
+    }
 
     #[inline(always)]
     pub fn size(&self) -> usize {
         unsafe { env::asm::array_size(self.value) }
+    }
+    
+    #[inline(always)]
+    pub fn length(&self) -> usize {
+        self.size()
     }
 
     #[inline(always)]
@@ -104,7 +131,7 @@ impl<T: Default> Array<T> {
 #[cfg(not(target_family = "wasm"))]
 impl<T> Array<T> {
     pub fn new() -> Self {
-        Self { value: Vec::new() }
+        Self { value: alloc::vec::Vec::new() }
     }
 
     pub fn from_items(items: &[T]) -> Self
@@ -113,9 +140,17 @@ impl<T> Array<T> {
     {
         Self { value: items.to_vec() }
     }
+    
+    pub fn from_vec(items: alloc::vec::Vec<T>) -> Self {
+        Self { value: items }
+    }
 
     pub fn size(&self) -> usize {
         self.value.len()
+    }
+    
+    pub fn length(&self) -> usize {
+        self.size()
     }
 
     pub fn push(&mut self, value: T) {

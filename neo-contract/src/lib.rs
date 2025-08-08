@@ -1,6 +1,9 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+#![no_std]
+extern crate alloc;
+
 pub mod contract;
 pub mod crypto;
 pub mod env;
@@ -18,8 +21,9 @@ pub mod context;
 pub mod account;
 pub mod error;
 pub mod neo_features;
+pub mod utils;
 
-pub use neo_contract_proc_macros::{contract, structs, program, account as account_attr, declare_id, event, init_if_needed};
+pub use neo_contract_proc_macros::{contract, structs, program, account as account_attr, declare_id, event, init_if_needed, error_code};
 
 // Re-export derive macros
 pub use neo_contract_proc_macros::Accounts;
@@ -84,6 +88,8 @@ pub mod prelude {
         Array, Bytes, H160, Int256, Map, ByteString,
         Any, CallFlags, FindOptions, Notification, PublicKey, TriggerType, Tx,
     };
+    pub use crate::types::builtin::any::IntoAny;
+    pub use crate::types::builtin::string::IntoByteString;
 
     // Macros
     pub use neo_contract_proc_macros::*;
@@ -94,8 +100,12 @@ pub mod prelude {
     pub use crate::error::ContractError;
     
     // Re-export derive macros and macros
-    pub use neo_contract_proc_macros::{Accounts, ErrorCode, program, account as account_attr, declare_id, event, init_if_needed};
+    pub use neo_contract_proc_macros::{Accounts, ErrorCode, program, account as account_attr, declare_id, event, init_if_needed, error_code};
     pub use crate::{require, require_eq, require_neq, require_gt, require_gte, require_keys_eq, require_keys_neq};
+    
+    // Utility macros for no_std
+    pub use crate::{format, emit, println, msg};
+    pub use alloc::vec;
     
     // Neo N3 Complete Features
     pub use crate::neo_features::{

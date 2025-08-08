@@ -1,6 +1,8 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
+
 #[cfg(target_family = "wasm")]
 use crate::types::placeholder::*;
 
@@ -11,7 +13,7 @@ pub struct Bytes(Placeholder);
 
 #[cfg(not(target_family = "wasm"))]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Bytes(Vec<u8>);
+pub struct Bytes(alloc::vec::Vec<u8>);
 
 impl Bytes {
     /// Creates a new empty byte array.
@@ -23,7 +25,7 @@ impl Bytes {
         }
         #[cfg(not(target_family = "wasm"))]
         {
-            Self(Vec::new())
+            Self(alloc::vec::Vec::new())
         }
     }
 

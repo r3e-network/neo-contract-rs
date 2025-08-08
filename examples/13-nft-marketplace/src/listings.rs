@@ -3,7 +3,7 @@
 //! Functions for creating, managing, and purchasing NFT listings.
 
 use neo_contract::prelude::*;
-use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
+use neo_contract::types::{IntoByteString, builtin::IntoAny};
 extern crate alloc;
 use alloc::vec::Vec;
 use crate::types::*;

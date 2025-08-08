@@ -1,6 +1,8 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
+extern crate alloc;
+
 #[allow(unused_imports)]
 use crate::{
     env,
@@ -22,7 +24,7 @@ pub struct StorageMap {
 
 #[cfg(not(target_family = "wasm"))]
 pub struct StorageMap {
-    items: std::collections::BTreeMap<Vec<u8>, Vec<u8>>,
+    items: alloc::collections::BTreeMap<alloc::vec::Vec<u8>, alloc::vec::Vec<u8>>,
 }
 
 #[cfg(target_family = "wasm")]
@@ -57,7 +59,7 @@ impl StorageMap {
 #[cfg(not(target_family = "wasm"))]
 impl StorageMap {
     pub fn new() -> Self {
-        Self { items: std::collections::BTreeMap::new() }
+        Self { items: alloc::collections::BTreeMap::new() }
     }
 
     pub fn get(&self, key: ByteString) -> Nullable<ByteString> {

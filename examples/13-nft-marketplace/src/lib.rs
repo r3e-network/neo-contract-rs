@@ -24,7 +24,6 @@ mod auctions;
 mod offers;
 mod royalties;
 
-use types::*;
 use storage::*;
 
 /// NFT Marketplace contract
