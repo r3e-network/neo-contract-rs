@@ -74,8 +74,7 @@ pub struct Iter<T> {
 }
 
 impl<T> Iter<T> {
-    /// Create a new iterator (for non-WASM targets)
-    #[cfg(not(target_family = "wasm"))]
+    /// Create a new iterator
     pub fn new() -> Self {
         Self {
             iter: Placeholder::new(0),

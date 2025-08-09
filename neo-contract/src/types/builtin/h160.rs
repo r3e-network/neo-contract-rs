@@ -20,6 +20,10 @@ pub struct H160(Placeholder);
 
 impl H160 {
     pub const SIZE: usize = 20;
+    
+    /// Constant zero value for use in const contexts
+    #[cfg(not(target_family = "wasm"))]
+    pub const ZERO: Self = H160([0u8; 20]);
 
     #[inline(always)]
     #[rustfmt::skip]
@@ -89,12 +93,49 @@ impl Clone for H160 {
 impl H160 {
     /// Check if address is zero
     pub fn is_zero(&self) -> bool {
-        self.0.iter().all(|&b| b == 0)
+        #[cfg(not(target_family = "wasm"))]
+        {
+            self.0.iter().all(|&b| b == 0)
+        }
+        #[cfg(target_family = "wasm")]
+        {
+            *self == Self::zero()
+        }
+    }
+    
+    /// Create H160 from a byte array
+    #[cfg(not(target_family = "wasm"))]
+    pub const fn from_array(bytes: [u8; 20]) -> Self {
+        H160(bytes)
+    }
+    
+    /// Convert to string representation
+    pub fn to_string(&self) -> ByteString {
+        self.into_byte_string()
     }
 }
 
 impl Eq for H160 {}
 impl Copy for H160 {}
+
+impl PartialOrd for H160 {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for H160 {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        #[cfg(not(target_family = "wasm"))]
+        {
+            self.0.cmp(&other.0)
+        }
+        #[cfg(target_family = "wasm")]
+        {
+            core::cmp::Ordering::Equal  // Simplified for WASM
+        }
+    }
+}
 
 #[cfg(target_family = "wasm")]
 impl core::fmt::Debug for H160 {

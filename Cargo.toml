@@ -27,6 +27,11 @@ members = [
     "examples/01-hello-world-solana-style-simple",
     "examples/01-hello-world-solana-style",
     "examples/04-nep17-token-solana-style",
+    # DeFi examples
+    "examples/defi/uniswap-v2-amm",
+    "examples/defi/compound-lending",
+    "examples/defi/aave-flashloan",
+    "examples/defi/test-tokens",
 ]
 
 [profile.release]

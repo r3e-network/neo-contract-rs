@@ -58,6 +58,6 @@ impl Iterator {
     #[inline(always)]
     pub fn key<T: crate::types::placeholder::FromPlaceholder>(iterator: StorageIterator<T>) -> crate::types::ByteString {
         // In WASM environment, retrieve the key from iterator
-        crate::types::ByteString::new()
+        crate::types::ByteString::empty()
     }
 }

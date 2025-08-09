@@ -5,10 +5,20 @@ use crate::prelude::*;
 use crate::types::{ByteString, Int256, H160, PublicKey};
 
 /// CryptoLib contract hash on Neo N3
-pub const CRYPTO_LIB_HASH: H160 = H160([
-    0x72, 0x6c, 0xb5, 0x77, 0x50, 0x2d, 0xbd, 0x44, 0x5f, 0xcd,
-    0x2f, 0xc6, 0x95, 0x54, 0xbe, 0xce, 0xc7, 0x1f, 0xd8, 0xa3,
-]);
+#[inline(always)]
+pub fn crypto_lib_hash() -> H160 {
+    #[cfg(not(target_family = "wasm"))]
+    {
+        H160::from_array([
+            0x72, 0x6c, 0xb5, 0x77, 0x50, 0x2d, 0xbd, 0x44, 0x5f, 0xcd,
+            0x2f, 0xc6, 0x95, 0x54, 0xbe, 0xce, 0xc7, 0x1f, 0xd8, 0xa3,
+        ])
+    }
+    #[cfg(target_family = "wasm")]
+    {
+        H160::zero()
+    }
+}
 
 /// CryptoLib native contract interface
 pub struct CryptoLib;
@@ -17,7 +27,7 @@ impl CryptoLib {
     /// Computes SHA256 hash
     pub fn sha256(data: ByteString) -> ByteString {
         crate::services::contract::Contract::call(
-            CRYPTO_LIB_HASH,
+            crypto_lib_hash(),
             ByteString::from_literal("sha256"),
             crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![data.into_any()]),
@@ -29,7 +39,7 @@ impl CryptoLib {
     /// Computes RIPEMD160 hash
     pub fn ripemd160(data: ByteString) -> ByteString {
         crate::services::contract::Contract::call(
-            CRYPTO_LIB_HASH,
+            crypto_lib_hash(),
             ByteString::from_literal("ripemd160"),
             crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![data.into_any()]),
@@ -41,7 +51,7 @@ impl CryptoLib {
     /// Computes Keccak256 hash (used in Ethereum)
     pub fn keccak256(data: ByteString) -> ByteString {
         crate::services::contract::Contract::call(
-            CRYPTO_LIB_HASH,
+            crypto_lib_hash(),
             ByteString::from_literal("keccak256"),
             crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![data.into_any()]),
@@ -53,7 +63,7 @@ impl CryptoLib {
     /// Computes Murmur32 hash
     pub fn murmur32(data: ByteString, seed: u32) -> ByteString {
         crate::services::contract::Contract::call(
-            CRYPTO_LIB_HASH,
+            crypto_lib_hash(),
             ByteString::from_literal("murmur32"),
             crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![
@@ -73,7 +83,7 @@ impl CryptoLib {
         curve: EcdsaCurve,
     ) -> bool {
         crate::services::contract::Contract::call(
-            CRYPTO_LIB_HASH,
+            crypto_lib_hash(),
             ByteString::from_literal("verifyWithECDsa"),
             crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![
@@ -90,7 +100,7 @@ impl CryptoLib {
     /// BLS12-381 point addition
     pub fn bls12_381_add(x: ByteString, y: ByteString) -> ByteString {
         crate::services::contract::Contract::call(
-            CRYPTO_LIB_HASH,
+            crypto_lib_hash(),
             ByteString::from_literal("bls12_381_add"),
             crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![x.into_any(), y.into_any()]),
@@ -102,7 +112,7 @@ impl CryptoLib {
     /// BLS12-381 scalar multiplication
     pub fn bls12_381_mul(x: ByteString, mul: ByteString, neg: bool) -> ByteString {
         crate::services::contract::Contract::call(
-            CRYPTO_LIB_HASH,
+            crypto_lib_hash(),
             ByteString::from_literal("bls12_381_mul"),
             crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![
@@ -118,7 +128,7 @@ impl CryptoLib {
     /// BLS12-381 pairing
     pub fn bls12_381_pairing(x: ByteString, y: ByteString) -> ByteString {
         crate::services::contract::Contract::call(
-            CRYPTO_LIB_HASH,
+            crypto_lib_hash(),
             ByteString::from_literal("bls12_381_pairing"),
             crate::types::CallFlags::READ_ONLY,
             crate::types::Array::from_vec(vec![x.into_any(), y.into_any()]),

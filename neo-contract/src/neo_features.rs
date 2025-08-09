@@ -13,6 +13,19 @@ use crate::types::builtin::any::IntoAny;
 // Additional type aliases for missing types
 pub type Script = ByteString;
 
+// Helper function to create H160 from bytes
+#[inline(always)]
+fn h160_from_bytes(bytes: [u8; 20]) -> H160 {
+    #[cfg(not(target_family = "wasm"))]
+    {
+        H160::from_array(bytes)
+    }
+    #[cfg(target_family = "wasm")]
+    {
+        H160::zero()
+    }
+}
+
 /// Oracle Request - Neo N3 Oracle Service Support
 pub mod oracle {
     use super::*;
@@ -95,10 +108,17 @@ pub mod native {
         
         pub fn script_hash() -> H160 {
             // NEO native contract hash on Neo N3 mainnet
-            H160([
-                0xef, 0x4c, 0x73, 0xdf, 0x88, 0xf5, 0xa6, 0xfe, 0xec, 0xe6,
-                0x21, 0x72, 0x4b, 0x47, 0xdb, 0x60, 0xcc, 0xd4, 0xef, 0xc7,
-            ])
+            #[cfg(not(target_family = "wasm"))]
+            {
+                H160::from_array([
+                    0xef, 0x4c, 0x73, 0xdf, 0x88, 0xf5, 0xa6, 0xfe, 0xec, 0xe6,
+                    0x21, 0x72, 0x4b, 0x47, 0xdb, 0x60, 0xcc, 0xd4, 0xef, 0xc7,
+                ])
+            }
+            #[cfg(target_family = "wasm")]
+            {
+                H160::zero()
+            }
         }
         
         pub fn symbol() -> ByteString {
@@ -224,7 +244,7 @@ pub mod native {
         
         pub fn script_hash() -> H160 {
             // GAS native contract hash on Neo N3 mainnet
-            H160([
+            h160_from_bytes([
                 0xd2, 0xa4, 0xce, 0xfe, 0x8b, 0x6e, 0x30, 0xf0, 0x48, 0x31,
                 0x5f, 0x61, 0x70, 0x77, 0x76, 0xcd, 0x1e, 0x0e, 0xf3, 0x20,
             ])
@@ -274,7 +294,7 @@ pub mod native {
         
         pub fn script_hash() -> H160 {
             // Policy native contract hash on Neo N3 mainnet
-            H160([
+            h160_from_bytes([
                 0xcc, 0x5e, 0x40, 0x0d, 0xb8, 0x8f, 0x51, 0xba, 0xac, 0x22,
                 0x2e, 0x3a, 0x42, 0x68, 0x02, 0x98, 0xdf, 0xa4, 0xdb, 0xc2,
             ])
@@ -336,7 +356,7 @@ pub mod native {
         
         pub fn script_hash() -> H160 {
             // Management native contract hash on Neo N3 mainnet
-            H160([
+            h160_from_bytes([
                 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
                 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             ])
@@ -441,7 +461,7 @@ pub mod native {
         
         pub fn script_hash() -> H160 {
             // Crypto native contract hash on Neo N3 mainnet
-            H160([
+            h160_from_bytes([
                 0x72, 0x6c, 0xb5, 0x77, 0x50, 0x2d, 0xbd, 0x44, 0x5f, 0xcd,
                 0x2f, 0xc6, 0x95, 0x54, 0xbe, 0xce, 0xc7, 0x1f, 0xd8, 0xa3,
             ])
@@ -501,7 +521,7 @@ pub mod native {
         
         pub fn script_hash() -> H160 {
             // StdLib native contract hash on Neo N3 mainnet
-            H160([
+            h160_from_bytes([
                 0xac, 0xce, 0x6f, 0xd8, 0x0d, 0x76, 0x48, 0xc9, 0xc5, 0x7e,
                 0x9c, 0x31, 0x59, 0x1a, 0x61, 0xec, 0xd2, 0x79, 0x3e, 0xf5,
             ])

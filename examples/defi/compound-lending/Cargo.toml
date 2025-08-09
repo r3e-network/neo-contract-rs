@@ -1,0 +1,17 @@
+[package]
+name = "compound-lending"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+neo-contract = { path = "../../../neo-contract" }
+wee_alloc = "0.4"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

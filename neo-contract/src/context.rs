@@ -96,6 +96,12 @@ pub struct SystemAccount<'info> {
     pub info: AccountInfo<'info>,
 }
 
+impl<'info> SystemAccount<'info> {
+    pub fn key(&self) -> H160 {
+        self.info.key
+    }
+}
+
 /// Program account type
 pub struct Program<'info, T> {
     pub info: AccountInfo<'info>,

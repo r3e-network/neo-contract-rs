@@ -201,7 +201,7 @@ impl core::fmt::Debug for ByteString {
 #[cfg(target_family = "wasm")]
 impl PartialOrd for ByteString {
     #[inline(always)]
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -209,13 +209,13 @@ impl PartialOrd for ByteString {
 #[cfg(target_family = "wasm")]
 impl Ord for ByteString {
     #[inline(always)]
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         // Compare the actual string contents by comparing their bytes
         let self_bytes = self.as_bytes();
         let other_bytes = other.as_bytes();
 
         // Compare byte by byte
-        let len = std::cmp::min(self_bytes.len(), other_bytes.len());
+        let len = core::cmp::min(self_bytes.len(), other_bytes.len());
         for i in 0..len {
             let self_byte = self_bytes[i];
             let other_byte = other_bytes[i];

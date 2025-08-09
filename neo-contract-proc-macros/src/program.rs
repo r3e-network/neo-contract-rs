@@ -63,6 +63,26 @@ pub fn expand_account(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     let input_struct = parse_macro_input!(input as ItemStruct);
     
     let struct_name = &input_struct.ident;
+    let fields = &input_struct.fields;
+    
+    // Extract field names and default values
+    let default_fields = if let syn::Fields::Named(named_fields) = fields {
+        named_fields.named.iter().map(|field| {
+            let field_name = &field.ident;
+            let field_ty = &field.ty;
+            
+            // Generate appropriate default based on type
+            let default_value = quote! {
+                <#field_ty>::default()
+            };
+            
+            quote! {
+                #field_name: #default_value
+            }
+        }).collect::<Vec<_>>()
+    } else {
+        vec![]
+    };
     
     // Generate serialization methods
     let expanded = quote! {
@@ -73,7 +93,8 @@ pub fn expand_account(input: proc_macro::TokenStream) -> proc_macro::TokenStream
             pub const SIZE: usize = 512;
             
             pub fn serialize(&self) -> neo_contract::types::Bytes {
-                neo_contract::types::Bytes::from(vec![0u8; 8])
+                // TODO: Implement proper serialization
+                neo_contract::types::Bytes::from(alloc::vec::Vec::from([0u8; 8]))
             }
             
             pub fn deserialize(_data: &[u8]) -> neo_contract::context::Result<Self> {
@@ -84,10 +105,7 @@ pub fn expand_account(input: proc_macro::TokenStream) -> proc_macro::TokenStream
         impl Default for #struct_name {
             fn default() -> Self {
                 Self {
-                    authority: neo_contract::types::H160::zero(),
-                    greeting: neo_contract::types::ByteString::from_literal("Hello"),
-                    visitor_count: neo_contract::types::Int256::zero(),
-                    is_initialized: false,
+                    #(#default_fields),*
                 }
             }
         }
@@ -131,7 +149,7 @@ pub fn expand_error_code(input: proc_macro::TokenStream) -> proc_macro::TokenStr
         
         impl From<#enum_name> for neo_contract::error::ContractError {
             fn from(err: #enum_name) -> Self {
-                neo_contract::error::ContractError::Custom(err.code(), err.message().to_string())
+                neo_contract::error::ContractError::Custom(err.code(), alloc::string::String::from(err.message()))
             }
         }
     };

@@ -22,10 +22,9 @@ macro_rules! emit {
     ($event:expr) => {{
         use $crate::services::runtime::Runtime;
         use $crate::types::{ByteString, Array};
-        use core::any::type_name;
         
-        // Get event type name
-        let event_name = type_name_of_val(&$event);
+        // Get event type name using the helper function
+        let event_name = $crate::utils::type_name_of_val(&$event);
         let event_name = if let Some(pos) = event_name.rfind("::") {
             &event_name[pos+2..]
         } else {

@@ -60,3 +60,18 @@ macro_rules! impl_placeholder {
         }
     };
 }
+
+// Implementation for bool
+impl IntoPlaceholder for bool {
+    #[inline(always)]
+    fn into_placeholder(self) -> Placeholder {
+        Placeholder::new(if self { 1 } else { 0 })
+    }
+}
+
+impl FromPlaceholder for bool {
+    #[inline(always)]
+    fn from_placeholder(placeholder: Placeholder) -> Self {
+        placeholder.0 != 0
+    }
+}

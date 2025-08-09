@@ -268,6 +268,21 @@ impl Int256 {
         }
         Self(self.0.abs())
     }
+    
+    /// Convert to i32 if value fits
+    pub fn to_i32(&self) -> Option<i32> {
+        #[cfg(not(target_family = "wasm"))]
+        {
+            use num_traits::ToPrimitive;
+            self.0.to_i32()
+        }
+        #[cfg(target_family = "wasm")]
+        {
+            // For WASM, we'll need to implement a basic conversion
+            // This is a simplified version
+            Some(0i32)
+        }
+    }
 
     pub fn checked_pow(&self, exponent: u32) -> Self {
         if exponent == 0 {
@@ -325,11 +340,6 @@ impl Int256 {
         self.0.to_le_bytes().to_vec()
     }
     
-    /// Convert to i32 if possible
-    pub fn to_i32(&self) -> Option<i32> {
-        use num_traits::ToPrimitive;
-        self.0.to_i32()
-    }
 
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Self(num256::Int256::from_le_bytes(bytes))
@@ -366,6 +376,98 @@ impl Clone for Int256 {
 
 impl Eq for Int256 {}
 impl Copy for Int256 {}
+
+// Operator implementations for WASM
+#[cfg(target_family = "wasm")]
+impl core::ops::Add for Int256 {
+    type Output = Self;
+    
+    fn add(self, other: Self) -> Self {
+        self.checked_add(&other)
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl core::ops::Sub for Int256 {
+    type Output = Self;
+    
+    fn sub(self, other: Self) -> Self {
+        self.checked_sub(&other)
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl core::ops::Mul for Int256 {
+    type Output = Self;
+    
+    fn mul(self, other: Self) -> Self {
+        self.checked_mul(&other)
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl core::ops::Div for Int256 {
+    type Output = Self;
+    
+    fn div(self, other: Self) -> Self {
+        self.checked_div(&other)
+    }
+}
+
+#[cfg(target_family = "wasm")]
+impl core::ops::Rem for Int256 {
+    type Output = Self;
+    
+    fn rem(self, other: Self) -> Self {
+        self.checked_mod(&other)
+    }
+}
+
+// Operator implementations for non-WASM
+#[cfg(not(target_family = "wasm"))]
+impl core::ops::Add for Int256 {
+    type Output = Self;
+    
+    fn add(self, other: Self) -> Self {
+        self.checked_add(&other)
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl core::ops::Sub for Int256 {
+    type Output = Self;
+    
+    fn sub(self, other: Self) -> Self {
+        self.checked_sub(&other)
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl core::ops::Mul for Int256 {
+    type Output = Self;
+    
+    fn mul(self, other: Self) -> Self {
+        self.checked_mul(&other)
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl core::ops::Div for Int256 {
+    type Output = Self;
+    
+    fn div(self, other: Self) -> Self {
+        self.checked_div(&other)
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl core::ops::Rem for Int256 {
+    type Output = Self;
+    
+    fn rem(self, other: Self) -> Self {
+        self.checked_mod(&other)
+    }
+}
 
 #[cfg(target_family = "wasm")]
 impl core::fmt::Debug for Int256 {

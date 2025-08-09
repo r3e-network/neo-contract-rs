@@ -22,6 +22,7 @@ pub mod account;
 pub mod error;
 pub mod neo_features;
 pub mod utils;
+pub mod serialization;
 
 pub use neo_contract_proc_macros::{contract, structs, program, account as account_attr, declare_id, event, init_if_needed, error_code};
 
@@ -96,6 +97,9 @@ pub mod prelude {
     
     // Solana-style imports
     pub use crate::context::{Context, AccountInfo, Account, Signer, SystemAccount, Program, System, Token, Result, Pubkey, Clock, Rent, CpiContext, Pda};
+    
+    // Serialization utilities
+    pub use crate::serialization::{StorageSerialize, storage_get, storage_put};
     pub use crate::account::{AccountSerialize, AccountDeserialize, AccountLoader, AccountMeta, ToAccountInfo, ToAccountMetas};
     pub use crate::error::ContractError;
     
