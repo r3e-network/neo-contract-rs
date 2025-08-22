@@ -15,7 +15,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  DOTNET_VERSION: '7.0.x'
+  DOTNET_VERSION: '9.0.x'
 
 jobs:
   build-framework:
@@ -66,10 +66,14 @@ jobs:
       matrix:
         example:
           - 01-hello-world
+          - 01-hello-world-solana-style-simple
           - 02-simple-storage
           - 02-simple-token
           - 03-counter
           - 04-nep17-token
+          - 05-nep11-nft
+          - 10-multisig-wallet
+          - 11-governance
     steps:
       - uses: actions/checkout@v4
       
@@ -183,6 +187,7 @@ jobs:
           - 01-hello-world
           - 02-simple-storage
           - 03-counter
+          - 10-multisig-wallet
     steps:
       - uses: actions/checkout@v4
       
@@ -193,7 +198,7 @@ jobs:
       
       - name: Install Neo Express
         run: |
-          dotnet tool install Neo.Express -g
+          dotnet tool install Neo.Express --version 3.8.2 -g
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
       
       - name: Download NEF artifacts
@@ -303,7 +308,7 @@ jobs:
       
       - name: Install Neo Express
         run: |
-          dotnet tool install Neo.Express -g
+          dotnet tool install Neo.Express --version 3.8.2 -g
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
       
       - name: Download all NEF artifacts
