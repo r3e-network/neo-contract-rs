@@ -8,7 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-Ctarget-feature=+multivalue -Clink-arg=--initial-memory=2097152"
 
 jobs:
   test:

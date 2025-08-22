@@ -35,14 +35,12 @@ jobs:
     - name: Run tests with coverage
       run: |
         cargo llvm-cov --workspace --lcov --output-path lcov.info \
-          --ignore-filename-regex "(tests|examples)" \
-          --exclude-from-test
+          --ignore-filename-regex "(tests|examples)"
           
     - name: Generate detailed coverage report
       run: |
         cargo llvm-cov report --html --output-dir coverage-html \
-          --ignore-filename-regex "(tests|examples)" \
-          --exclude-from-test
+          --ignore-filename-regex "(tests|examples)"
           
     - name: Generate coverage summary
       run: |
@@ -53,7 +51,6 @@ jobs:
         echo '```' >> COVERAGE_SUMMARY.md
         cargo llvm-cov --workspace \
           --ignore-filename-regex "(tests|examples)" \
-          --exclude-from-test \
           | grep -E "(Lines|Functions|Branches)" >> COVERAGE_SUMMARY.md
         echo '```' >> COVERAGE_SUMMARY.md
         echo "" >> COVERAGE_SUMMARY.md
@@ -61,8 +58,7 @@ jobs:
         echo "## Coverage by Module" >> COVERAGE_SUMMARY.md
         echo '```' >> COVERAGE_SUMMARY.md
         cargo llvm-cov --workspace --summary-only \
-          --ignore-filename-regex "(tests|examples)" \
-          --exclude-from-test >> COVERAGE_SUMMARY.md
+          --ignore-filename-regex "(tests|examples)" >> COVERAGE_SUMMARY.md
         echo '```' >> COVERAGE_SUMMARY.md
         
         echo "" >> COVERAGE_SUMMARY.md
@@ -77,8 +73,7 @@ jobs:
       run: |
         # Extract overall line coverage percentage
         COVERAGE=$(cargo llvm-cov --workspace \
-          --ignore-filename-regex "(tests|examples)" \
-          --exclude-from-test | grep -oP '\d+\.\d+%' | head -1 | sed 's/%//')
+          --ignore-filename-regex "(tests|examples)" | grep -oP '\d+\.\d+%' | head -1 | sed 's/%//')
           
         echo "Current coverage: $COVERAGE%"
         
