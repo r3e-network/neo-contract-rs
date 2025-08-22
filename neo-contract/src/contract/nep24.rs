@@ -71,9 +71,16 @@ impl NEP24Implementation {
             Int256::from(amount as i64).into_any(),
         ]);
         
-        // In real implementation, serialize royalty_data to ByteString
-        // For now, store empty as we can't properly serialize without the full runtime
-        Storage::put(context, key, ByteString::empty());
+        // Production implementation: Serialize royalty_data to ByteString
+        use alloc::vec::Vec;
+        
+        // Create serialized royalty data
+        let mut royalty_bytes = Vec::new();
+        royalty_bytes.extend_from_slice(&recipient.to_bytes());    // 20 bytes for H160
+        royalty_bytes.extend_from_slice(&amount.to_le_bytes());    // 2 bytes for u16
+        
+        let serialized_data = ByteString::from_bytes(&royalty_bytes);
+        Storage::put(context, key, serialized_data);
     }
 
     /// Get royalty info from contract storage
@@ -85,10 +92,29 @@ impl NEP24Implementation {
             .concat(&token_id);
         
         Storage::get(context, key)
-            .and_then(|_data| {
-                // In a real implementation, deserialize the ByteString
-                // For now, return None as we can't properly deserialize without the full runtime
-                None::<RoyaltyInfo>
+            .and_then(|data| {
+                // Production implementation: Deserialize ByteString to RoyaltyInfo
+                let data_bytes = data.to_bytes();
+                
+                // Check if we have enough bytes for H160 (20) + u16 (2) = 22 bytes minimum
+                if data_bytes.len() >= 22 {
+                    // Extract recipient address (first 20 bytes)
+                    let mut recipient_bytes = [0u8; 20];
+                    recipient_bytes.copy_from_slice(&data_bytes[0..20]);
+                    let recipient = H160::from_bytes(&recipient_bytes);
+                    
+                    // Extract royalty amount (next 2 bytes)
+                    let mut amount_bytes = [0u8; 2];
+                    amount_bytes.copy_from_slice(&data_bytes[20..22]);
+                    let amount = u16::from_le_bytes(amount_bytes);
+                    
+                    Some(RoyaltyInfo {
+                        recipient,
+                        amount,
+                    })
+                } else {
+                    None // Insufficient data for deserialization
+                }
             })
     }
 
@@ -104,9 +130,16 @@ impl NEP24Implementation {
             Int256::from(amount as i64).into_any(),
         ]);
         
-        // In real implementation, serialize royalty_data to ByteString
-        // For now, store empty as we can't properly serialize without the full runtime
-        Storage::put(context, key, ByteString::empty());
+        // Production implementation: Serialize royalty_data to ByteString
+        use alloc::vec::Vec;
+        
+        // Create serialized royalty data
+        let mut royalty_bytes = Vec::new();
+        royalty_bytes.extend_from_slice(&recipient.to_bytes());    // 20 bytes for H160
+        royalty_bytes.extend_from_slice(&amount.to_le_bytes());    // 2 bytes for u16
+        
+        let serialized_data = ByteString::from_bytes(&royalty_bytes);
+        Storage::put(context, key, serialized_data);
     }
 
     /// Get default royalty from contract storage
@@ -117,10 +150,29 @@ impl NEP24Implementation {
         let key = ByteString::from_literal("default_royalty");
         
         Storage::get(context, key)
-            .and_then(|_data| {
-                // In a real implementation, deserialize the ByteString
-                // For now, return None as we can't properly deserialize without the full runtime
-                None::<RoyaltyInfo>
+            .and_then(|data| {
+                // Production implementation: Deserialize ByteString to RoyaltyInfo
+                let data_bytes = data.to_bytes();
+                
+                // Check if we have enough bytes for H160 (20) + u16 (2) = 22 bytes minimum
+                if data_bytes.len() >= 22 {
+                    // Extract recipient address (first 20 bytes)
+                    let mut recipient_bytes = [0u8; 20];
+                    recipient_bytes.copy_from_slice(&data_bytes[0..20]);
+                    let recipient = H160::from_bytes(&recipient_bytes);
+                    
+                    // Extract royalty amount (next 2 bytes)
+                    let mut amount_bytes = [0u8; 2];
+                    amount_bytes.copy_from_slice(&data_bytes[20..22]);
+                    let amount = u16::from_le_bytes(amount_bytes);
+                    
+                    Some(RoyaltyInfo {
+                        recipient,
+                        amount,
+                    })
+                } else {
+                    None // Insufficient data for deserialization
+                }
             })
     }
 
@@ -206,9 +258,16 @@ impl RoyaltyRegistry {
             Int256::from(amount as i64).into_any(),
         ]);
 
-        // In real implementation, serialize royalty_data to ByteString
-        // For now, store empty as we can't properly serialize without the full runtime
-        Storage::put(context, key, ByteString::empty());
+        // Production implementation: Serialize royalty_data to ByteString
+        use alloc::vec::Vec;
+        
+        // Create serialized royalty data
+        let mut royalty_bytes = Vec::new();
+        royalty_bytes.extend_from_slice(&recipient.to_bytes());    // 20 bytes for H160
+        royalty_bytes.extend_from_slice(&amount.to_le_bytes());    // 2 bytes for u16
+        
+        let serialized_data = ByteString::from_bytes(&royalty_bytes);
+        Storage::put(context, key, serialized_data);
         true
     }
 
@@ -224,10 +283,29 @@ impl RoyaltyRegistry {
             .concat(&token_id);
 
         Storage::get(context, key)
-            .and_then(|_data| {
-                // In a real implementation, deserialize the ByteString
-                // For now, return None as we can't properly deserialize without the full runtime
-                None::<RoyaltyInfo>
+            .and_then(|data| {
+                // Production implementation: Deserialize ByteString to RoyaltyInfo
+                let data_bytes = data.to_bytes();
+                
+                // Check if we have enough bytes for H160 (20) + u16 (2) = 22 bytes minimum
+                if data_bytes.len() >= 22 {
+                    // Extract recipient address (first 20 bytes)
+                    let mut recipient_bytes = [0u8; 20];
+                    recipient_bytes.copy_from_slice(&data_bytes[0..20]);
+                    let recipient = H160::from_bytes(&recipient_bytes);
+                    
+                    // Extract royalty amount (next 2 bytes)
+                    let mut amount_bytes = [0u8; 2];
+                    amount_bytes.copy_from_slice(&data_bytes[20..22]);
+                    let amount = u16::from_le_bytes(amount_bytes);
+                    
+                    Some(RoyaltyInfo {
+                        recipient,
+                        amount,
+                    })
+                } else {
+                    None // Insufficient data for deserialization
+                }
             })
     }
 }

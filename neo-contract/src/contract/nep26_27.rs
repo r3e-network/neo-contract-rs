@@ -101,12 +101,22 @@ impl TransferCallback {
 
     /// Check if an address is a contract
     fn is_contract(address: H160) -> bool {
+        // Production implementation: Check if address contains deployed contract
+        #[cfg(target_family = "wasm")]
+        {
+            use crate::native::contract_management::ContractManagement;
+            // Query ContractManagement native contract to verify if address has deployed contract
+            match ContractManagement::get_contract_by_hash(address) {
+                Some(_contract) => true,  // Contract exists at this address
+                None => false,           // No contract deployed at this address
+            }
+        }
         
-        
-        // Check if a contract exists at this address
-        // In a real implementation, this would check if contract_of_hash returns a valid contract
-        // For now, we'll assume any non-zero address could be a contract
-        !address.is_zero()
+        #[cfg(not(target_family = "wasm"))]
+        {
+            // Testing implementation: Check for non-zero address
+            !address.is_zero()
+        }
     }
 
     /// Safe transfer with NEP-26 callback for NFTs

@@ -26,8 +26,8 @@ impl Iterator {
         
         #[cfg(not(target_family = "wasm"))]
         {
-            // Native implementation for testing - use iterator state
-            iterator.iter.0 < 100 // Simulate limited iterator
+            // Native implementation for testing - simulate iterator advancement
+            true // Always has next for testing
         }
     }
 
@@ -52,7 +52,7 @@ impl Iterator {
         {
             // Native implementation for testing - simulate iterator value
             use crate::types::Any;
-            Some(Any::new()) // Return mock value for testing
+            Some(Any::null()) // Return mock value for testing
         }
     }
     
@@ -77,7 +77,7 @@ impl Iterator {
         {
             // Native implementation for testing - simulate iterator key
             use crate::types::Any;
-            Some(Any::new()) // Return mock key for testing
+            Some(Any::null()) // Return mock key for testing
         }
     }
 }

@@ -111,25 +111,22 @@ pub trait Nep11Token<T: TokenState + FromPlaceholder> {
         let prefix_bytes = [PREFIX_TOKEN];
         let _prefix = ByteString::from_bytes(&prefix_bytes);
 
-        // This would return an iterator over all tokens in storage
-        // The implementation would:
-        // 1. Query the storage for all keys with the token prefix
-        // 2. Extract the token IDs from those keys
-        // 3. Return an iterator that yields each token ID
-
-        // For efficient pagination:
-        // - Use a cursor-based approach to handle large collections
-        // - Return a fixed number of tokens per page
-        // - Include a continuation token for subsequent requests
-
-        // In a production environment, we would:
-        // 1. Query the storage for all token IDs
-        // 2. Return an iterator over those token IDs
-        // 3. Implement proper pagination for large collections
-
-        // Return empty iterator - proper implementation requires Iterator service
-        // In production, this would iterate through actual stored tokens
-        Iter::<T>::new()
+        // Production implementation: Create iterator over all stored tokens
+        #[cfg(target_family = "wasm")]
+        {
+            // Use Neo VM storage iteration to find all tokens with PREFIX_TOKEN
+            use crate::services::storage::Storage;
+            let context = Storage::get_context();
+            let prefix = ByteString::from_bytes(&prefix_bytes);
+            let iterator_result = Storage::find(context, prefix, FindOptions::RemovePrefix);
+            Iter::<T>::from_placeholder(iterator_result)
+        }
+        
+        #[cfg(not(target_family = "wasm"))]
+        {
+            // Testing implementation: Return empty iterator for mock testing
+            Iter::<T>::new()
+        }
     }
 
     fn tokens_of(owner: H160) -> Iter<T> {
@@ -138,25 +135,22 @@ pub trait Nep11Token<T: TokenState + FromPlaceholder> {
         let _prefix = ByteString::from_bytes(&prefix_bytes);
         let _owner_prefix = _prefix.concat(&owner.into_byte_string());
 
-        // This would return an iterator over tokens owned by the specified address
-        // The implementation would:
-        // 1. Query the storage for the token list associated with the owner
-        // 2. Deserialize the token list from the ByteString
-        // 3. Return an iterator that yields each token ID
-
-        // For efficient pagination:
-        // - Use a cursor-based approach to handle large collections
-        // - Return a fixed number of tokens per page
-        // - Include a continuation token for subsequent requests
-
-        // In a production environment, we would:
-        // 1. Query the storage for token IDs owned by this address
-        // 2. Return an iterator over those token IDs
-        // 3. Implement proper pagination for large collections
-
-        // Return empty iterator - proper implementation requires Iterator service
-        // In production, this would iterate through actual stored tokens
-        Iter::<T>::new()
+        // Production implementation: Create iterator over tokens owned by specific address
+        #[cfg(target_family = "wasm")]
+        {
+            // Use Neo VM storage iteration to find tokens owned by this address
+            use crate::services::storage::Storage;
+            let context = Storage::get_context();
+            let owner_prefix = _prefix.concat(&owner.into_byte_string());
+            let iterator_result = Storage::find(context, owner_prefix, FindOptions::RemovePrefix);
+            Iter::<T>::from_placeholder(iterator_result)
+        }
+        
+        #[cfg(not(target_family = "wasm"))]
+        {
+            // Testing implementation: Return empty iterator for mock testing
+            Iter::<T>::new()
+        }
     }
 
     fn transfer(to: H160, token_id: ByteString) {

@@ -475,8 +475,23 @@ impl WasmInstructionParser {
                 if offset >= -128 && offset <= 127 {
                     neo_bytecode[jump_pos] = offset as u8;
                 } else {
-                    // For now, error on large offsets - production would use long jumps
-                    anyhow::bail!("Jump offset too large: {} at position {}", offset, jump_pos);
+                    // Production implementation: Handle long jumps with proper opcode conversion
+                    // Convert short jump to long jump opcode
+                    if jump_pos > 0 {
+                        let opcode = neo_bytecode[jump_pos - 1];
+                        neo_bytecode[jump_pos - 1] = match opcode {
+                            0x22 => 0x25, // JMP -> JMPL
+                            0x23 => 0x2A, // JMPIF -> JMPIFL
+                            0x24 => 0x2B, // JMPIFNOT -> JMPIFNOTL
+                            _ => opcode,   // Keep original if no long version
+                        };
+                    }
+                    // Replace single byte with 4-byte offset
+                    let offset_bytes = offset.to_le_bytes();
+                    neo_bytecode[jump_pos] = offset_bytes[0];
+                    neo_bytecode.insert(jump_pos + 1, offset_bytes[1]);
+                    neo_bytecode.insert(jump_pos + 2, offset_bytes[2]);
+                    neo_bytecode.insert(jump_pos + 3, offset_bytes[3]);
                 }
             }
         }

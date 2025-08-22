@@ -38,12 +38,32 @@ pub fn check_multi_signs(_public_keys: Array<PublicKey>, _signs: Array<ByteStrin
         
         // Validate each key-signature pair
         for i in 0.._public_keys.length() {
-            let _pk = _public_keys.get(i);
+            let pk = _public_keys.get(i);
             let sig = _signs.get(i);
-            // In a real implementation, we would verify the signature
-            // For now, just check they're not empty
-            if sig.is_empty() {
-                return false;
+            
+            // Production implementation: Verify each signature cryptographically
+            #[cfg(target_family = "wasm")]
+            {
+                // Use Neo VM cryptographic verification syscalls
+                use crate::env;
+                let verification_result = unsafe {
+                    env::syscall::system_crypto_verify_ecdsa_secp256r1(
+                        sig.to_bytes().as_slice(),
+                        pk.to_bytes().as_slice(),
+                        _message.to_bytes().as_slice()
+                    )
+                };
+                if !verification_result {
+                    return false; // Invalid signature
+                }
+            }
+            
+            #[cfg(not(target_family = "wasm"))]
+            {
+                // Testing implementation: Basic checks for non-empty signatures
+                if sig.is_empty() || pk.0.is_empty() {
+                    return false;
+                }
             }
         }
         true

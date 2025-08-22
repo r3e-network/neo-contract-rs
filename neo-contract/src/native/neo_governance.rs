@@ -180,10 +180,11 @@ impl NeoGovernance {
                 let vote_to_any = arr.get(2);
                 
                 AccountState {
-                    balance: balance_any.as_integer().unwrap_or(Int256::zero()),
-                    height: height_any.as_integer().unwrap_or(Int256::zero()).to_i32().unwrap_or(0) as u32,
+                    balance: balance_any.as_int().unwrap_or(Int256::zero()),
+                    balance_height: height_any.as_int().unwrap_or(Int256::zero()),
                     vote_to: if !vote_to_any.is_null() { 
-                        Some(vote_to_any.as_h160().unwrap_or(H160::zero())) 
+                        // Convert H160 to PublicKey - in Neo, public keys are used for voting
+                        Some(PublicKey::from_bytes(&vote_to_any.as_h160().unwrap_or(H160::zero()).to_bytes()))
                     } else { 
                         None 
                     },

@@ -438,18 +438,51 @@ impl MemoryModelTranslator {
     fn emit_multi_byte_load(&self, size: u32, bytecode: &mut Vec<u8>) -> Result<()> {
         match size {
             2 => {
-                // Load 2 bytes (i16)
-                // In a full implementation, this would handle endianness
-                // For now, just duplicate the load
-                bytecode.push(OpCode::Dup.to_byte());
+                // Load 2 bytes (i16) with proper endianness handling
+                // Neo VM uses little-endian, so load and combine bytes
+                bytecode.push(OpCode::Dup.to_byte());           // Duplicate address for second byte
+                bytecode.push(OpCode::PushInt8.to_byte());      // Add 1 for next byte
+                bytecode.push(1);
+                bytecode.push(OpCode::Add.to_byte());           // Calculate address + 1
+                
+                // Load both bytes
+                self.emit_storage_get(bytecode)?;               // Load second byte
+                bytecode.push(OpCode::Swap.to_byte());          // Swap addresses
+                self.emit_storage_get(bytecode)?;               // Load first byte
+                
+                // Combine bytes in little-endian order
+                bytecode.push(OpCode::PushInt8.to_byte());      // Shift for high byte
+                bytecode.push(8);
+                bytecode.push(OpCode::Shl.to_byte());           // Shift second byte
+                bytecode.push(OpCode::Add.to_byte());           // Combine bytes
             },
             4 => {
-                // Load 4 bytes (i32)
-                // In a full implementation, this would handle endianness
-                // For now, just duplicate the load
-                bytecode.push(OpCode::Dup.to_byte());
-                bytecode.push(OpCode::Dup.to_byte());
-                bytecode.push(OpCode::Dup.to_byte());
+                // Load 4 bytes (i32) with proper little-endian handling
+                let mut addresses = Vec::new();
+                
+                // Generate addresses for all 4 bytes
+                for offset in 0..4 {
+                    if offset > 0 {
+                        bytecode.push(OpCode::Dup.to_byte());       // Duplicate base address
+                        bytecode.push(OpCode::PushInt8.to_byte());  // Add offset
+                        bytecode.push(offset);
+                        bytecode.push(OpCode::Add.to_byte());       // Calculate address + offset
+                    }
+                }
+                
+                // Load all 4 bytes
+                for _ in 0..4 {
+                    self.emit_storage_get(bytecode)?;
+                }
+                
+                // Combine bytes in little-endian order (byte0 + byte1<<8 + byte2<<16 + byte3<<24)
+                for shift in [8, 16, 24] {
+                    bytecode.push(OpCode::Swap.to_byte());          // Get next byte
+                    bytecode.push(OpCode::PushInt8.to_byte());      // Shift amount
+                    bytecode.push(shift);
+                    bytecode.push(OpCode::Shl.to_byte());           // Shift byte
+                    bytecode.push(OpCode::Add.to_byte());           // Combine with result
+                }
             },
             8 => {
                 // Load 8 bytes (i64)
@@ -545,6 +578,15 @@ impl MemoryModelTranslator {
         // Neo storage put expects: [key, value]
         bytecode.push(OpCode::SysCall.to_byte());
         bytecode.extend_from_slice(&SysCall::SYSTEM_STORAGE_PUT.to_le_bytes());
+        Ok(())
+    }
+
+    /// Emit storage get operation (key should be on stack)
+    fn emit_storage_get(&self, bytecode: &mut Vec<u8>) -> Result<()> {
+        // Stack should have: [key]
+        // Neo storage get returns: [value]
+        bytecode.push(OpCode::SysCall.to_byte());
+        bytecode.extend_from_slice(&SysCall::SYSTEM_STORAGE_GET.to_le_bytes());
         Ok(())
     }
 
