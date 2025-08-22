@@ -94,9 +94,20 @@ where
             Ok(serialized) => {
                 crate::services::storage::Storage::put(self.context.to_storage_context(), self.key.clone(), serialized);
             }
-            Err(_) => {
-                // Handle serialization error - for now, do nothing
-                // In a production system, this should be logged or handled appropriately
+            Err(e) => {
+                // Production error handling for serialization failures
+                #[cfg(target_family = "wasm")]
+                {
+                    // In WASM/Neo VM context, we need to handle errors gracefully
+                    // Log the error and potentially panic for data integrity
+                    crate::services::runtime::Runtime::log(&format!("Storage serialization error: {:?}", e));
+                    panic!("Critical storage error: failed to serialize value");
+                }
+                #[cfg(not(target_family = "wasm"))]
+                {
+                    // In non-WASM context, panic with error context
+                    panic!("Storage serialization failed: {:?}", e);
+                }
             }
         }
     }
@@ -171,9 +182,19 @@ where
             Ok(serialized) => {
                 crate::services::storage::Storage::put(self.context.to_storage_context(), storage_key, serialized);
             }
-            Err(_) => {
-                // Handle serialization error - for now, do nothing
-                // In a production system, this should be logged or handled appropriately
+            Err(e) => {
+                // Production error handling for serialization failures
+                #[cfg(target_family = "wasm")]
+                {
+                    // In WASM/Neo VM context, handle errors with proper logging
+                    crate::services::runtime::Runtime::log(&format!("Storage map serialization error: {:?}", e));
+                    panic!("Critical storage error: failed to serialize map value");
+                }
+                #[cfg(not(target_family = "wasm"))]
+                {
+                    // In non-WASM context, panic with error context
+                    panic!("Storage map serialization failed: {:?}", e);
+                }
             }
         }
     }

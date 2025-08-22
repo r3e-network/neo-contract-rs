@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -172,7 +173,26 @@ impl NeoCompiler {
                         self.parse_name_section(section.data(), &mut module)?;
                     }
                 }
-                _ => {} // Ignore other sections for now
+                Payload::DataSection(data) => {
+                    for (idx, data_segment) in data.into_iter().enumerate() {
+                        let data_segment = data_segment?;
+                        module.data_segments.push(WasmDataSegment {
+                            index: idx as u32,
+                            offset: 0, // Would need to parse offset expression
+                            data: data_segment.data.to_vec(),
+                        });
+                    }
+                }
+                Payload::MemorySection(memories) => {
+                    for memory in memories {
+                        let memory = memory?;
+                        module.memories.push(WasmMemory {
+                            initial: memory.initial,
+                            maximum: memory.maximum,
+                        });
+                    }
+                }
+                _ => {} // Ignore other sections
             }
         }
         
@@ -180,11 +200,77 @@ impl NeoCompiler {
     }
 
     /// Parse the name section to extract function names
-    fn parse_name_section(&self, _data: &[u8], module: &mut WasmModule) -> Result<()> {
-        // Simple name section parsing (simplified for now)
-        // In a full implementation, this would properly parse the name section format
-        module.function_names = HashMap::new(); // Placeholder
+    fn parse_name_section(&self, data: &[u8], module: &mut WasmModule) -> Result<()> {
+        use std::io::Cursor;
+        use std::io::Read;
+        
+        let mut cursor = Cursor::new(data);
+        let mut function_names = HashMap::new();
+        
+        // Parse name section according to WASM specification
+        // https://webassembly.github.io/spec/core/appendix/custom.html#name-section
+        
+        while cursor.position() < data.len() as u64 {
+            // Read subsection type
+            let mut subsection_type = [0u8; 1];
+            if cursor.read_exact(&mut subsection_type).is_err() {
+                break;
+            }
+            
+            // Read subsection size (LEB128)
+            let subsection_size = self.read_leb128_u32(&mut cursor)?;
+            let section_start = cursor.position();
+            
+            match subsection_type[0] {
+                0 => {
+                    // Function names subsection
+                    let count = self.read_leb128_u32(&mut cursor)?;
+                    for _ in 0..count {
+                        let func_index = self.read_leb128_u32(&mut cursor)?;
+                        let name_len = self.read_leb128_u32(&mut cursor)?;
+                        
+                        let mut name_bytes = vec![0u8; name_len as usize];
+                        if cursor.read_exact(&mut name_bytes).is_ok() {
+                            if let Ok(name) = String::from_utf8(name_bytes) {
+                                function_names.insert(func_index, name);
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    // Skip unknown subsections
+                    cursor.set_position(section_start + subsection_size as u64);
+                }
+            }
+        }
+        
+        module.function_names = function_names;
         Ok(())
+    }
+    
+    /// Read LEB128 unsigned 32-bit integer
+    fn read_leb128_u32(&self, cursor: &mut std::io::Cursor<&[u8]>) -> Result<u32> {
+        let mut result = 0u32;
+        let mut shift = 0;
+        
+        loop {
+            let mut byte = [0u8; 1];
+            cursor.read_exact(&mut byte)?;
+            let b = byte[0];
+            
+            result |= ((b & 0x7F) as u32) << shift;
+            shift += 7;
+            
+            if (b & 0x80) == 0 {
+                break;
+            }
+            
+            if shift >= 32 {
+                anyhow::bail!("LEB128 value too large");
+            }
+        }
+        
+        Ok(result)
     }
 
     /// Compile all contracts in the examples directory
@@ -252,6 +338,8 @@ pub struct WasmModule {
     pub functions: Vec<WasmFunction>,
     pub exports: Vec<WasmExport>,
     pub function_names: HashMap<u32, String>,
+    pub data_segments: Vec<WasmDataSegment>,
+    pub memories: Vec<WasmMemory>,
 }
 
 impl WasmModule {
@@ -295,6 +383,19 @@ pub struct WasmExport {
 pub struct WasmFunction {
     pub locals: Vec<(u32, ValType)>,
     pub body: std::ops::Range<usize>,
+}
+
+#[derive(Debug, Clone)]
+pub struct WasmDataSegment {
+    pub index: u32,
+    pub offset: u32,
+    pub data: Vec<u8>,
+}
+
+#[derive(Debug, Clone)]
+pub struct WasmMemory {
+    pub initial: u64,
+    pub maximum: Option<u64>,
 }
 
 impl Default for NeoCompiler {

@@ -14,16 +14,23 @@ pub struct Event;
 impl Event {
     /// Emits an event with the given name and state.
     #[inline(always)]
-    #[allow(unused_variables)]
-    pub fn emit(_name: ByteString, _state: Array<Any>) {
-        // Production implementation for non-WASM targets
-        // In a test/dev environment, events are logged to console
-        // In production Neo environment, this would emit actual blockchain events
-        #[cfg(feature = "std")]
+    pub fn emit(name: ByteString, state: Array<Any>) {
+        #[cfg(target_family = "wasm")]
         {
-            println!("Event: {} with {} parameters", _name.to_string(), _state.length());
+            // Production WASM implementation using Neo blockchain event system
+            use crate::runtime;
+            runtime::Runtime::notify(name, &[state.into()]);
         }
-        // Event is recorded but not persisted in non-WASM environment
+        
+        #[cfg(not(target_family = "wasm"))]
+        {
+            // Native implementation for testing - structured event logging
+            #[cfg(feature = "std")]
+            {
+                println!("Neo Event [{}]: {} parameters emitted", name.to_string(), state.length());
+            }
+            // In testing environment, events are logged but not persisted to blockchain
+        }
     }
 }
 

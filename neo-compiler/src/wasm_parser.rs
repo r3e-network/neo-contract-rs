@@ -25,6 +25,7 @@ pub struct ControlLabel {
     pub start_offset: usize,
     pub end_offset: Option<usize>,
     pub continuation_offset: Option<usize>,
+    pub jump_positions: Vec<usize>, // Positions that need to be patched
 }
 
 #[derive(Debug, Clone)]
@@ -143,7 +144,9 @@ impl WasmInstructionParser {
         
         while !binary_reader.eof() {
             let op = binary_reader.read_operator()?;
-            // Skip validation for now to avoid API complexity
+            
+            // Validate operator based on current context
+            self.validate_operator(&op)?;
             
             self.translate_operator(&op, &mut neo_bytecode)?;
             self.offset = binary_reader.original_position();
@@ -222,9 +225,15 @@ impl WasmInstructionParser {
             },
             Operator::If { blockty: _ } => {
                 self.push_control_label(ControlType::If)?;
-                // Emit conditional jump - will be patched later
+                // Emit conditional jump - will be resolved by control flow handler
                 neo_bytecode.push(OpCode::JmpIfNot.to_byte());
-                neo_bytecode.push(0); // Placeholder for jump offset
+                let jump_pos = neo_bytecode.len();
+                neo_bytecode.push(0); // Jump offset - will be patched
+                
+                // Record jump position for later resolution
+                if let Some(label) = self.label_stack.last_mut() {
+                    label.jump_positions.push(jump_pos);
+                }
             },
             Operator::Else => {
                 self.handle_else(neo_bytecode)?;
@@ -378,8 +387,15 @@ impl WasmInstructionParser {
     fn emit_memory_load(&mut self, memarg: &wasmparser::MemArg, size: u32, neo_bytecode: &mut Vec<u8>) -> Result<()> {
         // Stack: [address] -> [loaded_value]
         
-        // For now, use simplified addressing (offset from stack top)
+        // Calculate actual memory address: stack_value + memarg.offset
         let base_address = memarg.offset as u32;
+        
+        // Add offset to stack address if non-zero
+        if base_address > 0 {
+            neo_bytecode.push(OpCode::PushInt32.to_byte());
+            neo_bytecode.extend_from_slice(&base_address.to_le_bytes());
+            neo_bytecode.push(OpCode::Add.to_byte());
+        }
         
         // Create memory operation
         let mem_op = MemoryOperation {
@@ -424,6 +440,7 @@ impl WasmInstructionParser {
             start_offset: self.offset,
             end_offset: None,
             continuation_offset: None,
+            jump_positions: Vec::new(),
         });
         Ok(())
     }
@@ -434,7 +451,11 @@ impl WasmInstructionParser {
             if matches!(label.label_type, ControlType::If) {
                 // Insert unconditional jump to end of if block
                 neo_bytecode.push(OpCode::Jmp.to_byte());
-                neo_bytecode.push(0); // Placeholder for jump offset
+                let jump_pos = neo_bytecode.len();
+                neo_bytecode.push(0); // Jump offset - will be patched
+                
+                // Record jump position for resolution
+                label.jump_positions.push(jump_pos);
                 
                 label.continuation_offset = Some(neo_bytecode.len());
                 label.label_type = ControlType::Else;
@@ -444,27 +465,106 @@ impl WasmInstructionParser {
     }
 
     /// Handle end of control block
-    fn handle_end(&mut self, _neo_bytecode: &mut Vec<u8>) -> Result<()> {
-        if let Some(mut label) = self.label_stack.pop() {
-            label.end_offset = Some(self.offset);
-            // In a full implementation, this would patch jump offsets
+    fn handle_end(&mut self, neo_bytecode: &mut Vec<u8>) -> Result<()> {
+        if let Some(label) = self.label_stack.pop() {
+            let end_position = neo_bytecode.len();
+            
+            // Patch all pending jumps for this control block
+            for &jump_pos in &label.jump_positions {
+                let offset = (end_position as i32) - (jump_pos as i32) - 1;
+                if offset >= -128 && offset <= 127 {
+                    neo_bytecode[jump_pos] = offset as u8;
+                } else {
+                    // For now, error on large offsets - production would use long jumps
+                    anyhow::bail!("Jump offset too large: {} at position {}", offset, jump_pos);
+                }
+            }
         }
         Ok(())
     }
 
     /// Emit branch instruction
-    fn emit_branch(&self, _relative_depth: u32, neo_bytecode: &mut Vec<u8>) -> Result<()> {
-        // Simplified branch implementation
+    fn emit_branch(&self, relative_depth: u32, neo_bytecode: &mut Vec<u8>) -> Result<()> {
+        // Branch to the target control block
         neo_bytecode.push(OpCode::Jmp.to_byte());
-        neo_bytecode.push(0); // Placeholder for jump offset
+        
+        // Calculate target from label stack
+        if relative_depth as usize >= self.label_stack.len() {
+            anyhow::bail!("Invalid branch depth: {}", relative_depth);
+        }
+        
+        let target_idx = self.label_stack.len() - 1 - (relative_depth as usize);
+        let target_label = &self.label_stack[target_idx];
+        
+        // Calculate offset to target
+        let current_pos = neo_bytecode.len();
+        let target_pos = match target_label.label_type {
+            ControlType::Loop => target_label.start_offset,
+            _ => target_label.end_offset.unwrap_or(current_pos + 1), // Will be patched
+        };
+        
+        let offset = (target_pos as i32) - (current_pos as i32) - 1;
+        if offset >= -128 && offset <= 127 {
+            // Short jump fits in i8
+            neo_bytecode.push(offset as u8);
+        } else {
+            // Long jump requires different opcode - use JMPL instead
+            // First, replace the short jump opcode with long jump equivalent
+            if let Some(last_opcode) = neo_bytecode.last_mut() {
+                *last_opcode = match *last_opcode {
+                    0x23 => 0x2A, // JMPIF -> JMPIFL  
+                    0x24 => 0x2B, // JMPIFNOT -> JMPIFNOTL
+                    0x22 => 0x25, // JMP -> JMPL
+                    _ => *last_opcode,
+                };
+            }
+            // Emit 4-byte offset for long jump
+            let offset_bytes = offset.to_le_bytes();
+            neo_bytecode.extend_from_slice(&offset_bytes);
+        }
+        
         Ok(())
     }
 
     /// Emit conditional branch instruction
-    fn emit_conditional_branch(&self, _relative_depth: u32, neo_bytecode: &mut Vec<u8>) -> Result<()> {
-        // Simplified conditional branch implementation
+    fn emit_conditional_branch(&self, relative_depth: u32, neo_bytecode: &mut Vec<u8>) -> Result<()> {
+        // Conditional branch to the target control block
         neo_bytecode.push(OpCode::JmpIf.to_byte());
-        neo_bytecode.push(0); // Placeholder for jump offset
+        
+        // Calculate target from label stack
+        if relative_depth as usize >= self.label_stack.len() {
+            anyhow::bail!("Invalid conditional branch depth: {}", relative_depth);
+        }
+        
+        let target_idx = self.label_stack.len() - 1 - (relative_depth as usize);
+        let target_label = &self.label_stack[target_idx];
+        
+        // Calculate offset to target
+        let current_pos = neo_bytecode.len();
+        let target_pos = match target_label.label_type {
+            ControlType::Loop => target_label.start_offset,
+            _ => target_label.end_offset.unwrap_or(current_pos + 1), // Will be patched
+        };
+        
+        let offset = (target_pos as i32) - (current_pos as i32) - 1;
+        if offset >= -128 && offset <= 127 {
+            // Short conditional jump fits in i8
+            neo_bytecode.push(offset as u8);
+        } else {
+            // Long conditional jump requires 4-byte offset
+            // Replace previous opcode with long version if applicable
+            if let Some(last_opcode) = neo_bytecode.last_mut() {
+                *last_opcode = match *last_opcode {
+                    0x23 => 0x2A, // JMPIF -> JMPIFL
+                    0x24 => 0x2B, // JMPIFNOT -> JMPIFNOTL
+                    _ => *last_opcode,
+                };
+            }
+            // Emit 4-byte offset for long conditional jump
+            let offset_bytes = offset.to_le_bytes();
+            neo_bytecode.extend_from_slice(&offset_bytes);
+        }
+        
         Ok(())
     }
 
@@ -487,6 +587,68 @@ impl WasmInstructionParser {
 impl Default for WasmInstructionParser {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl WasmInstructionParser {
+    /// Validate WASM operator in current context
+    fn validate_operator(&self, op: &wasmparser::Operator) -> Result<()> {
+        use wasmparser::Operator;
+        
+        match op {
+            // Validate stack operations
+            Operator::Drop | Operator::Select => {
+                // Always valid
+                Ok(())
+            },
+            
+            // Validate local variable operations
+            Operator::LocalGet { local_index } | 
+            Operator::LocalSet { local_index } | 
+            Operator::LocalTee { local_index } => {
+                if *local_index > 65535 {
+                    anyhow::bail!("Local index {} exceeds maximum (65535)", local_index);
+                }
+                Ok(())
+            },
+            
+            // Validate memory operations
+            Operator::I32Load { memarg } | 
+            Operator::I64Load { memarg } |
+            Operator::I32Store { memarg } |
+            Operator::I64Store { memarg } => {
+                if memarg.align > 8 {
+                    anyhow::bail!("Memory alignment {} exceeds maximum (8)", memarg.align);
+                }
+                if memarg.offset > 0xFFFFFFFF {
+                    anyhow::bail!("Memory offset {} exceeds 32-bit limit", memarg.offset);
+                }
+                Ok(())
+            },
+            
+            // Validate control flow
+            Operator::Br { relative_depth } |
+            Operator::BrIf { relative_depth } => {
+                if *relative_depth as usize >= self.label_stack.len() {
+                    anyhow::bail!("Branch depth {} exceeds label stack depth {}", 
+                                relative_depth, self.label_stack.len());
+                }
+                Ok(())
+            },
+            
+            // Validate function calls
+            Operator::Call { function_index } => {
+                // Function index validation would require module context
+                // For production, validate against actual function table
+                if *function_index > 65535 {
+                    anyhow::bail!("Function index {} exceeds reasonable limit", function_index);
+                }
+                Ok(())
+            },
+            
+            // All other operators are considered valid
+            _ => Ok(())
+        }
     }
 }
 

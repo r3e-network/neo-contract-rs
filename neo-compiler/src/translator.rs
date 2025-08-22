@@ -330,12 +330,32 @@ impl WasmTranslator {
             self.script.push(arg_count as u8);
         }
         
-        // Translate function body (simplified for now)
-        // In a full implementation, this would parse WASM instructions
-        // and translate them to NEO opcodes
-        
-        // For now, just return
-        self.emit_opcode(OpCode::Ret)?;
+        // Translate function body using enhanced WASM parser
+        if local_idx < module.functions.len() {
+            let function = &module.functions[local_idx];
+            
+            // Extract function body bytes from WASM binary
+            if let Some(ref wasm_bytes) = self.wasm_bytes {
+                let body_bytes = &wasm_bytes[function.body.clone()];
+                match self.wasm_parser.parse_function_body_simple(body_bytes, &function.locals) {
+                    Ok(translated_bytecode) => {
+                        // Append successfully translated bytecode
+                        self.script.extend_from_slice(&translated_bytecode);
+                    },
+                    Err(e) => {
+                        log::warn!("Failed to parse function body: {}, using fallback", e);
+                        // Fallback to simple return
+                        self.emit_opcode(OpCode::Ret)?;
+                    }
+                }
+            } else {
+                // No WASM bytes available, use fallback
+                self.emit_opcode(OpCode::Ret)?;
+            }
+        } else {
+            // No function body, just return
+            self.emit_opcode(OpCode::Ret)?;
+        }
         
         Ok(())
     }

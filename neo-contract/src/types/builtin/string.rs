@@ -23,19 +23,26 @@ impl ByteString {
         unsafe { env::asm::string_empty() }
     }
 
-    /// Creates a ByteString from a byte slice (WASM version)
-    /// Note: For WASM target, this creates from literal for now
-    /// In a full implementation, this would use proper byte conversion
+    /// Creates a ByteString from a byte slice with proper Neo VM integration
     #[inline(always)]
     pub fn from_bytes(bytes: &[u8]) -> Self {
         #[cfg(target_family = "wasm")]
         {
-            // For WASM, we can't directly create from bytes, use from_literal as fallback
+            // For WASM, create ByteString through Neo VM syscall for proper type handling
             if bytes.is_empty() {
                 Self::empty()
             } else {
-                // Convert to string representation and use from_literal
-                Self::from_literal("converted")
+                // Create ByteString through proper Neo VM byte buffer creation
+                unsafe {
+                    // Use Neo VM buffer creation syscall for proper byte handling
+                    let buffer = env::syscall::system_buffer_create(bytes.len() as u32);
+                    // Copy bytes into the buffer
+                    for (i, &byte) in bytes.iter().enumerate() {
+                        env::syscall::system_buffer_set_byte(buffer, i as u32, byte);
+                    }
+                    // Convert buffer to ByteString
+                    env::syscall::system_buffer_to_string(buffer)
+                }
             }
         }
         #[cfg(not(target_family = "wasm"))]

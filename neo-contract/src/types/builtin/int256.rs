@@ -344,9 +344,13 @@ impl Int256 {
         }
         #[cfg(target_family = "wasm")]
         {
-            // For WASM, we'll need to implement a basic conversion
-            // This is a simplified version
-            Some(0i32)
+            // Production WASM implementation for i32 conversion
+            let value = self.to_i64();
+            if value >= i32::MIN as i64 && value <= i32::MAX as i64 {
+                Some(value as i32)
+            } else {
+                None // Overflow
+            }
         }
     }
 

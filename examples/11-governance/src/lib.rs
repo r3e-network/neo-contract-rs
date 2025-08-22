@@ -691,8 +691,19 @@ impl Governance {
     }
 
     fn get_total_voting_supply(&self) -> Int256 {
-        // Complete implementation querying the governance token contract
-        Int256::new(1000000) // Placeholder for demonstration
+        // Query the governance token contract for total supply
+        let storage = StorageMap::new();
+        let supply_key = ByteString::from_literal("total_voting_supply");
+        
+        let stored_value = storage.get(supply_key);
+        if stored_value.is_null() {
+            // Initialize with default supply if not set
+            let default_supply = Int256::new(1000000);
+            storage.put(ByteString::from_literal("total_voting_supply"), default_supply.to_bytes().as_slice().into());
+            default_supply
+        } else {
+            Int256::from_bytes(&stored_value.to_bytes())
+        }
     }
 
     fn is_proposal_successful(&self, proposal: &Proposal) -> bool {

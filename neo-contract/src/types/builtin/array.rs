@@ -198,11 +198,28 @@ impl<T: Default> Default for Array<T> {
 #[cfg(target_family = "wasm")]
 impl<T: Default> Clone for Array<T> {
     fn clone(&self) -> Self {
-        // In WASM target, we create a new array and copy all elements
-        // This is a simplified implementation for Neo VM compatibility
-        Self {
-            value: self.value, // Placeholder is Copy in WASM context
-            _marker: core::marker::PhantomData,
+        // Create a deep copy of the array for Neo VM compatibility
+        // In WASM context, this ensures proper memory isolation
+        #[cfg(target_family = "wasm")]
+        {
+            // For WASM, perform actual array cloning via syscall
+            use crate::env;
+            let cloned_value = unsafe {
+                env::syscall::system_contract_call_clone(self.value)
+            };
+            Self {
+                value: cloned_value,
+                _marker: core::marker::PhantomData,
+            }
+        }
+        
+        #[cfg(not(target_family = "wasm"))]
+        {
+            // For native target, use direct copy
+            Self {
+                value: self.value,
+                _marker: core::marker::PhantomData,
+            }
         }
     }
 }

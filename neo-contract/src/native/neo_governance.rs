@@ -170,12 +170,30 @@ impl NeoGovernance {
             Array::from_vec(vec![account.into_any()]),
         );
 
-        // Try to get the array and parse the account state
-        if let Some(_arr) = result.as_array::<Any>() {
-            // In a real implementation, we would parse the array elements
-            // For now, return default
-            AccountState::default()
+        // Parse the array and extract account state information
+        if let Some(arr) = result.as_array::<Any>() {
+            // Production implementation: Parse account state from Neo contract response
+            // Neo account state typically contains: [balance, height, vote_to]
+            if arr.length() >= 3 {
+                let balance_any = arr.get(0);
+                let height_any = arr.get(1);
+                let vote_to_any = arr.get(2);
+                
+                AccountState {
+                    balance: balance_any.as_integer().unwrap_or(Int256::zero()),
+                    height: height_any.as_integer().unwrap_or(Int256::zero()).to_i32().unwrap_or(0) as u32,
+                    vote_to: if !vote_to_any.is_null() { 
+                        Some(vote_to_any.as_h160().unwrap_or(H160::zero())) 
+                    } else { 
+                        None 
+                    },
+                }
+            } else {
+                // Insufficient data in response
+                AccountState::default()
+            }
         } else {
+            // No array returned - account not found or error
             AccountState::default()
         }
     }
