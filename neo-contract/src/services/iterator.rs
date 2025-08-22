@@ -56,7 +56,7 @@ impl Iterator {
     
     /// Gets the current key in the iterator.
     #[inline(always)]
-    pub fn key<T: crate::types::placeholder::FromPlaceholder>(iterator: StorageIterator<T>) -> crate::types::ByteString {
+    pub fn key<T: crate::types::placeholder::FromPlaceholder>(_iterator: StorageIterator<T>) -> crate::types::ByteString {
         // In WASM environment, retrieve the key from iterator
         crate::types::ByteString::empty()
     }

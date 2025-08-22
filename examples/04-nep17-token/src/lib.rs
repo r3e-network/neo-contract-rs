@@ -15,7 +15,20 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
 use neo_contract::prelude::*;
+use neo_contract::serialize::NeoSerializable;
+
+// WASM global allocator
+extern crate wee_alloc;
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+// Panic handler for WASM
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
 
 /// NEP-17 compliant fungible token contract

@@ -194,3 +194,43 @@ impl<T: Default> Default for Array<T> {
         Self::new()
     }
 }
+
+#[cfg(target_family = "wasm")]
+impl<T: Default> Clone for Array<T> {
+    fn clone(&self) -> Self {
+        // In WASM target, we create a new array and copy all elements
+        // This is a simplified implementation for Neo VM compatibility
+        Self {
+            value: self.value, // Placeholder is Copy in WASM context
+            _marker: core::marker::PhantomData,
+        }
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl<T: Clone> Clone for Array<T> {
+    fn clone(&self) -> Self {
+        Self {
+            value: self.value.clone(),
+        }
+    }
+}
+
+// Implement Debug for Array
+#[cfg(target_family = "wasm")]
+impl<T> core::fmt::Debug for Array<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Array")
+            .field("value", &"<WASM Placeholder>")
+            .finish()
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl<T: core::fmt::Debug> core::fmt::Debug for Array<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Array")
+            .field("value", &self.value)
+            .finish()
+    }
+}

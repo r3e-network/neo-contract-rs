@@ -3,6 +3,7 @@
 //! Functions for handling NEP-24 royalty calculations and distributions.
 
 use neo_contract::prelude::*;
+use neo_contract::serialize::NeoSerializable;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
 extern crate alloc;
 use alloc::vec::Vec;

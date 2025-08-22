@@ -3,6 +3,8 @@ name = "neo-features-showcase"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+
 [lib]
 crate-type = ["cdylib"]
 
@@ -15,3 +17,6 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = "symbols"
+
+[dependencies.wee_alloc]
+version = "0.4"

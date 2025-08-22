@@ -4,7 +4,7 @@
 use crate::types::*;
 
 #[repr(C)]
-#[derive(Default)]
+#[derive(Default, Clone, Debug)]
 pub struct Notification {
     sender: H160,
     script_hash: H160,

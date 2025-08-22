@@ -98,12 +98,27 @@ impl Runtime {
         true
     }
 
+    /// Determines whether the specified account has witnessed the current transaction.
+    #[inline(always)]
+    #[allow(unused_variables)]
+    pub fn check_witness_with_account(account: H160) -> bool {
+        // For non-WASM targets (tests), return false (conservative default)
+        false
+    }
+
     /// Determines whether the specified public key has witnessed the current transaction.
     #[inline(always)]
     #[allow(unused_variables)]
     pub fn check_witness_with_public_key(public_key: PublicKey) -> bool {
-        // For non-WASM targets (tests), return true (allow all)
-        true
+        // For non-WASM targets (tests), return false (conservative default)
+        false
+    }
+
+    /// Gets the transaction that triggered the execution.
+    #[inline(always)]
+    pub fn get_tx() -> Tx {
+        // For non-WASM targets (tests), return default transaction
+        Tx::default()
     }
 
     /// Writes a log message to the execution log.
@@ -241,10 +256,22 @@ impl Runtime {
         unsafe { env::syscall::system_runtime_check_witness_with_account(account) }
     }
 
+    /// Determines whether the specified account has witnessed the current transaction.
+    #[inline(always)]
+    pub fn check_witness_with_account(account: H160) -> bool {
+        unsafe { env::syscall::system_runtime_check_witness_with_account(account) }
+    }
+
     /// Determines whether the specified public key has witnessed the current transaction.
     #[inline(always)]
     pub fn check_witness_with_public_key(public_key: PublicKey) -> bool {
         unsafe { env::syscall::system_runtime_check_witness_with_public_key(public_key) }
+    }
+
+    /// Gets the transaction that triggered the execution.
+    #[inline(always)]
+    pub fn get_tx() -> Tx {
+        unsafe { env::syscall::system_runtime_tx() }
     }
 
     /// Writes a log message to the execution log.

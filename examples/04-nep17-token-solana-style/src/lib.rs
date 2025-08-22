@@ -1,527 +1,405 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
 use neo_contract::prelude::*;
-use neo_contract::types::builtin::IntoAny;
-use neo_contract::serialize::{Serialize, Deserialize};
+use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
 
-declare_id!("NeoNEP17TokenContract123456789");
+// WASM global allocator
+extern crate wee_alloc;
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[program]
-pub mod nep17_token {
-    use super::*;
+// Panic handler for WASM no_std builds
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
+}
 
+// NEP-17 Token Implementation - Solana Style (Converted to Neo N3)
+pub struct NEP17TokenSolanaStyle {
+    // Storage keys for metadata
+    name_key: ByteString,
+    symbol_key: ByteString,
+    decimals_key: ByteString,
+    total_supply_key: ByteString,
+    owner_key: ByteString,
+    initialized_key: ByteString,
+}
+
+#[contract_impl]
+impl NEP17TokenSolanaStyle {
+    pub fn init() -> Self {
+        Self {
+            name_key: ByteString::from_literal("name"),
+            symbol_key: ByteString::from_literal("symbol"),
+            decimals_key: ByteString::from_literal("decimals"),
+            total_supply_key: ByteString::from_literal("total_supply"),
+            owner_key: ByteString::from_literal("owner"),
+            initialized_key: ByteString::from_literal("initialized"),
+        }
+    }
+
+    #[method]
     pub fn initialize(
-        ctx: Context<Initialize>,
+        &self,
         name: ByteString,
         symbol: ByteString,
         decimals: u8,
         total_supply: Int256,
-    ) -> Result<()> {
-        let token_metadata = &mut ctx.accounts.token_metadata;
-        let mint_authority = &ctx.accounts.mint_authority;
+    ) -> bool {
+        let context = Storage::get_context();
         
-        require!(
-            !token_metadata.is_initialized,
-            TokenError::AlreadyInitialized
-        );
-        
-        require_gt!(
-            total_supply,
-            Int256::zero(),
-            TokenError::InvalidSupply
-        );
-        
-        token_metadata.name = name;
-        token_metadata.symbol = symbol;
-        token_metadata.decimals = decimals;
-        token_metadata.total_supply = total_supply;
-        token_metadata.mint_authority = mint_authority.key();
-        token_metadata.freeze_authority = Some(mint_authority.key());
-        token_metadata.is_initialized = true;
-        
-        let owner_balance = &mut ctx.accounts.owner_balance;
-        owner_balance.owner = mint_authority.key();
-        owner_balance.amount = total_supply;
-        
-        emit!(TokenInitialized {
-            name: token_metadata.name.clone(),
-            symbol: token_metadata.symbol.clone(),
-            decimals,
-            total_supply,
-            mint_authority: mint_authority.key(),
-        });
-        
-        Ok(())
+        // Check if already initialized
+        if let Some(_) = Storage::get(context.clone(), self.initialized_key.clone()) {
+            Runtime::log(ByteString::from_literal("Already initialized"));
+            return false;
+        }
+
+        if total_supply <= Int256::zero() {
+            Runtime::log(ByteString::from_literal("Invalid supply"));
+            return false;
+        }
+
+        let owner = Runtime::get_executing_script_hash();
+        if !Runtime::check_witness(owner) {
+            Runtime::log(ByteString::from_literal("No authorization"));
+            return false;
+        }
+
+        // Store metadata in storage
+        Storage::put(context.clone(), self.name_key.clone(), name.clone());
+        Storage::put(context.clone(), self.symbol_key.clone(), symbol.clone());
+        Storage::put(context.clone(), self.decimals_key.clone(), ByteString::from_bytes(&[decimals]));
+        Storage::put(context.clone(), self.total_supply_key.clone(), total_supply.into_byte_string());
+        Storage::put(context.clone(), self.owner_key.clone(), owner.into_byte_string());
+        Storage::put(context.clone(), self.initialized_key.clone(), ByteString::from_literal("true"));
+
+        // Set owner balance
+        let balance_key = self.get_balance_key(owner);
+        Storage::put(context, balance_key, total_supply.into_byte_string());
+
+        // Emit transfer event
+        let mut args = Array::new();
+        args.push(H160::zero().into_any());
+        args.push(owner.into_any());
+        args.push(total_supply.into_any());
+        Runtime::notify(ByteString::from_literal("Transfer"), args);
+
+        Runtime::log(ByteString::from_literal("Token initialized"));
+        true
     }
-    
+
+    #[method]
     #[safe]
-    pub fn symbol(ctx: Context<GetMetadata>) -> Result<ByteString> {
-        let token_metadata = &ctx.accounts.token_metadata;
-        Ok(token_metadata.symbol.clone())
+    pub fn symbol(&self) -> ByteString {
+        let context = Storage::get_context();
+        Storage::get(context, self.symbol_key.clone()).unwrap_or(ByteString::from_literal("UNKNOWN"))
     }
-    
+
+    #[method]
     #[safe]
-    pub fn decimals(ctx: Context<GetMetadata>) -> Result<u8> {
-        let token_metadata = &ctx.accounts.token_metadata;
-        Ok(token_metadata.decimals)
+    pub fn decimals(&self) -> u8 {
+        let context = Storage::get_context();
+        if let Some(decimals_bytes) = Storage::get(context, self.decimals_key.clone()) {
+            let bytes = decimals_bytes.to_bytes();
+            if !bytes.is_empty() {
+                bytes[0]
+            } else {
+                8
+            }
+        } else {
+            8
+        }
     }
-    
+
+    #[method]
     #[safe]
-    pub fn total_supply(ctx: Context<GetMetadata>) -> Result<Int256> {
-        let token_metadata = &ctx.accounts.token_metadata;
-        Ok(token_metadata.total_supply)
+    pub fn total_supply(&self) -> Int256 {
+        let context = Storage::get_context();
+        if let Some(supply_bytes) = Storage::get(context, self.total_supply_key.clone()) {
+            Int256::from_byte_string(supply_bytes)
+        } else {
+            Int256::zero()
+        }
     }
-    
+
+    #[method]
     #[safe]
-    pub fn balance_of(ctx: Context<BalanceOf>) -> Result<Int256> {
-        let balance_account = &ctx.accounts.balance_account;
-        Ok(balance_account.amount)
+    pub fn balance_of(&self, account: H160) -> Int256 {
+        let context = Storage::get_context();
+        let balance_key = self.get_balance_key(account);
+        
+        match Storage::get(context, balance_key) {
+            Some(balance) => Int256::from_byte_string(balance),
+            None => Int256::zero(),
+        }
     }
-    
-    pub fn transfer(
-        ctx: Context<Transfer>,
-        amount: Int256,
-    ) -> Result<()> {
-        let from_balance = &mut ctx.accounts.from_balance;
-        let to_balance = &mut ctx.accounts.to_balance;
-        let from = &ctx.accounts.from;
+
+    #[method]
+    pub fn transfer(&self, from: H160, to: H160, amount: Int256, data: Any) -> bool {
+        if amount <= Int256::zero() {
+            Runtime::log(ByteString::from_literal("Invalid amount"));
+            return false;
+        }
+
+        if from == to {
+            Runtime::log(ByteString::from_literal("Same from and to"));
+            return true;
+        }
+
+        if !Runtime::check_witness(from) {
+            Runtime::log(ByteString::from_literal("No authorization"));
+            return false;
+        }
+
+        let context = Storage::get_context();
+        let from_balance = self.balance_of(from);
         
-        require_keys_eq!(
-            from_balance.owner,
-            from.key(),
-            TokenError::Unauthorized
-        );
-        
-        require_gt!(
-            amount,
-            Int256::zero(),
-            TokenError::InvalidAmount
-        );
-        
-        require_gte!(
-            from_balance.amount,
-            amount,
-            TokenError::InsufficientBalance
-        );
-        
-        from_balance.amount = from_balance.amount
-            .checked_sub(&amount)
-            .ok_or(TokenError::ArithmeticError)?;
-        
-        to_balance.amount = to_balance.amount
-            .checked_add(&amount)
-            .ok_or(TokenError::ArithmeticError)?;
-        
-        emit!(TokenTransfer {
-            from: from.key(),
-            to: to_balance.owner,
-            amount,
-        });
-        
-        Ok(())
+        if from_balance < amount {
+            Runtime::log(ByteString::from_literal("Insufficient balance"));
+            return false;
+        }
+
+        let to_balance = self.balance_of(to);
+
+        // Update balances
+        let new_from_balance = from_balance - amount;
+        let new_to_balance = to_balance + amount;
+
+        let from_key = self.get_balance_key(from);
+        let to_key = self.get_balance_key(to);
+
+        if new_from_balance == Int256::zero() {
+            Storage::delete(context.clone(), from_key);
+        } else {
+            Storage::put(context.clone(), from_key, new_from_balance.into_byte_string());
+        }
+
+        Storage::put(context, to_key, new_to_balance.into_byte_string());
+
+        // Emit transfer event
+        let mut args = Array::new();
+        args.push(from.into_any());
+        args.push(to.into_any());
+        args.push(amount.into_any());
+        Runtime::notify(ByteString::from_literal("Transfer"), args);
+
+        // Post transfer
+        self.post_transfer(from, to, amount, data, true);
+        true
     }
-    
-    pub fn approve(
-        ctx: Context<Approve>,
-        spender: Pubkey,
-        amount: Int256,
-    ) -> Result<()> {
-        let allowance = &mut ctx.accounts.allowance;
-        let owner = &ctx.accounts.owner;
+
+    #[method]
+    #[safe]
+    pub fn allowance(&self, owner: H160, spender: H160) -> Int256 {
+        let context = Storage::get_context();
+        let allowance_key = self.get_allowance_key(owner, spender);
         
-        allowance.owner = owner.key();
-        allowance.spender = spender;
-        allowance.amount = amount;
-        
-        emit!(TokenApproval {
-            owner: owner.key(),
-            spender,
-            amount,
-        });
-        
-        Ok(())
+        match Storage::get(context, allowance_key) {
+            Some(allowance) => Int256::from_byte_string(allowance),
+            None => Int256::zero(),
+        }
     }
-    
-    pub fn transfer_from(
-        ctx: Context<TransferFrom>,
-        amount: Int256,
-    ) -> Result<()> {
-        let allowance = &mut ctx.accounts.allowance;
-        let from_balance = &mut ctx.accounts.from_balance;
-        let to_balance = &mut ctx.accounts.to_balance;
-        let spender = &ctx.accounts.spender;
-        
-        require_keys_eq!(
-            allowance.spender,
-            spender.key(),
-            TokenError::Unauthorized
-        );
-        
-        require_gt!(
-            amount,
-            Int256::zero(),
-            TokenError::InvalidAmount
-        );
-        
-        require_gte!(
-            allowance.amount,
-            amount,
-            TokenError::InsufficientAllowance
-        );
-        
-        require_gte!(
-            from_balance.amount,
-            amount,
-            TokenError::InsufficientBalance
-        );
-        
-        allowance.amount = allowance.amount
-            .checked_sub(&amount)
-            .ok_or(TokenError::ArithmeticError)?;
-        
-        from_balance.amount = from_balance.amount
-            .checked_sub(&amount)
-            .ok_or(TokenError::ArithmeticError)?;
-        
-        to_balance.amount = to_balance.amount
-            .checked_add(&amount)
-            .ok_or(TokenError::ArithmeticError)?;
-        
-        emit!(TokenTransfer {
-            from: from_balance.owner,
-            to: to_balance.owner,
-            amount,
-        });
-        
-        Ok(())
+
+    #[method]
+    pub fn approve(&self, owner: H160, spender: H160, amount: Int256) -> bool {
+        if !Runtime::check_witness(owner) {
+            Runtime::log(ByteString::from_literal("No authorization"));
+            return false;
+        }
+
+        let context = Storage::get_context();
+        let allowance_key = self.get_allowance_key(owner, spender);
+
+        if amount == Int256::zero() {
+            Storage::delete(context, allowance_key);
+        } else {
+            Storage::put(context, allowance_key, amount.into_byte_string());
+        }
+
+        // Emit approval event
+        let mut args = Array::new();
+        args.push(owner.into_any());
+        args.push(spender.into_any());
+        args.push(amount.into_any());
+        Runtime::notify(ByteString::from_literal("Approval"), args);
+
+        true
     }
-    
-    pub fn mint(
-        ctx: Context<Mint>,
-        amount: Int256,
-    ) -> Result<()> {
-        let token_metadata = &mut ctx.accounts.token_metadata;
-        let mint_authority = &ctx.accounts.mint_authority;
-        let to_balance = &mut ctx.accounts.to_balance;
-        
-        require_keys_eq!(
-            token_metadata.mint_authority,
-            mint_authority.key(),
-            TokenError::Unauthorized
-        );
-        
-        require_gt!(
-            amount,
-            Int256::zero(),
-            TokenError::InvalidAmount
-        );
-        
-        token_metadata.total_supply = token_metadata.total_supply
-            .checked_add(&amount)
-            .ok_or(TokenError::ArithmeticError)?;
-        
-        to_balance.amount = to_balance.amount
-            .checked_add(&amount)
-            .ok_or(TokenError::ArithmeticError)?;
-        
-        emit!(TokenMinted {
-            to: to_balance.owner,
-            amount,
-            new_supply: token_metadata.total_supply,
-        });
-        
-        Ok(())
+
+    #[method]
+    pub fn transfer_from(&self, spender: H160, from: H160, to: H160, amount: Int256, data: Any) -> bool {
+        if amount <= Int256::zero() {
+            Runtime::log(ByteString::from_literal("Invalid amount"));
+            return false;
+        }
+
+        if !Runtime::check_witness(spender) {
+            Runtime::log(ByteString::from_literal("No authorization"));
+            return false;
+        }
+
+        let allowance = self.allowance(from, spender);
+        if allowance < amount {
+            Runtime::log(ByteString::from_literal("Insufficient allowance"));
+            return false;
+        }
+
+        let from_balance = self.balance_of(from);
+        if from_balance < amount {
+            Runtime::log(ByteString::from_literal("Insufficient balance"));
+            return false;
+        }
+
+        let context = Storage::get_context();
+        let to_balance = self.balance_of(to);
+
+        // Update balances
+        let new_from_balance = from_balance - amount;
+        let new_to_balance = to_balance + amount;
+        let new_allowance = allowance - amount;
+
+        let from_key = self.get_balance_key(from);
+        let to_key = self.get_balance_key(to);
+        let allowance_key = self.get_allowance_key(from, spender);
+
+        if new_from_balance == Int256::zero() {
+            Storage::delete(context.clone(), from_key);
+        } else {
+            Storage::put(context.clone(), from_key, new_from_balance.into_byte_string());
+        }
+
+        Storage::put(context.clone(), to_key, new_to_balance.into_byte_string());
+
+        if new_allowance == Int256::zero() {
+            Storage::delete(context.clone(), allowance_key);
+        } else {
+            Storage::put(context, allowance_key, new_allowance.into_byte_string());
+        }
+
+        // Emit transfer event
+        let mut args = Array::new();
+        args.push(from.into_any());
+        args.push(to.into_any());
+        args.push(amount.into_any());
+        Runtime::notify(ByteString::from_literal("Transfer"), args);
+
+        // Post transfer
+        self.post_transfer(from, to, amount, data, true);
+        true
     }
-    
-    pub fn burn(
-        ctx: Context<Burn>,
-        amount: Int256,
-    ) -> Result<()> {
-        let token_metadata = &mut ctx.accounts.token_metadata;
-        let from_balance = &mut ctx.accounts.from_balance;
-        let from = &ctx.accounts.from;
+
+    #[method]
+    pub fn mint(&self, to: H160, amount: Int256) -> bool {
+        let context = Storage::get_context();
+        let owner = if let Some(owner_bytes) = Storage::get(context.clone(), self.owner_key.clone()) {
+            H160::from_byte_string(owner_bytes)
+        } else {
+            H160::zero()
+        };
         
-        require_keys_eq!(
-            from_balance.owner,
-            from.key(),
-            TokenError::Unauthorized
-        );
-        
-        require_gt!(
-            amount,
-            Int256::zero(),
-            TokenError::InvalidAmount
-        );
-        
-        require_gte!(
-            from_balance.amount,
-            amount,
-            TokenError::InsufficientBalance
-        );
-        
-        from_balance.amount = from_balance.amount
-            .checked_sub(&amount)
-            .ok_or(TokenError::ArithmeticError)?;
-        
-        token_metadata.total_supply = token_metadata.total_supply
-            .checked_sub(&amount)
-            .ok_or(TokenError::ArithmeticError)?;
-        
-        emit!(TokenBurned {
-            from: from.key(),
-            amount,
-            new_supply: token_metadata.total_supply,
-        });
-        
-        Ok(())
+        if !Runtime::check_witness(owner) {
+            Runtime::log(ByteString::from_literal("No authorization"));
+            return false;
+        }
+
+        if amount <= Int256::zero() {
+            Runtime::log(ByteString::from_literal("Invalid amount"));
+            return false;
+        }
+
+        let to_balance = self.balance_of(to);
+        let new_balance = to_balance + amount;
+        let current_total_supply = self.total_supply();
+        let new_total_supply = current_total_supply + amount;
+
+        let balance_key = self.get_balance_key(to);
+        Storage::put(context.clone(), balance_key, new_balance.into_byte_string());
+
+        // Update total supply
+        Storage::put(context.clone(), self.total_supply_key.clone(), new_total_supply.into_byte_string());
+
+        // Emit transfer event
+        let mut args = Array::new();
+        args.push(H160::zero().into_any());
+        args.push(to.into_any());
+        args.push(amount.into_any());
+        Runtime::notify(ByteString::from_literal("Transfer"), args);
+
+        true
     }
-    
-    pub fn freeze_account(
-        ctx: Context<FreezeAccount>,
-    ) -> Result<()> {
-        let token_metadata = &ctx.accounts.token_metadata;
-        let freeze_authority = &ctx.accounts.freeze_authority;
-        let target_balance = &mut ctx.accounts.target_balance;
+
+    #[method]
+    pub fn burn(&self, from: H160, amount: Int256) -> bool {
+        if !Runtime::check_witness(from) {
+            Runtime::log(ByteString::from_literal("No authorization"));
+            return false;
+        }
+
+        if amount <= Int256::zero() {
+            Runtime::log(ByteString::from_literal("Invalid amount"));
+            return false;
+        }
+
+        let from_balance = self.balance_of(from);
+        if from_balance < amount {
+            Runtime::log(ByteString::from_literal("Insufficient balance"));
+            return false;
+        }
+
+        let context = Storage::get_context();
+        let new_balance = from_balance - amount;
+        let current_total_supply = self.total_supply();
+        let new_total_supply = current_total_supply - amount;
+
+        let balance_key = self.get_balance_key(from);
         
-        require!(
-            token_metadata.freeze_authority.is_some(),
-            TokenError::NoFreezeAuthority
-        );
-        
-        require_keys_eq!(
-            token_metadata.freeze_authority.unwrap(),
-            freeze_authority.key(),
-            TokenError::Unauthorized
-        );
-        
-        target_balance.is_frozen = true;
-        
-        emit!(AccountFrozen {
-            account: target_balance.owner,
-            authority: freeze_authority.key(),
-        });
-        
-        Ok(())
+        if new_balance == Int256::zero() {
+            Storage::delete(context.clone(), balance_key);
+        } else {
+            Storage::put(context.clone(), balance_key, new_balance.into_byte_string());
+        }
+
+        // Update total supply
+        Storage::put(context, self.total_supply_key.clone(), new_total_supply.into_byte_string());
+
+        // Emit transfer event
+        let mut args = Array::new();
+        args.push(from.into_any());
+        args.push(H160::zero().into_any());
+        args.push(amount.into_any());
+        Runtime::notify(ByteString::from_literal("Transfer"), args);
+
+        true
     }
-    
-    pub fn thaw_account(
-        ctx: Context<ThawAccount>,
-    ) -> Result<()> {
-        let token_metadata = &ctx.accounts.token_metadata;
-        let freeze_authority = &ctx.accounts.freeze_authority;
-        let target_balance = &mut ctx.accounts.target_balance;
-        
-        require!(
-            token_metadata.freeze_authority.is_some(),
-            TokenError::NoFreezeAuthority
-        );
-        
-        require_keys_eq!(
-            token_metadata.freeze_authority.unwrap(),
-            freeze_authority.key(),
-            TokenError::Unauthorized
-        );
-        
-        target_balance.is_frozen = false;
-        
-        emit!(AccountThawed {
-            account: target_balance.owner,
-            authority: freeze_authority.key(),
-        });
-        
-        Ok(())
+
+    // Helper methods
+    fn get_balance_key(&self, account: H160) -> ByteString {
+        let key = ByteString::from_literal("balance");
+        key.concat(&account.into_byte_string())
     }
-}
 
-#[derive(Accounts)]
-pub struct Initialize<'info> {
-    #[account(init, payer = mint_authority, space = 8 + TokenMetadata::SIZE)]
-    pub token_metadata: Account<'info, TokenMetadata>,
-    #[account(init, payer = mint_authority, space = 8 + BalanceAccount::SIZE)]
-    pub owner_balance: Account<'info, BalanceAccount>,
-    #[account(mut)]
-    pub mint_authority: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
+    fn get_allowance_key(&self, owner: H160, spender: H160) -> ByteString {
+        let key = ByteString::from_literal("allowance");
+        key.concat(&owner.into_byte_string()).concat(&spender.into_byte_string())
+    }
 
-#[derive(Accounts)]
-pub struct GetMetadata<'info> {
-    pub token_metadata: Account<'info, TokenMetadata>,
-}
-
-#[derive(Accounts)]
-pub struct BalanceOf<'info> {
-    pub balance_account: Account<'info, BalanceAccount>,
-}
-
-#[derive(Accounts)]
-pub struct Transfer<'info> {
-    #[account(mut, has_one = owner @ TokenError::Unauthorized)]
-    pub from_balance: Account<'info, BalanceAccount>,
-    #[account(mut)]
-    pub to_balance: Account<'info, BalanceAccount>,
-    pub from: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct Approve<'info> {
-    #[account(init_if_needed, payer = owner, space = 8 + AllowanceAccount::SIZE)]
-    pub allowance: Account<'info, AllowanceAccount>,
-    #[account(mut)]
-    pub owner: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct TransferFrom<'info> {
-    #[account(mut)]
-    pub allowance: Account<'info, AllowanceAccount>,
-    #[account(mut)]
-    pub from_balance: Account<'info, BalanceAccount>,
-    #[account(mut)]
-    pub to_balance: Account<'info, BalanceAccount>,
-    pub spender: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct Mint<'info> {
-    #[account(mut)]
-    pub token_metadata: Account<'info, TokenMetadata>,
-    #[account(mut)]
-    pub to_balance: Account<'info, BalanceAccount>,
-    pub mint_authority: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct Burn<'info> {
-    #[account(mut)]
-    pub token_metadata: Account<'info, TokenMetadata>,
-    #[account(mut, has_one = owner @ TokenError::Unauthorized)]
-    pub from_balance: Account<'info, BalanceAccount>,
-    pub from: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct FreezeAccount<'info> {
-    pub token_metadata: Account<'info, TokenMetadata>,
-    #[account(mut)]
-    pub target_balance: Account<'info, BalanceAccount>,
-    pub freeze_authority: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct ThawAccount<'info> {
-    pub token_metadata: Account<'info, TokenMetadata>,
-    #[account(mut)]
-    pub target_balance: Account<'info, BalanceAccount>,
-    pub freeze_authority: Signer<'info>,
-}
-
-#[account]
-pub struct TokenMetadata {
-    pub name: ByteString,
-    pub symbol: ByteString,
-    pub decimals: u8,
-    pub total_supply: Int256,
-    pub mint_authority: Pubkey,
-    pub freeze_authority: Option<Pubkey>,
-    pub is_initialized: bool,
-}
-
-impl TokenMetadata {
-    pub const SIZE: usize = 100 + 10 + 1 + 32 + 32 + 33 + 1;
-}
-
-#[account]
-pub struct BalanceAccount {
-    pub owner: Pubkey,
-    pub amount: Int256,
-    pub is_frozen: bool,
-}
-
-impl BalanceAccount {
-    pub const SIZE: usize = 32 + 32 + 1;
-}
-
-#[account]
-pub struct AllowanceAccount {
-    pub owner: Pubkey,
-    pub spender: Pubkey,
-    pub amount: Int256,
-}
-
-impl AllowanceAccount {
-    pub const SIZE: usize = 32 + 32 + 32;
-}
-
-#[error_code]
-pub enum TokenError {
-    #[msg("Token already initialized")]
-    AlreadyInitialized,
-    #[msg("Invalid supply amount")]
-    InvalidSupply,
-    #[msg("Invalid transfer amount")]
-    InvalidAmount,
-    #[msg("Insufficient balance")]
-    InsufficientBalance,
-    #[msg("Insufficient allowance")]
-    InsufficientAllowance,
-    #[msg("Unauthorized operation")]
-    Unauthorized,
-    #[msg("Arithmetic error")]
-    ArithmeticError,
-    #[msg("No freeze authority set")]
-    NoFreezeAuthority,
-    #[msg("Account is frozen")]
-    AccountFrozen,
-}
-
-#[event]
-pub struct TokenInitialized {
-    pub name: ByteString,
-    pub symbol: ByteString,
-    pub decimals: u8,
-    pub total_supply: Int256,
-    pub mint_authority: Pubkey,
-}
-
-#[event]
-pub struct TokenTransfer {
-    pub from: Pubkey,
-    pub to: Pubkey,
-    pub amount: Int256,
-}
-
-#[event]
-pub struct TokenApproval {
-    pub owner: Pubkey,
-    pub spender: Pubkey,
-    pub amount: Int256,
-}
-
-#[event]
-pub struct TokenMinted {
-    pub to: Pubkey,
-    pub amount: Int256,
-    pub new_supply: Int256,
-}
-
-#[event]
-pub struct TokenBurned {
-    pub from: Pubkey,
-    pub amount: Int256,
-    pub new_supply: Int256,
-}
-
-#[event]
-pub struct AccountFrozen {
-    pub account: Pubkey,
-    pub authority: Pubkey,
-}
-
-#[event]
-pub struct AccountThawed {
-    pub account: Pubkey,
-    pub authority: Pubkey,
+    fn post_transfer(&self, from: H160, to: H160, amount: Int256, data: Any, call_onpayment: bool) {
+        if call_onpayment {
+            // Try to call onNEP17Payment on the 'to' contract
+            let mut call_args = Array::new();
+            call_args.push(from.into_any());
+            call_args.push(amount.into_any());
+            call_args.push(data);
+            
+            let _ = Contract::call(
+                to,
+                ByteString::from_literal("onNEP17Payment"),
+                CallFlags::All,
+                call_args,
+            );
+        }
+    }
 }

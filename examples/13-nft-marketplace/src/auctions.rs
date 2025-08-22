@@ -3,6 +3,7 @@
 //! Functions for creating and managing NFT auctions with bidding.
 
 use neo_contract::prelude::*;
+use neo_contract::serialize::NeoSerializable;
 use neo_contract::types::{IntoByteString, builtin::IntoAny};
 use crate::types::*;
 use crate::storage::*;

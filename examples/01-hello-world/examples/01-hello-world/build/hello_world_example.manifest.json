@@ -1,0 +1,25 @@
+{
+  "name": "Contract",
+  "groups": [],
+  "features": {
+    "storage": true,
+    "payable": false
+  },
+  "supported_standards": [],
+  "abi": {
+    "methods": [],
+    "events": []
+  },
+  "permissions": [
+    {
+      "contract": "*",
+      "methods": [
+        "*"
+      ]
+    }
+  ],
+  "trusts": [
+    "*"
+  ],
+  "extra": null
+}

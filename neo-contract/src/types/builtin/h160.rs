@@ -132,7 +132,7 @@ impl Ord for H160 {
         }
         #[cfg(target_family = "wasm")]
         {
-            core::cmp::Ordering::Equal  // Simplified for WASM
+            self.0.cmp(&other.0)  // Proper comparison for WASM
         }
     }
 }

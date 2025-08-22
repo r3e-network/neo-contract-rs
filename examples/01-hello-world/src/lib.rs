@@ -1,19 +1,37 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
 use neo_contract::prelude::*;
 
-declare_id!("NeoHelloWorldProgram");
+// WASM global allocator
+extern crate wee_alloc;
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[program]
-pub mod hello_world {
-    use super::*;
+// Panic handler for WASM no_std builds
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
+}
 
-    pub fn initialize(_ctx: Context<Initialize>) -> Result<()> {
-        // Get storage context
+// Solana-style Neo N3 Hello World Contract
+pub struct HelloWorld {
+    greeting: ByteString,
+}
+
+#[contract_impl]
+impl HelloWorld {
+    pub fn init() -> Self {
+        Self {
+            greeting: ByteString::from_literal("Hello, Neo N3!"),
+        }
+    }
+
+    #[method]
+    pub fn initialize(&self) -> bool {
         let context = Storage::get_context();
-        
-        // Initialize the greeting
         Storage::put(
             context,
             ByteString::from_literal("greeting"),
@@ -21,10 +39,12 @@ pub mod hello_world {
         );
         
         Runtime::log(ByteString::from_literal("Contract initialized"));
-        Ok(())
+        true
     }
     
-    pub fn say_hello(_ctx: Context<SayHello>, _name: ByteString) -> Result<ByteString> {
+    #[method]
+    #[safe]
+    pub fn say_hello(&self, name: ByteString) -> ByteString {
         let context = Storage::get_context();
         let greeting = Storage::get(context, ByteString::from_literal("greeting"))
             .unwrap_or(ByteString::from_literal("Hello"));
@@ -32,16 +52,16 @@ pub mod hello_world {
         Runtime::log(ByteString::from_literal("Say hello called"));
         Runtime::notify(ByteString::from_literal("HelloEvent"), Array::new());
         
-        Ok(greeting)
+        greeting
     }
     
-    pub fn set_greeting(ctx: Context<SetGreeting>, new_greeting: ByteString) -> Result<()> {
-        // Check authorization using address
-        let owner = ctx.accounts.owner;
-        require!(
-            check_witness_with_account(owner.key()),
-            ContractError::Unauthorized
-        );
+    #[method]
+    pub fn set_greeting(&self, new_greeting: ByteString) -> bool {
+        // Check authorization
+        let authority = Runtime::get_executing_script_hash();
+        if !Runtime::check_witness(authority) {
+            return false;
+        }
         
         let context = Storage::get_context();
         Storage::put(
@@ -51,22 +71,7 @@ pub mod hello_world {
         );
         
         Runtime::log(ByteString::from_literal("Greeting updated"));
-        Ok(())
+        true
     }
-}
-
-#[derive(Accounts)]
-pub struct Initialize<'info> {
-    pub owner: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct SayHello<'info> {
-    pub caller: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct SetGreeting<'info> {
-    pub owner: Signer<'info>,
 }
 

@@ -7,4 +7,5 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+wee_alloc = "0.4"
 neo-contract = { path = "../../neo-contract" }

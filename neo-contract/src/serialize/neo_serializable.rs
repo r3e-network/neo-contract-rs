@@ -187,8 +187,8 @@ impl NeoSerializable for H160 {
         }
         #[cfg(target_family = "wasm")]
         {
-            // For WASM target, return placeholder
-            Bytes::from_slice(&[])
+            // For WASM target, serialize the data properly
+            Bytes::from_slice(&self.0)
         }
     }
 
@@ -202,8 +202,10 @@ impl NeoSerializable for H160 {
         }
         #[cfg(target_family = "wasm")]
         {
-            // For WASM target, return placeholder
-            Ok(H160::default())
+            // For WASM target, deserialize properly
+            let mut buf = [0u8; 20];
+            buf.copy_from_slice(&bytes[0..20]);
+            Ok(H160(buf))
         }
     }
 }
@@ -217,8 +219,8 @@ impl NeoSerializable for H256 {
         }
         #[cfg(target_family = "wasm")]
         {
-            // For WASM target, return placeholder
-            Bytes::from_slice(&[])
+            // For WASM target, serialize the data properly
+            Bytes::from_slice(&self.0)
         }
     }
 
@@ -232,8 +234,10 @@ impl NeoSerializable for H256 {
         }
         #[cfg(target_family = "wasm")]
         {
-            // For WASM target, return placeholder
-            Ok(H256::default())
+            // For WASM target, deserialize properly  
+            let mut buf = [0u8; 32];
+            buf.copy_from_slice(&bytes[0..32]);
+            Ok(H256(buf))
         }
     }
 }
@@ -247,8 +251,8 @@ impl NeoSerializable for Int256 {
         }
         #[cfg(target_family = "wasm")]
         {
-            // For WASM target, return placeholder
-            Bytes::from_slice(&[])
+            // For WASM target, serialize the data properly
+            Bytes::from_slice(&self.0)
         }
     }
 
@@ -262,8 +266,8 @@ impl NeoSerializable for Int256 {
         }
         #[cfg(target_family = "wasm")]
         {
-            // For WASM target, return placeholder
-            Ok(Int256::default())
+            // For WASM target, deserialize properly
+            Ok(Int256::from_bytes(&bytes[0..32]))
         }
     }
 }

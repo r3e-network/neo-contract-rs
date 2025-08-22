@@ -195,6 +195,7 @@ pub enum VmState {
 
 impl VmState {
     /// Convert from u8 value
+    #[allow(dead_code)]
     pub fn from_u8(value: u8) -> Self {
         match value {
             0 => VmState::None,
@@ -206,6 +207,7 @@ impl VmState {
     }
 
     /// Convert to u8 value
+    #[allow(dead_code)]
     pub fn to_u8(self) -> u8 {
         self as u8
     }

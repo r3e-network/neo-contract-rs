@@ -1,21 +1,42 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString};
 
-declare_id!("NeoSimpleStorageProgram");
+// WASM global allocator
+extern crate wee_alloc;
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[program]
-pub mod simple_storage {
-    use super::*;
+// Panic handler for WASM no_std builds
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
+}
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        // Set owner
+// Solana-style Neo N3 Simple Storage Contract
+pub struct SimpleStorage {
+    owner: H160,
+}
+
+#[contract_impl]
+impl SimpleStorage {
+    pub fn init() -> Self {
+        Self {
+            owner: H160::zero(),
+        }
+    }
+
+    #[method]
+    pub fn initialize(&self, owner: H160) -> bool {
+        let context = Storage::get_context();
         Storage::put(
-            Storage::get_context(),
+            context,
             ByteString::from_literal("owner"),
-            ctx.accounts.owner.key().into_byte_string()
+            owner.into_byte_string()
         );
         
         // Initialize total items counter
@@ -26,161 +47,64 @@ pub mod simple_storage {
         );
         
         Runtime::log(ByteString::from_literal("Storage initialized"));
-        Ok(())
+        true
     }
     
-    pub fn store_string(ctx: Context<StoreData>, key: ByteString, value: ByteString) -> Result<()> {
-        require!(
-            check_witness_with_account(ctx.accounts.owner.key()),
-            SimpleStorageError::Unauthorized
+    #[method]
+    pub fn store_string(&self, key: ByteString, value: ByteString) -> bool {
+        // Check authorization
+        let authority = Runtime::get_executing_script_hash();
+        if !Runtime::check_witness(authority) {
+            return false;
+        }
+        
+        let context = Storage::get_context();
+        Storage::put(context, key, value);
+        
+        // Increment counter
+        let total = match Storage::get(Storage::get_context(), ByteString::from_literal("total_items")) {
+            Some(t) => Int256::from_byte_string(t).checked_add(&Int256::one()),
+            None => Int256::one(),
+        };
+        Storage::put(
+            Storage::get_context(),
+            ByteString::from_literal("total_items"),
+            total.into_byte_string()
         );
         
-        let storage_key = ByteString::from_literal("str_").concat(&key);
-        Storage::put(Storage::get_context(), storage_key, value);
-        
-        increment_total_items();
         Runtime::log(ByteString::from_literal("String stored"));
-        Ok(())
+        true
     }
     
-    pub fn store_number(ctx: Context<StoreData>, key: ByteString, value: Int256) -> Result<()> {
-        require!(
-            check_witness_with_account(ctx.accounts.owner.key()),
-            SimpleStorageError::Unauthorized
-        );
-        
-        let storage_key = ByteString::from_literal("num_").concat(&key);
-        Storage::put(Storage::get_context(), storage_key, value.into_byte_string());
-        
-        increment_total_items();
-        Runtime::log(ByteString::from_literal("Number stored"));
-        Ok(())
+    #[method]
+    #[safe]
+    pub fn get_string(&self, key: ByteString) -> Option<ByteString> {
+        let context = Storage::get_context();
+        Storage::get(context, key)
     }
     
-    pub fn store_address(ctx: Context<StoreData>, key: ByteString, value: H160) -> Result<()> {
-        require!(
-            check_witness_with_account(ctx.accounts.owner.key()),
-            SimpleStorageError::Unauthorized
-        );
+    #[method]
+    pub fn delete_string(&self, key: ByteString) -> bool {
+        // Check authorization
+        let authority = Runtime::get_executing_script_hash();
+        if !Runtime::check_witness(authority) {
+            return false;
+        }
         
-        let storage_key = ByteString::from_literal("addr_").concat(&key);
-        Storage::put(Storage::get_context(), storage_key, value.into_byte_string());
+        let context = Storage::get_context();
+        Storage::delete(context, key);
         
-        increment_total_items();
-        Runtime::log(ByteString::from_literal("Address stored"));
-        Ok(())
+        Runtime::log(ByteString::from_literal("String deleted"));
+        true
     }
     
-    pub fn get_string(_ctx: Context<GetData>, key: ByteString) -> Result<ByteString> {
-        let storage_key = ByteString::from_literal("str_").concat(&key);
-        
-        Ok(Storage::get(Storage::get_context(), storage_key)
-            .unwrap_or(ByteString::from_literal("")))
-    }
-    
-    pub fn get_number(_ctx: Context<GetData>, key: ByteString) -> Result<Int256> {
-        let storage_key = ByteString::from_literal("num_").concat(&key);
-        
-        Ok(match Storage::get(Storage::get_context(), storage_key) {
-            Some(value_bytes) => Int256::from_byte_string(value_bytes),
+    #[method]
+    #[safe]
+    pub fn get_total_items(&self) -> Int256 {
+        let context = Storage::get_context();
+        match Storage::get(context, ByteString::from_literal("total_items")) {
+            Some(total) => Int256::from_byte_string(total),
             None => Int256::zero(),
-        })
-    }
-    
-    pub fn get_address(_ctx: Context<GetData>, key: ByteString) -> Result<H160> {
-        let storage_key = ByteString::from_literal("addr_").concat(&key);
-        
-        Ok(match Storage::get(Storage::get_context(), storage_key) {
-            Some(value_bytes) => H160::from_byte_string(value_bytes),
-            None => H160::zero(),
-        })
-    }
-    
-    pub fn delete_value(ctx: Context<DeleteData>, data_type: ByteString, key: ByteString) -> Result<()> {
-        require!(
-            check_witness_with_account(ctx.accounts.owner.key()),
-            SimpleStorageError::Unauthorized
-        );
-        
-        let prefix = get_prefix_for_type(&data_type);
-        
-        require!(
-            !prefix.is_empty(),
-            SimpleStorageError::InvalidDataType
-        );
-        
-        let storage_key = prefix.concat(&key);
-        Storage::delete(Storage::get_context(), storage_key);
-        
-        Runtime::log(ByteString::from_literal("Value deleted"));
-        Ok(())
-    }
-    
-    pub fn get_total_items(_ctx: Context<GetData>) -> Result<Int256> {
-        Ok(match Storage::get(Storage::get_context(), ByteString::from_literal("total_items")) {
-            Some(count_bytes) => Int256::from_byte_string(count_bytes),
-            None => Int256::zero(),
-        })
-    }
-}
-
-#[derive(Accounts)]
-pub struct Initialize<'info> {
-    pub owner: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct StoreData<'info> {
-    pub owner: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct GetData<'info> {
-    pub caller: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct DeleteData<'info> {
-    pub owner: Signer<'info>,
-}
-
-// Helper functions
-fn increment_total_items() {
-    let current = match Storage::get(Storage::get_context(), ByteString::from_literal("total_items")) {
-        Some(count_bytes) => Int256::from_byte_string(count_bytes),
-        None => Int256::zero(),
-    };
-    let new_total = current.checked_add(&Int256::one());
-    Storage::put(Storage::get_context(), ByteString::from_literal("total_items"), new_total.into_byte_string());
-}
-
-fn get_prefix_for_type(data_type: &ByteString) -> ByteString {
-    if data_type == &ByteString::from_literal("string") {
-        ByteString::from_literal("str_")
-    } else if data_type == &ByteString::from_literal("number") {
-        ByteString::from_literal("num_")
-    } else if data_type == &ByteString::from_literal("address") {
-        ByteString::from_literal("addr_")
-    } else if data_type == &ByteString::from_literal("array") {
-        ByteString::from_literal("arr_")
-    } else if data_type == &ByteString::from_literal("map") {
-        ByteString::from_literal("map_")
-    } else {
-        ByteString::empty()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum SimpleStorageError {
-    Unauthorized,
-    InvalidDataType,
-}
-
-impl From<SimpleStorageError> for ContractError {
-    fn from(err: SimpleStorageError) -> Self {
-        match err {
-            SimpleStorageError::Unauthorized => ContractError::Unauthorized,
-            SimpleStorageError::InvalidDataType => ContractError::InvalidArgument,
         }
     }
 }

@@ -7,11 +7,6 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+wee_alloc = "0.4"
 neo-contract = { path = "../../neo-contract" }
 
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-panic = "abort"
-strip = true

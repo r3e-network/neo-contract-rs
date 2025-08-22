@@ -66,7 +66,7 @@ impl NEP24Implementation {
             .concat(&token_id);
         
         // Pack royalty info
-        let royalty_data = Array::from_vec(vec![
+        let _royalty_data = Array::from_vec(vec![
             recipient.into_any(),
             Int256::from(amount as i64).into_any(),
         ]);
@@ -99,7 +99,7 @@ impl NEP24Implementation {
         let context = Storage::get_context();
         let key = ByteString::from_literal("default_royalty");
         
-        let royalty_data = Array::from_vec(vec![
+        let _royalty_data = Array::from_vec(vec![
             recipient.into_any(),
             Int256::from(amount as i64).into_any(),
         ]);
@@ -128,8 +128,8 @@ impl NEP24Implementation {
     pub fn process_royalty_payment(
         token_id: ByteString,
         sale_price: Int256,
-        buyer: H160,
-        seller: H160,
+        _buyer: H160,
+        _seller: H160,
     ) -> Result<RoyaltyPayment> {
         // Get royalty info (token-specific or default)
         let royalty_info = NEP24Implementation::get_royalty(token_id.clone())
@@ -140,7 +140,7 @@ impl NEP24Implementation {
         let royalty_amount = NEP24Implementation::calculate_royalty(sale_price, royalty_info.amount);
 
         // Ensure buyer has sufficient funds
-        let total_amount = sale_price
+        let _total_amount = sale_price
             .checked_add(&royalty_amount); // This will panic on overflow
 
         Ok(RoyaltyPayment {
@@ -201,7 +201,7 @@ impl RoyaltyRegistry {
             .concat(&ByteString::from_literal(":"))
             .concat(&token_id);
 
-        let royalty_data = Array::from_vec(vec![
+        let _royalty_data = Array::from_vec(vec![
             recipient.into_any(),
             Int256::from(amount as i64).into_any(),
         ]);

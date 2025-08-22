@@ -1,844 +1,404 @@
-//! # NEP-24 Royalty NFT Contract
-//!
-//! A comprehensive NFT contract implementing both NEP-11 and NEP-24 standards:
-//! - Complete NEP-11 non-fungible token functionality
-//! - NEP-24 royalty standard for creator compensation
-//! - Advanced royalty distribution with multiple recipients
-//! - Marketplace integration with automatic royalty payments
-//! - Creator and collector management systems
-//!
-//! This contract enables creators to earn ongoing royalties from secondary sales
-//! while providing a complete NFT ecosystem for digital art and collectibles.
-
 #![no_std]
 #![no_main]
 
+extern crate alloc;
 use neo_contract::prelude::*;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
 
-declare_id!("RoyaltyNft111111111111111111111111111111112");
+// WASM global allocator
+extern crate wee_alloc;
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-/// Royalty information structure
-#[derive(Clone, Debug)]
-pub struct RoyaltyInfo {
-    pub recipient: H160,
-    pub percentage: u32, // Basis points (100 = 1%)
+// Panic handler for WASM no_std builds
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
 }
 
-impl RoyaltyInfo {
-    pub fn new(recipient: H160, percentage: u32) -> Self {
-        Self { recipient, percentage }
-    }
-
-    pub fn serialize(&self) -> ByteString {
-        let mut result = ByteString::empty();
-        result = result.concat(&self.recipient.into_byte_string());
-        result = result.concat(&ByteString::from_bytes(&self.percentage.to_le_bytes()));
-        result
-    }
-
-    pub fn deserialize(data: &[u8]) -> Option<Self> {
-        if data.len() < 24 { // 20 bytes for H160 + 4 bytes for u32
-            return None;
-        }
-
-        let recipient = H160::from_byte_string(ByteString::from_bytes(&data[0..20]));
-        let percentage = u32::from_le_bytes([data[20], data[21], data[22], data[23]]);
-
-        Some(Self { recipient, percentage })
-    }
+// Simple NEP-24 Royalty NFT Implementation
+pub struct NEP24RoyaltyNFT {
+    // Storage keys for metadata
+    name_key: ByteString,
+    symbol_key: ByteString,
+    total_supply_key: ByteString,
+    owner_key: ByteString,
+    initialized_key: ByteString,
 }
 
-/// Token metadata structure
-#[derive(Clone, Debug)]
-pub struct TokenMetadata {
-    pub name: ByteString,
-    pub description: ByteString,
-    pub image: ByteString,
-    pub attributes: Map<ByteString, ByteString>,
-}
-
-impl TokenMetadata {
-    pub fn new(name: ByteString, description: ByteString, image: ByteString) -> Self {
+#[contract_impl]
+impl NEP24RoyaltyNFT {
+    pub fn init() -> Self {
         Self {
-            name,
-            description,
-            image,
-            attributes: Map::new(),
+            name_key: ByteString::from_literal("name"),
+            symbol_key: ByteString::from_literal("symbol"),
+            total_supply_key: ByteString::from_literal("total_supply"),
+            owner_key: ByteString::from_literal("owner"),
+            initialized_key: ByteString::from_literal("initialized"),
         }
     }
 
-    pub fn add_attribute(&mut self, key: ByteString, value: ByteString) {
-        self.attributes.put(key, value);
-    }
-
-    pub fn serialize(&self) -> ByteString {
-        let mut result = ByteString::empty();
+    #[method]
+    pub fn initialize(&self, name: ByteString, symbol: ByteString) -> bool {
+        let context = Storage::get_context();
         
-        // Serialize name length and data
-        let name_len = self.name.len() as u32;
-        result = result.concat(&ByteString::from_bytes(&name_len.to_le_bytes()));
-        result = result.concat(&self.name);
-        
-        // Serialize description length and data
-        let desc_len = self.description.len() as u32;
-        result = result.concat(&ByteString::from_bytes(&desc_len.to_le_bytes()));
-        result = result.concat(&self.description);
-        
-        // Serialize image length and data
-        let image_len = self.image.len() as u32;
-        result = result.concat(&ByteString::from_bytes(&image_len.to_le_bytes()));
-        result = result.concat(&self.image);
-        
-        // Serialize attributes count
-        let attr_count = self.attributes.size() as u32;
-        result = result.concat(&ByteString::from_bytes(&attr_count.to_le_bytes()));
-        
-        result
-    }
-
-    pub fn deserialize(data: &[u8]) -> Option<Self> {
-        if data.len() < 12 { // Minimum size for 3 length fields
-            return None;
-        }
-        
-        let mut offset = 0;
-        
-        // Deserialize name
-        let name_len = u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]) as usize;
-        offset += 4;
-        if offset + name_len > data.len() { return None; }
-        let name = ByteString::from_bytes(&data[offset..offset + name_len]);
-        offset += name_len;
-        
-        // Deserialize description
-        if offset + 4 > data.len() { return None; }
-        let desc_len = u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]) as usize;
-        offset += 4;
-        if offset + desc_len > data.len() { return None; }
-        let description = ByteString::from_bytes(&data[offset..offset + desc_len]);
-        offset += desc_len;
-        
-        // Deserialize image
-        if offset + 4 > data.len() { return None; }
-        let image_len = u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]) as usize;
-        offset += 4;
-        if offset + image_len > data.len() { return None; }
-        let image = ByteString::from_bytes(&data[offset..offset + image_len]);
-        offset += image_len;
-        
-        // Deserialize attributes count
-        if offset + 4 > data.len() { return None; }
-        let _attr_count = u32::from_le_bytes([data[offset], data[offset+1], data[offset+2], data[offset+3]]);
-        
-        Some(Self {
-            name,
-            description,
-            image,
-            attributes: Map::new(), // Simplified for this conversion
-        })
-    }
-}
-
-/// Royalty NFT account data
-#[derive(Clone, Debug)]
-pub struct RoyaltyNftAccount {
-    pub mint: H160,
-    pub owner: H160,
-    pub token_id: ByteString,
-    pub metadata: TokenMetadata,
-    pub royalty_infos: Array<RoyaltyInfo>,
-}
-
-/// Collection account data
-#[derive(Clone, Debug)]
-pub struct RoyaltyCollectionAccount {
-    pub symbol: ByteString,
-    pub total_supply: Int256,
-    pub mint_authority: H160,
-    pub freeze_authority: H160,
-    pub base_uri: ByteString,
-    pub is_frozen: bool,
-    pub default_royalty: Array<RoyaltyInfo>,
-    pub max_royalty_percentage: u32,
-}
-
-/// Owner account data (tracks NFTs owned)
-#[derive(Clone, Debug)]
-pub struct RoyaltyOwnerAccount {
-    pub owner: H160,
-    pub balance: Int256,
-    pub token_ids: Array<ByteString>,
-}
-
-/// Deploy context
-#[derive(Accounts)]
-pub struct Deploy<'info> {
-    #[account(signer)]
-    pub owner: AccountInfo<'info>,
-    #[account(init)]
-    pub collection: AccountInfo<'info>,
-}
-
-/// Transfer context
-#[derive(Accounts)]
-pub struct Transfer<'info> {
-    #[account(signer)]
-    pub owner_or_approved: AccountInfo<'info>,
-    #[account(mut)]
-    pub nft_account: AccountInfo<'info>,
-    #[account(mut)]
-    pub from_owner_account: AccountInfo<'info>,
-    #[account(mut)]
-    pub to_owner_account: AccountInfo<'info>,
-}
-
-/// Mint context
-#[derive(Accounts)]
-pub struct MintWithRoyalty<'info> {
-    #[account(signer)]
-    pub authority: AccountInfo<'info>,
-    #[account(mut)]
-    pub collection: AccountInfo<'info>,
-    #[account(init)]
-    pub nft_account: AccountInfo<'info>,
-    #[account(mut)]
-    pub owner_account: AccountInfo<'info>,
-}
-
-/// Marketplace sale context
-#[derive(Accounts)]
-pub struct MarketplaceSale<'info> {
-    #[account(signer)]
-    pub marketplace: AccountInfo<'info>,
-    #[account(mut)]
-    pub nft_account: AccountInfo<'info>,
-    #[account(mut)]
-    pub seller_account: AccountInfo<'info>,
-    #[account(mut)]
-    pub buyer_account: AccountInfo<'info>,
-    #[account(mut)]
-    pub collection: AccountInfo<'info>,
-}
-
-/// Admin context
-#[derive(Accounts)]
-pub struct AdminAction<'info> {
-    #[account(signer)]
-    pub owner: AccountInfo<'info>,
-    #[account(mut)]
-    pub collection: AccountInfo<'info>,
-}
-
-/// View context
-#[derive(Accounts)]
-pub struct View<'info> {
-    pub account: AccountInfo<'info>,
-}
-
-#[program]
-pub mod royalty_nft {
-    use super::*;
-
-    /// Deploy the royalty NFT contract
-    pub fn deploy(
-        ctx: Context<Deploy>,
-        symbol: ByteString,
-        base_uri: ByteString,
-        default_royalty_percentage: u32
-    ) -> Result<()> {
-        let collection = &mut ctx.accounts.collection;
-        let owner = &ctx.accounts.owner;
-
-        // Validate parameters
-        require!(!symbol.is_empty() && symbol.len() <= 16, "Invalid symbol: must be 1-16 characters");
-        require!(default_royalty_percentage <= 2500, "Default royalty too high (max 25%)");
-
-        // Initialize default royalty
-        let mut default_royalty = Array::new();
-        if default_royalty_percentage > 0 {
-            default_royalty.push(RoyaltyInfo::new(owner.key(), default_royalty_percentage));
+        // Check if already initialized
+        if let Some(_) = Storage::get(context.clone(), self.initialized_key.clone()) {
+            Runtime::log(ByteString::from_literal("Already initialized"));
+            return false;
         }
 
-        // Initialize collection account
-        let collection_data = RoyaltyCollectionAccount {
-            symbol: symbol.clone(),
-            total_supply: Int256::zero(),
-            mint_authority: owner.key(),
-            freeze_authority: owner.key(),
-            base_uri,
-            is_frozen: false,
-            default_royalty,
-            max_royalty_percentage: 2500, // 25% max
-        };
-
-        // Store collection data
-        let storage = Storage::get_context();
-        Storage::put(storage, ByteString::from_literal("royalty_collection_data"), collection_data.serialize());
-
-        // Emit deployment event
-        emit!(RoyaltyNftDeployed { symbol });
-        Ok(())
-    }
-
-    /// Get token symbol
-    pub fn symbol(ctx: Context<View>) -> Result<ByteString> {
-        let storage = Storage::get_context();
-        let collection_data = get_royalty_collection_data(&storage)?;
-        Ok(collection_data.symbol)
-    }
-
-    /// Get decimals (always 0 for NFTs)
-    pub fn decimals(_ctx: Context<View>) -> Result<u32> {
-        Ok(0)
-    }
-
-    /// Get total supply
-    pub fn total_supply(ctx: Context<View>) -> Result<Int256> {
-        let storage = Storage::get_context();
-        let collection_data = get_royalty_collection_data(&storage)?;
-        Ok(collection_data.total_supply)
-    }
-
-    /// Get balance of account
-    pub fn balance_of(ctx: Context<View>, owner: H160) -> Result<Int256> {
-        let storage = Storage::get_context();
-        let owner_key = format!("royalty_owner_account_{}", owner);
-        
-        match Storage::get(storage, ByteString::from_str(&owner_key)) {
-            Some(owner_data) => {
-                let owner_account: RoyaltyOwnerAccount = RoyaltyOwnerAccount::deserialize(owner_data)?;
-                Ok(owner_account.balance)
-            },
-            None => Ok(Int256::zero()),
+        let owner = Runtime::get_executing_script_hash();
+        if !Runtime::check_witness(owner) {
+            Runtime::log(ByteString::from_literal("No authorization"));
+            return false;
         }
+
+        // Store metadata in storage
+        Storage::put(context.clone(), self.name_key.clone(), name.clone());
+        Storage::put(context.clone(), self.symbol_key.clone(), symbol.clone());
+        Storage::put(context.clone(), self.total_supply_key.clone(), Int256::zero().into_byte_string());
+        Storage::put(context.clone(), self.owner_key.clone(), owner.into_byte_string());
+        Storage::put(context, self.initialized_key.clone(), ByteString::from_literal("true"));
+
+        Runtime::log(ByteString::from_literal("Royalty NFT initialized"));
+        true
     }
 
-    /// Get owner of token
-    pub fn owner_of(ctx: Context<View>, token_id: ByteString) -> Result<H160> {
-        let storage = Storage::get_context();
-        let nft_key = format!("royalty_nft_{}", token_id);
-        
-        match Storage::get(storage, ByteString::from_str(&nft_key)) {
-            Some(nft_data) => {
-                let nft_account: RoyaltyNftAccount = RoyaltyNftAccount::deserialize(nft_data)?;
-                Ok(nft_account.owner)
-            },
-            None => Ok(H160::zero()),
-        }
+    #[method]
+    #[safe]
+    pub fn symbol(&self) -> ByteString {
+        let context = Storage::get_context();
+        Storage::get(context, self.symbol_key.clone()).unwrap_or(ByteString::from_literal("UNKNOWN"))
     }
 
-    /// Transfer token
-    pub fn transfer(
-        ctx: Context<Transfer>,
-        to: H160,
-        token_id: ByteString,
-        _data: Vec<u8>
-    ) -> Result<()> {
-        let owner_or_approved = &ctx.accounts.owner_or_approved;
-        let nft_account = &mut ctx.accounts.nft_account;
-        let from_owner_account = &mut ctx.accounts.from_owner_account;
-        let to_owner_account = &mut ctx.accounts.to_owner_account;
+    #[method]
+    #[safe]
+    pub fn decimals(&self) -> u8 {
+        0  // NFTs have 0 decimals
+    }
 
-        let storage = Storage::get_context();
-
-        // Check if contract is paused
-        let collection_data = get_royalty_collection_data(&storage)?;
-        require!(!collection_data.is_frozen, "Contract is paused");
-
-        // Get NFT data
-        let nft_key = format!("royalty_nft_{}", token_id);
-        let mut nft_data: RoyaltyNftAccount = match Storage::get(storage.clone(), ByteString::from_str(&nft_key)) {
-            Some(data) => RoyaltyNftAccount::deserialize(data)?,
-            None => return Err(ErrorCode::TokenNotFound.into()),
-        };
-
-        let from = nft_data.owner;
-
-        // Check authorization (owner or approved)
-        require!(
-            owner_or_approved.key() == from || is_approved_for_token(&storage, &token_id, owner_or_approved.key())?,
-            "Unauthorized: Not owner or approved"
-        );
-
-        // Update NFT owner
-        nft_data.owner = to;
-        Storage::put(storage.clone(), ByteString::from_str(&nft_key), nft_data.serialize());
-
-        // Clear approval
-        let approval_key = format!("royalty_approval_{}", token_id);
-        Storage::delete(storage.clone(), ByteString::from_str(&approval_key));
-
-        // Update from owner account
-        let from_key = format!("royalty_owner_account_{}", from);
-        let mut from_account_data: RoyaltyOwnerAccount = match Storage::get(storage.clone(), ByteString::from_str(&from_key)) {
-            Some(data) => RoyaltyOwnerAccount::deserialize(data)?,
-            None => return Err(ErrorCode::OwnerAccountNotFound.into()),
-        };
-
-        from_account_data.balance = from_account_data.balance.checked_sub(&Int256::one());
-        remove_token_from_list(&mut from_account_data.token_ids, &token_id);
-
-        if from_account_data.balance == Int256::zero() {
-            Storage::delete(storage.clone(), ByteString::from_str(&from_key));
+    #[method]
+    #[safe]
+    pub fn total_supply(&self) -> Int256 {
+        let context = Storage::get_context();
+        if let Some(supply_bytes) = Storage::get(context, self.total_supply_key.clone()) {
+            Int256::from_byte_string(supply_bytes)
         } else {
-            Storage::put(storage.clone(), ByteString::from_str(&from_key), from_account_data.serialize());
+            Int256::zero()
         }
-
-        // Update to owner account
-        let to_key = format!("royalty_owner_account_{}", to);
-        let mut to_account_data: RoyaltyOwnerAccount = match Storage::get(storage.clone(), ByteString::from_str(&to_key)) {
-            Some(data) => RoyaltyOwnerAccount::deserialize(data)?,
-            None => RoyaltyOwnerAccount {
-                owner: to,
-                balance: Int256::zero(),
-                token_ids: Array::new(),
-            },
-        };
-
-        to_account_data.balance = to_account_data.balance.checked_add(&Int256::one());
-        to_account_data.token_ids.push(token_id.clone());
-        Storage::put(storage, ByteString::from_str(&to_key), to_account_data.serialize());
-
-        // Emit Transfer event
-        emit!(TransferEvent {
-            from,
-            to,
-            amount: Int256::one(),
-            token_id: token_id.clone(),
-        });
-
-        Ok(())
     }
 
-    /// Get royalty information for a token (NEP-24 required)
-    pub fn royalty_info(
-        ctx: Context<View>,
-        token_id: ByteString,
-        _royalty_token: H160,
-        sale_price: Int256
-    ) -> Result<Array<Map<ByteString, Any>>> {
-        let storage = Storage::get_context();
-        let nft_key = format!("royalty_nft_{}", token_id);
+    #[method]
+    #[safe]
+    pub fn balance_of(&self, owner: H160) -> Int256 {
+        let context = Storage::get_context();
+        let balance_key = self.get_balance_key(owner);
         
-        let royalty_infos = match Storage::get(storage.clone(), ByteString::from_str(&nft_key)) {
-            Some(nft_data) => {
-                let nft_account: RoyaltyNftAccount = RoyaltyNftAccount::deserialize(nft_data)?;
-                if nft_account.royalty_infos.size() > 0 {
-                    nft_account.royalty_infos
-                } else {
-                    // Use default royalty
-                    let collection_data = get_royalty_collection_data(&storage)?;
-                    collection_data.default_royalty
-                }
-            },
-            None => return Err(ErrorCode::TokenNotFound.into()),
-        };
-
-        let mut result = Array::new();
-
-        for i in 0..royalty_infos.size() {
-            let royalty_info = royalty_infos.get(i);
-            let mut royalty_map = Map::new();
-            
-            // Calculate royalty amount based on percentage
-            let percentage_int = Int256::new(royalty_info.percentage as i64);
-            let royalty_amount = sale_price.checked_mul(&percentage_int)
-                .checked_div(&Int256::new(10000));
-            
-            royalty_map.put(
-                ByteString::from_literal("royaltyRecipient"),
-                royalty_info.recipient.into_any()
-            );
-            royalty_map.put(
-                ByteString::from_literal("royaltyAmount"),
-                royalty_amount.into_any()
-            );
-
-            result.push(royalty_map);
+        match Storage::get(context, balance_key) {
+            Some(balance) => Int256::from_byte_string(balance),
+            None => Int256::zero(),
         }
-
-        Ok(result)
     }
 
-    /// Mint NFT with royalty information
-    pub fn mint_with_royalty(
-        ctx: Context<MintWithRoyalty>,
-        to: H160,
-        token_id: ByteString,
-        name: ByteString,
-        description: ByteString,
-        image: ByteString,
-        royalty_recipients: Array<H160>,
-        royalty_percentages: Array<u32>
-    ) -> Result<()> {
-        let authority = &ctx.accounts.authority;
-        let collection = &mut ctx.accounts.collection;
-        let nft_account = &mut ctx.accounts.nft_account;
-        let owner_account = &mut ctx.accounts.owner_account;
+    #[method]
+    #[safe]
+    pub fn tokens_of(&self, owner: H160) -> Array<ByteString> {
+        let mut tokens = Array::new();
+        let context = Storage::get_context();
+        let prefix = self.get_owner_token_prefix(owner);
+        
+        // Simple implementation - just return empty array for now
+        // In a full implementation, this would iterate through storage
+        tokens
+    }
 
-        require!(!token_id.is_empty() && token_id.len() <= 64, "Invalid token ID: must be 1-64 characters");
+    #[method]
+    #[safe]
+    pub fn owner_of(&self, token_id: ByteString) -> H160 {
+        let context = Storage::get_context();
+        let owner_key = self.get_token_owner_key(token_id);
+        
+        match Storage::get(context, owner_key) {
+            Some(owner_bytes) => H160::from_byte_string(owner_bytes),
+            None => H160::zero(),
+        }
+    }
 
-        let storage = Storage::get_context();
-        let mut collection_data = get_royalty_collection_data(&storage)?;
+    #[method]
+    #[safe]
+    pub fn royalty_info(&self, token_id: ByteString, sale_price: Int256) -> Array<Any> {
+        let context = Storage::get_context();
+        let royalty_key = self.get_royalty_key(token_id.clone());
+        
+        let mut royalty_array = Array::new();
+        
+        // Get royalty percentage (stored as basis points, 1000 = 10%)
+        if let Some(royalty_bytes) = Storage::get(context.clone(), royalty_key.clone()) {
+            let royalty_percentage = Int256::from_byte_string(royalty_bytes);
+            
+            // Get royalty recipient
+            let recipient_key = self.get_royalty_recipient_key(token_id);
+            if let Some(recipient_bytes) = Storage::get(context, recipient_key) {
+                let recipient = H160::from_byte_string(recipient_bytes);
+                
+                // Calculate royalty amount: (sale_price * royalty_percentage) / 10000
+                let royalty_amount = (sale_price * royalty_percentage) / Int256::from(10000);
+                
+                // Return array with [recipient, royalty_amount]
+                royalty_array.push(recipient.into_any());
+                royalty_array.push(royalty_amount.into_any());
+            }
+        }
+        
+        royalty_array
+    }
 
-        require!(
-            authority.key() == collection_data.mint_authority || is_authorized_minter(&storage, authority.key())?,
-            "Unauthorized: Not authorized to mint"
-        );
-
-        // Validate royalty parameters
-        require!(royalty_recipients.size() == royalty_percentages.size(), "Royalty recipients and percentages length mismatch");
-
-        let mut total_royalty = 0u32;
-        let mut royalty_infos = Array::new();
-
-        for i in 0..royalty_recipients.size() {
-            let recipient = royalty_recipients.get(i);
-            let percentage = royalty_percentages.get(i);
-
-            require!(percentage <= collection_data.max_royalty_percentage, "Individual royalty percentage too high");
-
-            total_royalty += percentage;
-            royalty_infos.push(RoyaltyInfo::new(recipient, percentage));
+    #[method]
+    pub fn mint(&self, to: H160, token_id: ByteString, royalty_recipient: H160, royalty_percentage: Int256) -> bool {
+        let context = Storage::get_context();
+        let contract_owner = if let Some(owner_bytes) = Storage::get(context.clone(), self.owner_key.clone()) {
+            H160::from_byte_string(owner_bytes)
+        } else {
+            H160::zero()
+        };
+        
+        if !Runtime::check_witness(contract_owner) {
+            Runtime::log(ByteString::from_literal("No authorization"));
+            return false;
         }
 
-        require!(total_royalty <= collection_data.max_royalty_percentage, "Total royalty percentage too high");
+        // Validate royalty percentage (max 50% = 5000 basis points)
+        if royalty_percentage > Int256::from(5000) {
+            Runtime::log(ByteString::from_literal("Royalty percentage too high"));
+            return false;
+        }
 
         // Check if token already exists
-        let nft_key = format!("royalty_nft_{}", token_id);
-        require!(
-            Storage::get(storage.clone(), ByteString::from_str(&nft_key)).is_none(),
-            "Token already exists"
-        );
-
-        // Create NFT account
-        let metadata = TokenMetadata::new(name, description, image);
-        let nft_data = RoyaltyNftAccount {
-            mint: collection.key(),
-            owner: to,
-            token_id: token_id.clone(),
-            metadata,
-            royalty_infos,
-        };
-        Storage::put(storage.clone(), ByteString::from_str(&nft_key), nft_data.serialize());
-
-        // Update owner account
-        let owner_key = format!("royalty_owner_account_{}", to);
-        let mut owner_data: RoyaltyOwnerAccount = match Storage::get(storage.clone(), ByteString::from_str(&owner_key)) {
-            Some(data) => RoyaltyOwnerAccount::deserialize(data)?,
-            None => RoyaltyOwnerAccount {
-                owner: to,
-                balance: Int256::zero(),
-                token_ids: Array::new(),
-            },
-        };
-
-        owner_data.balance = owner_data.balance.checked_add(&Int256::one());
-        owner_data.token_ids.push(token_id.clone());
-        Storage::put(storage.clone(), ByteString::from_str(&owner_key), owner_data.serialize());
-
-        // Update collection
-        collection_data.total_supply = collection_data.total_supply.checked_add(&Int256::one());
-        Storage::put(storage, ByteString::from_literal("royalty_collection_data"), collection_data.serialize());
-
-        // Emit Transfer event (from null address)
-        emit!(TransferEvent {
-            from: H160::zero(),
-            to,
-            amount: Int256::one(),
-            token_id: token_id.clone(),
-        });
-
-        emit!(RoyaltyNftMinted { 
-            token_id: token_id.clone(), 
-            to, 
-            total_royalty_percentage: Int256::new(total_royalty as i64),
-        });
-        Ok(())
-    }
-
-    /// Process marketplace sale with automatic royalty distribution
-    pub fn marketplace_sale(
-        ctx: Context<MarketplaceSale>,
-        token_id: ByteString,
-        sale_price: Int256,
-        payment_token: H160
-    ) -> Result<()> {
-        let marketplace = &ctx.accounts.marketplace;
-        let nft_account = &mut ctx.accounts.nft_account;
-        let seller_account = &mut ctx.accounts.seller_account;
-        let buyer_account = &mut ctx.accounts.buyer_account;
-        let collection = &mut ctx.accounts.collection;
-
-        let storage = Storage::get_context();
-
-        // Verify marketplace authorization
-        require!(is_approved_marketplace(&storage, marketplace.key())?, "Unauthorized: Marketplace not approved");
-
-        // Get NFT data
-        let nft_key = format!("royalty_nft_{}", token_id);
-        let mut nft_data: RoyaltyNftAccount = match Storage::get(storage.clone(), ByteString::from_str(&nft_key)) {
-            Some(data) => RoyaltyNftAccount::deserialize(data)?,
-            None => return Err(ErrorCode::TokenNotFound.into()),
-        };
-
-        let seller = nft_data.owner;
-        let buyer = buyer_account.key();
-
-        // Calculate and distribute royalties
-        let mut total_royalty = Int256::zero();
-
-        for i in 0..nft_data.royalty_infos.size() {
-            let royalty_info = nft_data.royalty_infos.get(i);
-            let percentage_int = Int256::new(royalty_info.percentage as i64);
-            let royalty_amount = sale_price.checked_mul(&percentage_int)
-                .checked_div(&Int256::new(10000));
-            total_royalty = total_royalty.checked_add(&royalty_amount);
+        let owner_key = self.get_token_owner_key(token_id.clone());
+        if let Some(_) = Storage::get(context.clone(), owner_key.clone()) {
+            Runtime::log(ByteString::from_literal("Token already exists"));
+            return false;
         }
 
-        // Update NFT owner
-        nft_data.owner = buyer;
-        Storage::put(storage.clone(), ByteString::from_str(&nft_key), nft_data.serialize());
+        // Set token owner
+        Storage::put(context.clone(), owner_key, to.into_byte_string());
 
-        // Update owner accounts (simplified - would need proper account management)
-        let seller_key = format!("royalty_owner_account_{}", seller);
-        let mut seller_data: RoyaltyOwnerAccount = match Storage::get(storage.clone(), ByteString::from_str(&seller_key)) {
-            Some(data) => RoyaltyOwnerAccount::deserialize(data)?,
-            None => return Err(ErrorCode::OwnerAccountNotFound.into()),
-        };
+        // Set royalty info
+        let royalty_key = self.get_royalty_key(token_id.clone());
+        let recipient_key = self.get_royalty_recipient_key(token_id.clone());
+        Storage::put(context.clone(), royalty_key, royalty_percentage.into_byte_string());
+        Storage::put(context.clone(), recipient_key, royalty_recipient.into_byte_string());
 
-        seller_data.balance = seller_data.balance.checked_sub(&Int256::one());
-        remove_token_from_list(&mut seller_data.token_ids, &token_id);
-        Storage::put(storage.clone(), ByteString::from_str(&seller_key), seller_data.serialize());
+        // Update balance
+        let balance_key = self.get_balance_key(to);
+        let balance = self.balance_of(to);
+        Storage::put(context.clone(), balance_key, (balance + Int256::from(1)).into_byte_string());
 
-        let buyer_key = format!("royalty_owner_account_{}", buyer);
-        let mut buyer_data: RoyaltyOwnerAccount = match Storage::get(storage.clone(), ByteString::from_str(&buyer_key)) {
-            Some(data) => RoyaltyOwnerAccount::deserialize(data)?,
-            None => RoyaltyOwnerAccount {
-                owner: buyer,
-                balance: Int256::zero(),
-                token_ids: Array::new(),
-            },
-        };
+        // Update total supply
+        let total_supply = self.total_supply();
+        Storage::put(context.clone(), self.total_supply_key.clone(), (total_supply + Int256::from(1)).into_byte_string());
 
-        buyer_data.balance = buyer_data.balance.checked_add(&Int256::one());
-        buyer_data.token_ids.push(token_id.clone());
-        Storage::put(storage, ByteString::from_str(&buyer_key), buyer_data.serialize());
+        // Emit transfer event
+        let mut args = Array::new();
+        args.push(H160::zero().into_any());
+        args.push(to.into_any());
+        args.push(Int256::from(1).into_any());
+        args.push(token_id.into_any());
+        Runtime::notify(ByteString::from_literal("Transfer"), args);
 
-        // Calculate seller proceeds
-        let seller_proceeds = sale_price.checked_sub(&total_royalty);
-
-        emit!(MarketplaceSale {
-            token_id,
-            seller,
-            buyer,
-            sale_price,
-            total_royalty,
-            seller_proceeds,
-        });
-
-        Ok(())
+        Runtime::log(ByteString::from_literal("Royalty NFT minted"));
+        true
     }
 
-    /// Set creator royalty
-    pub fn set_creator_royalty(
-        ctx: Context<AdminAction>,
-        creator: H160,
-        percentage: u32
-    ) -> Result<()> {
-        let owner = &ctx.accounts.owner;
-        let collection = &ctx.accounts.collection;
-
-        let storage = Storage::get_context();
-        let collection_data = get_royalty_collection_data(&storage)?;
-
-        // Verify authorization (creator or contract owner)
-        require!(
-            owner.key() == creator || owner.key() == collection_data.mint_authority,
-            "Unauthorized: Not creator or owner"
-        );
-
-        require!(percentage <= collection_data.max_royalty_percentage, "Royalty percentage too high");
-
-        let creator_royalty_key = format!("creator_royalty_{}", creator);
-
-        if percentage == 0 {
-            Storage::delete(storage, ByteString::from_str(&creator_royalty_key));
-        } else {
-            Storage::put(storage, ByteString::from_str(&creator_royalty_key), ByteString::from_bytes(&percentage.to_le_bytes()));
+    #[method]
+    pub fn burn(&self, token_id: ByteString) -> bool {
+        let owner = self.owner_of(token_id.clone());
+        if !Runtime::check_witness(owner) {
+            Runtime::log(ByteString::from_literal("No authorization"));
+            return false;
         }
 
-        emit!(CreatorRoyaltySet { creator, percentage: Int256::new(percentage as i64) });
-        Ok(())
-    }
-
-    /// Add approved marketplace
-    pub fn add_marketplace(
-        ctx: Context<AdminAction>,
-        marketplace: H160
-    ) -> Result<()> {
-        let owner = &ctx.accounts.owner;
-        let collection = &ctx.accounts.collection;
-
-        let storage = Storage::get_context();
-        let collection_data = get_royalty_collection_data(&storage)?;
-        require!(owner.key() == collection_data.mint_authority, "Unauthorized: Only owner can add marketplaces");
-
-        let marketplace_key = format!("approved_marketplace_{}", marketplace);
-        Storage::put(storage, ByteString::from_str(&marketplace_key), ByteString::from_literal("true"));
-
-        emit!(MarketplaceAdded { marketplace });
-        Ok(())
-    }
-
-    /// Get maximum allowed royalty percentage
-    pub fn get_max_royalty(ctx: Context<View>) -> Result<u32> {
-        let storage = Storage::get_context();
-        let collection_data = get_royalty_collection_data(&storage)?;
-        Ok(collection_data.max_royalty_percentage)
-    }
-
-    /// Check if marketplace is approved
-    pub fn is_approved_marketplace(ctx: Context<View>, marketplace: H160) -> Result<bool> {
-        let storage = Storage::get_context();
-        is_approved_marketplace(&storage, marketplace)
-    }
-
-    /// Get contract owner
-    pub fn get_owner(ctx: Context<View>) -> Result<H160> {
-        let storage = Storage::get_context();
-        let collection_data = get_royalty_collection_data(&storage)?;
-        Ok(collection_data.mint_authority)
-    }
-
-    /// Check if contract is paused
-    pub fn is_paused(ctx: Context<View>) -> Result<bool> {
-        let storage = Storage::get_context();
-        let collection_data = get_royalty_collection_data(&storage)?;
-        Ok(collection_data.is_frozen)
-    }
-
-    /// Get token properties/metadata
-    pub fn properties(ctx: Context<View>, token_id: ByteString) -> Result<Map<ByteString, Any>> {
-        let storage = Storage::get_context();
-        let nft_key = format!("royalty_nft_{}", token_id);
+        let context = Storage::get_context();
         
-        match Storage::get(storage, ByteString::from_str(&nft_key)) {
-            Some(nft_data) => {
-                let nft_account: RoyaltyNftAccount = RoyaltyNftAccount::deserialize(nft_data)?;
-                let mut result = Map::new();
-                result.put(ByteString::from_literal("name"), nft_account.metadata.name.into_any());
-                result.put(ByteString::from_literal("description"), nft_account.metadata.description.into_any());
-                result.put(ByteString::from_literal("image"), nft_account.metadata.image.into_any());
-                Ok(result)
-            },
-            None => Ok(Map::new()),
+        // Remove token owner
+        let owner_key = self.get_token_owner_key(token_id.clone());
+        Storage::delete(context.clone(), owner_key);
+
+        // Remove royalty info
+        let royalty_key = self.get_royalty_key(token_id.clone());
+        let recipient_key = self.get_royalty_recipient_key(token_id.clone());
+        Storage::delete(context.clone(), royalty_key);
+        Storage::delete(context.clone(), recipient_key);
+
+        // Update balance
+        let balance_key = self.get_balance_key(owner);
+        let balance = self.balance_of(owner);
+        if balance > Int256::zero() {
+            Storage::put(context.clone(), balance_key, (balance - Int256::from(1)).into_byte_string());
         }
-    }
-}
 
-// Helper functions
-fn get_royalty_collection_data(storage: &Storage) -> Result<RoyaltyCollectionAccount> {
-    match Storage::get(storage.clone(), ByteString::from_literal("royalty_collection_data")) {
-        Some(data) => RoyaltyCollectionAccount::deserialize(data),
-        None => Err(ErrorCode::CollectionNotInitialized.into()),
-    }
-}
-
-fn is_authorized_minter(storage: &Storage, address: H160) -> Result<bool> {
-    let minter_key = format!("authorized_minter_{}", address);
-    Ok(Storage::get(storage.clone(), ByteString::from_str(&minter_key)).is_some())
-}
-
-fn is_approved_for_token(storage: &Storage, token_id: &ByteString, address: H160) -> Result<bool> {
-    let approval_key = format!("royalty_approval_{}", token_id);
-    match Storage::get(storage.clone(), ByteString::from_str(&approval_key)) {
-        Some(approved_bytes) => {
-            let approved = H160::from_byte_string(approved_bytes);
-            Ok(approved == address)
-        },
-        None => Ok(false),
-    }
-}
-
-fn is_approved_marketplace(storage: &Storage, marketplace: H160) -> Result<bool> {
-    let marketplace_key = format!("approved_marketplace_{}", marketplace);
-    Ok(Storage::get(storage.clone(), ByteString::from_str(&marketplace_key)).is_some())
-}
-
-fn remove_token_from_list(token_ids: &mut Array<ByteString>, token_id: &ByteString) {
-    let mut new_tokens = Array::new();
-    for i in 0..token_ids.size() {
-        let token = token_ids.get(i).clone();
-        if token != *token_id {
-            new_tokens.push(token);
+        // Update total supply
+        let total_supply = self.total_supply();
+        if total_supply > Int256::zero() {
+            Storage::put(context.clone(), self.total_supply_key.clone(), (total_supply - Int256::from(1)).into_byte_string());
         }
+
+        // Emit transfer event
+        let mut args = Array::new();
+        args.push(owner.into_any());
+        args.push(H160::zero().into_any());
+        args.push(Int256::from(1).into_any());
+        args.push(token_id.into_any());
+        Runtime::notify(ByteString::from_literal("Transfer"), args);
+
+        Runtime::log(ByteString::from_literal("Royalty NFT burned"));
+        true
     }
-    *token_ids = new_tokens;
-}
 
-// Events
-#[event]
-pub struct RoyaltyNftDeployed {
-    pub symbol: ByteString,
-}
+    #[method]
+    pub fn transfer(&self, to: H160, token_id: ByteString, data: Any) -> bool {
+        let owner = self.owner_of(token_id.clone());
+        if !Runtime::check_witness(owner) {
+            Runtime::log(ByteString::from_literal("No authorization"));
+            return false;
+        }
 
-#[event]
-pub struct TransferEvent {
-    pub from: H160,
-    pub to: H160,
-    pub amount: Int256,
-    pub token_id: ByteString,
-}
+        if owner == to {
+            Runtime::log(ByteString::from_literal("Same owner"));
+            return true;
+        }
 
-#[event]
-pub struct RoyaltyNftMinted {
-    pub token_id: ByteString,
-    pub to: H160,
-    pub total_royalty_percentage: Int256,
-}
+        let context = Storage::get_context();
+        
+        // Update token owner
+        let owner_key = self.get_token_owner_key(token_id.clone());
+        Storage::put(context.clone(), owner_key, to.into_byte_string());
 
-#[event]
-pub struct MarketplaceSale {
-    pub token_id: ByteString,
-    pub seller: H160,
-    pub buyer: H160,
-    pub sale_price: Int256,
-    pub total_royalty: Int256,
-    pub seller_proceeds: Int256,
-}
+        // Update old owner balance
+        let old_balance_key = self.get_balance_key(owner);
+        let old_balance = self.balance_of(owner);
+        if old_balance > Int256::zero() {
+            Storage::put(context.clone(), old_balance_key, (old_balance - Int256::from(1)).into_byte_string());
+        }
 
-#[event]
-pub struct CreatorRoyaltySet {
-    pub creator: H160,
-    pub percentage: Int256,
-}
+        // Update new owner balance
+        let new_balance_key = self.get_balance_key(to);
+        let new_balance = self.balance_of(to);
+        Storage::put(context, new_balance_key, (new_balance + Int256::from(1)).into_byte_string());
 
-#[event]
-pub struct MarketplaceAdded {
-    pub marketplace: H160,
-}
+        // Emit transfer event
+        let mut args = Array::new();
+        args.push(owner.into_any());
+        args.push(to.into_any());
+        args.push(Int256::from(1).into_any());
+        args.push(token_id.clone().into_any());
+        Runtime::notify(ByteString::from_literal("Transfer"), args);
 
-// Error codes
-#[error_code]
-pub enum ErrorCode {
-    #[msg("Collection not initialized")]
-    CollectionNotInitialized,
-    #[msg("Token not found")]
-    TokenNotFound,
-    #[msg("Owner account not found")]
-    OwnerAccountNotFound,
-    #[msg("Unauthorized")]
-    Unauthorized,
-    #[msg("Token already exists")]
-    TokenAlreadyExists,
-    #[msg("Contract is paused")]
-    ContractPaused,
-    #[msg("Invalid token ID")]
-    InvalidTokenId,
-    #[msg("Royalty percentage too high")]
-    RoyaltyTooHigh,
-    #[msg("Marketplace not approved")]
-    MarketplaceNotApproved,
+        // Call onNEP11Payment if needed
+        self.post_transfer(owner, to, Int256::from(1), token_id, data);
+
+        Runtime::log(ByteString::from_literal("Royalty NFT transferred"));
+        true
+    }
+
+    #[method]
+    pub fn sale_with_royalty(&self, token_id: ByteString, sale_price: Int256, buyer: H160) -> bool {
+        let owner = self.owner_of(token_id.clone());
+        if !Runtime::check_witness(owner) {
+            Runtime::log(ByteString::from_literal("No authorization"));
+            return false;
+        }
+
+        let context = Storage::get_context();
+        
+        // Get royalty info
+        let royalty_info = self.royalty_info(token_id.clone(), sale_price);
+        
+        if royalty_info.length() >= 2 {
+            // Extract royalty recipient and amount
+            let royalty_recipient_key = self.get_royalty_recipient_key(token_id.clone());
+            if let Some(recipient_bytes) = Storage::get(context.clone(), royalty_recipient_key) {
+                let royalty_recipient = H160::from_byte_string(recipient_bytes);
+                
+                let royalty_key = self.get_royalty_key(token_id.clone());
+                if let Some(royalty_bytes) = Storage::get(context.clone(), royalty_key) {
+                    let royalty_percentage = Int256::from_byte_string(royalty_bytes);
+                    let royalty_amount = (sale_price * royalty_percentage) / Int256::from(10000);
+                    
+                    // Emit royalty payment event
+                    let mut royalty_args = Array::new();
+                    royalty_args.push(token_id.clone().into_any());
+                    royalty_args.push(royalty_recipient.into_any());
+                    royalty_args.push(royalty_amount.into_any());
+                    Runtime::notify(ByteString::from_literal("RoyaltyPayment"), royalty_args);
+                }
+            }
+        }
+
+        // Transfer ownership
+        self.transfer(buyer, token_id.clone(), Any::null());
+
+        // Emit sale event
+        let mut sale_args = Array::new();
+        sale_args.push(token_id.into_any());
+        sale_args.push(owner.into_any());
+        sale_args.push(buyer.into_any());
+        sale_args.push(sale_price.into_any());
+        Runtime::notify(ByteString::from_literal("Sale"), sale_args);
+
+        Runtime::log(ByteString::from_literal("Sale with royalty completed"));
+        true
+    }
+
+    #[method]
+    #[safe]
+    pub fn properties(&self, token_id: ByteString) -> Map<ByteString, ByteString> {
+        // Simple implementation - return empty map
+        // In a full implementation, this would return token properties
+        Map::new()
+    }
+
+    // Helper methods
+    fn get_balance_key(&self, account: H160) -> ByteString {
+        let key = ByteString::from_literal("balance");
+        key.concat(&account.into_byte_string())
+    }
+
+    fn get_token_owner_key(&self, token_id: ByteString) -> ByteString {
+        let key = ByteString::from_literal("owner");
+        key.concat(&token_id)
+    }
+
+    fn get_owner_token_prefix(&self, owner: H160) -> ByteString {
+        let prefix = ByteString::from_literal("tokens");
+        prefix.concat(&owner.into_byte_string())
+    }
+
+    fn get_royalty_key(&self, token_id: ByteString) -> ByteString {
+        let key = ByteString::from_literal("royalty");
+        key.concat(&token_id)
+    }
+
+    fn get_royalty_recipient_key(&self, token_id: ByteString) -> ByteString {
+        let key = ByteString::from_literal("royalty_recipient");
+        key.concat(&token_id)
+    }
+
+    fn post_transfer(&self, from: H160, to: H160, amount: Int256, token_id: ByteString, data: Any) {
+        // Try to call onNEP11Payment on the 'to' contract
+        let mut call_args = Array::new();
+        call_args.push(from.into_any());
+        call_args.push(amount.into_any());
+        call_args.push(token_id.into_any());
+        call_args.push(data);
+        
+        let _ = Contract::call(
+            to,
+            ByteString::from_literal("onNEP11Payment"),
+            CallFlags::All,
+            call_args,
+        );
+    }
 }

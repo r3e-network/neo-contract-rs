@@ -1,0 +1,76 @@
+{
+  "name": "Contract",
+  "groups": [],
+  "features": {
+    "storage": true,
+    "payable": false
+  },
+  "supported_standards": [],
+  "abi": {
+    "methods": [
+      {
+        "name": "create_pool",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "pause",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "initialize",
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "withdraw",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "unpause",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "deposit",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      }
+    ],
+    "events": []
+  },
+  "permissions": [
+    {
+      "contract": "*",
+      "methods": [
+        "*"
+      ]
+    }
+  ],
+  "trusts": [
+    "*"
+  ],
+  "extra": {
+    "compiler": "neo-compiler",
+    "style": "solana"
+  }
+}

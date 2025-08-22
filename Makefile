@@ -164,4 +164,3 @@ info:
 	@echo "Rust version: $$(rustc --version)"
 	@echo "Target: wasm32-unknown-unknown"
 	@echo "Neo Express: $$(neoxp --version 2>/dev/null || echo 'not installed')"
-EOF < /dev/null

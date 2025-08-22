@@ -3,7 +3,10 @@ name = "neo-complete-features"
 version = "1.0.0"
 edition = "2021"
 
+[workspace]
+
 [dependencies]
+wee_alloc = "0.4"
 neo-contract = { path = "../../neo-contract" }
 neo-contract-proc-macros = { path = "../../neo-contract-proc-macros" }
 

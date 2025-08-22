@@ -1,7 +1,6 @@
 /// Serialization utilities for storage operations
 use crate::types::{ByteString, Int256, H160};
 use crate::types::builtin::string::IntoByteString;
-use alloc::vec::Vec;
 
 /// Trait for types that can be serialized to/from ByteString for storage
 pub trait StorageSerialize: Sized {

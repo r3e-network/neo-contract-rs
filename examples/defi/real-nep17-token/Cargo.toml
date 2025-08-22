@@ -1,0 +1,12 @@
+[package]
+name = "real-nep17-token"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+wee_alloc = "0.4"
+neo-contract = { path = "../../../neo-contract" }
+
+[lib]
+crate-type = ["cdylib"]
+

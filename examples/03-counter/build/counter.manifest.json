@@ -7,7 +7,20 @@
   },
   "supported_standards": [],
   "abi": {
-    "methods": [],
+    "methods": [
+      {
+        "name": "initialize",
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      }
+    ],
     "events": []
   },
   "permissions": [
@@ -21,5 +34,8 @@
   "trusts": [
     "*"
   ],
-  "extra": null
+  "extra": {
+    "compiler": "neo-compiler",
+    "style": "solana"
+  }
 }

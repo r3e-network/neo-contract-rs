@@ -64,7 +64,7 @@ pub mod oracle {
         let context = Storage::get_context();
         
         // Store request data
-        let request_id = Runtime::get_time();
+        let _request_id = Runtime::get_time();
         let request_key = ByteString::from_literal("oracle_request");
         
         Storage::put(context, request_key, url.clone());
@@ -80,7 +80,7 @@ pub mod oracle {
     
     /// Handle oracle response callback
     pub fn handle_response(
-        url: ByteString,
+        _url: ByteString,
         _user_data: Any,
         code: OracleResponseCode,
         result: ByteString,

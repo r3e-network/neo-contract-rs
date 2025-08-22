@@ -32,9 +32,17 @@ members = [
     "examples/defi/compound-lending",
     "examples/defi/aave-flashloan",
     "examples/defi/test-tokens",
+    "examples/defi/real-nep17-token",
+    "examples/defi/real-uniswap-amm",
+    "examples/defi/real-compound-lending",
+    "examples/defi/real-aave-flash",
 ]
 
 [profile.release]
-lto           = "fat"
-opt-level     = 3
+panic = "abort"
+lto = "fat"
+opt-level = 3
 codegen-units = 1
+
+[profile.dev]
+panic = "abort"

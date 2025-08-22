@@ -200,3 +200,23 @@ impl<K: Primitive + 'static + Ord + Clone, V: 'static + Clone> IntoAny for Map<K
         Any(alloc::boxed::Box::new(self))
     }
 }
+
+// Implement Debug for Any
+#[cfg(target_family = "wasm")]
+impl core::fmt::Debug for Any {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("Any")
+            .field(&"<WASM Placeholder>")
+            .finish()
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl core::fmt::Debug for Any {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("Any")
+            .field(&"<Boxed Any>")
+            .finish()
+    }
+}
+

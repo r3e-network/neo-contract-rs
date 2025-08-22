@@ -16,10 +16,10 @@ pub trait NEP26Receiver {
     /// Returns true if the transfer is accepted
     fn on_nep11_payment(
         &mut self,
-        from: H160,
-        amount: Int256,
+        _from: H160,
+        _amount: Int256,
         token_id: ByteString,
-        data: Any,
+        _data: Any,
     ) -> bool;
 }
 
@@ -29,9 +29,9 @@ pub trait NEP27Receiver {
     /// Returns true if the transfer is accepted
     fn on_nep17_payment(
         &mut self,
-        from: H160,
-        amount: Int256,
-        data: Any,
+        _from: H160,
+        _amount: Int256,
+        _data: Any,
     ) -> bool;
 }
 
@@ -197,10 +197,10 @@ macro_rules! impl_nep26_receiver {
         impl NEP26Receiver for $contract {
             fn on_nep11_payment(
                 &mut self,
-                from: H160,
-                amount: Int256,
+                _from: H160,
+                _amount: Int256,
                 token_id: ByteString,
-                data: Any,
+                _data: Any,
             ) -> bool {
                 // Default implementation: accept all transfers
                 true
@@ -216,9 +216,9 @@ macro_rules! impl_nep27_receiver {
         impl NEP27Receiver for $contract {
             fn on_nep17_payment(
                 &mut self,
-                from: H160,
-                amount: Int256,
-                data: Any,
+                _from: H160,
+                _amount: Int256,
+                _data: Any,
             ) -> bool {
                 // Default implementation: accept all transfers
                 true
@@ -252,14 +252,14 @@ impl ReceiverContract {
     }
 
     /// Check if token is accepted
-    fn is_token_accepted(&self, token: H160) -> bool {
+    fn is_token_accepted(&self, _token: H160) -> bool {
         use crate::services::runtime::Runtime;
         let caller = Runtime::get_calling_script_hash();
         self.accepted_tokens.iter().any(|&t| t == caller)
     }
 
     /// Check if NFT is accepted
-    fn is_nft_accepted(&self, nft: H160) -> bool {
+    fn is_nft_accepted(&self, _nft: H160) -> bool {
         use crate::services::runtime::Runtime;
         let caller = Runtime::get_calling_script_hash();
         self.accepted_nfts.iter().any(|&n| n == caller)

@@ -485,10 +485,9 @@ impl PartialOrd for Int256 {
 
 #[cfg(target_family = "wasm")]
 impl Ord for Int256 {
-    fn cmp(&self, _other: &Self) -> core::cmp::Ordering {
-        // For WASM target, we can't actually compare placeholders
-        // This is a placeholder implementation
-        core::cmp::Ordering::Equal
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        // For WASM target, compare the placeholder values
+        self.0.cmp(&other.0)
     }
 }
 

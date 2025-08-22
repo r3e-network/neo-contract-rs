@@ -124,7 +124,7 @@ pub type Result<T> = core::result::Result<T, crate::error::ContractError>;
 pub struct Pda;
 
 impl Pda {
-    pub fn find_program_address(seeds: &[&[u8]], program_id: &H160) -> (H160, u8) {
+    pub fn find_program_address(seeds: &[&[u8]], _program_id: &H160) -> (H160, u8) {
         for bump in (0..=255).rev() {
             let mut seed_data = alloc::vec::Vec::new();
             for seed in seeds {

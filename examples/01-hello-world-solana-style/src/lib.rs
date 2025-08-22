@@ -1,7 +1,21 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
+
 use neo_contract::prelude::*;
+
+// WASM global allocator
+extern crate wee_alloc;
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+// Panic handler for WASM no_std builds
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
+}
 
 declare_id!("NeoHelloWorldContract123456789");
 
@@ -9,7 +23,7 @@ declare_id!("NeoHelloWorldContract123456789");
 pub mod hello_world {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, greeting: ByteString) -> Result<()> {
+    pub fn initialize(mut ctx: Context<Initialize>, greeting: ByteString) -> Result<()> {
         let greeting_account = &mut ctx.accounts.greeting_account;
         let authority = &ctx.accounts.authority;
         
@@ -31,7 +45,7 @@ pub mod hello_world {
         Ok(greeting_account.data.greeting.clone())
     }
     
-    pub fn set_greeting(ctx: Context<SetGreeting>, new_greeting: ByteString) -> Result<()> {
+    pub fn set_greeting(mut ctx: Context<SetGreeting>, new_greeting: ByteString) -> Result<()> {
         let greeting_account = &mut ctx.accounts.greeting_account;
         let authority = &ctx.accounts.authority;
         
@@ -51,12 +65,11 @@ pub mod hello_world {
         Ok(())
     }
     
-    pub fn say_hello(ctx: Context<SayHello>, visitor_name: ByteString) -> Result<ByteString> {
+    pub fn say_hello(mut ctx: Context<SayHello>, visitor_name: ByteString) -> Result<ByteString> {
         let greeting_account = &mut ctx.accounts.greeting_account;
         
         greeting_account.data.visitor_count = greeting_account.data.visitor_count
-            .checked_add(&Int256::one())
-            .unwrap_or(Int256::zero());
+            .checked_add(&Int256::one());
         
         let response = ByteString::from_literal("Hello, ");
         
@@ -97,7 +110,7 @@ pub struct SayHello<'info> {
     pub visitor: Signer<'info>,
 }
 
-#[account]
+// Simple struct without Solana-specific attributes
 pub struct GreetingAccount {
     pub authority: H160,
     pub greeting: ByteString,
@@ -105,8 +118,5 @@ pub struct GreetingAccount {
     pub is_initialized: bool,
 }
 
-#[error_code]
-pub enum ContractError {
-    #[msg("Unauthorized access")]
-    Unauthorized,
-}
+// Use the ContractError from prelude instead of defining our own
+// ContractError is already available from neo_contract::prelude

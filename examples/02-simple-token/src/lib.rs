@@ -19,7 +19,20 @@
 #![no_main]
 
 use neo_contract::prelude::*;
+
+// WASM global allocator
+extern crate wee_alloc;
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+// Panic handler for WASM no_std builds
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
+}
 use neo_contract::types::{IntoByteString, FromByteString};
+use neo_contract::serialize::NeoSerializable;
 
 extern crate alloc;
 use alloc::vec::Vec;
@@ -37,9 +50,12 @@ pub struct TokenAccount {
 impl TokenAccount {
     pub fn serialize(&self) -> ByteString {
         let mut data = Vec::new();
-        data.extend_from_slice(&self.mint.to_bytes());
-        data.extend_from_slice(&self.owner.to_bytes());
-        data.extend_from_slice(&self.amount.into_byte_string().to_bytes());
+        let mint_bytes = self.mint.to_bytes();
+        let owner_bytes = self.owner.to_bytes();
+        let amount_bytes = self.amount.into_byte_string().to_bytes();
+        data.extend_from_slice(mint_bytes.as_bytes());
+        data.extend_from_slice(owner_bytes.as_bytes());
+        data.extend_from_slice(&amount_bytes);
         ByteString::from_bytes(&data)
     }
     
@@ -51,11 +67,11 @@ impl TokenAccount {
         
         let mut mint_bytes = [0u8; 20];
         mint_bytes.copy_from_slice(&bytes[0..20]);
-        let mint = H160::from_bytes(&mint_bytes);
+        let mint = H160::from_bytes(&mint_bytes).map_err(|_| SimpleTokenError::InvalidAccountData)?;
         
         let mut owner_bytes = [0u8; 20];
         owner_bytes.copy_from_slice(&bytes[20..40]);
-        let owner = H160::from_bytes(&owner_bytes);
+        let owner = H160::from_bytes(&owner_bytes).map_err(|_| SimpleTokenError::InvalidAccountData)?;
         
         let amount_bytes = ByteString::from_bytes(&bytes[40..]);
         let amount = Int256::from_byte_string(amount_bytes);
@@ -86,8 +102,10 @@ impl MintAccount {
         data.extend_from_slice(&(symbol_bytes.len() as u32).to_le_bytes());
         data.extend_from_slice(&symbol_bytes);
         data.extend_from_slice(&self.max_supply.into_byte_string().to_bytes());
-        data.extend_from_slice(&self.mint_authority.to_bytes());
-        data.extend_from_slice(&self.freeze_authority.to_bytes());
+        let mint_auth_bytes = self.mint_authority.to_bytes();
+        let freeze_auth_bytes = self.freeze_authority.to_bytes();
+        data.extend_from_slice(mint_auth_bytes.as_bytes());
+        data.extend_from_slice(freeze_auth_bytes.as_bytes());
         data.push(if self.is_mintable { 1 } else { 0 });
         data.push(if self.is_frozen { 1 } else { 0 });
         ByteString::from_bytes(&data)
@@ -117,9 +135,9 @@ impl MintAccount {
         let max_supply = Int256::from_byte_string(max_supply_bytes);
         offset += 32;
         
-        let mint_authority = H160::from_bytes(&bytes[offset..offset+20]);
+        let mint_authority = H160::from_bytes(&bytes[offset..offset+20]).map_err(|_| SimpleTokenError::InvalidAccountData)?;
         offset += 20;
-        let freeze_authority = H160::from_bytes(&bytes[offset..offset+20]);
+        let freeze_authority = H160::from_bytes(&bytes[offset..offset+20]).map_err(|_| SimpleTokenError::InvalidAccountData)?;
         offset += 20;
         
         let is_mintable = bytes[offset] != 0;

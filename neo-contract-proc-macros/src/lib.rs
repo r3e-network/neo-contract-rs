@@ -472,7 +472,7 @@ pub fn program(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -
 /// }
 /// ```
 #[proc_macro_derive(Accounts, attributes(account))]
-pub fn Accounts(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn accounts(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     program::expand_derive_accounts(input)
 }
 
@@ -519,7 +519,7 @@ pub fn declare_id(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// }
 /// ```
 #[proc_macro_derive(ErrorCode, attributes(msg))]
-pub fn ErrorCode(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn error_code(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     program::expand_error_code(input)
 }
 
@@ -531,7 +531,7 @@ pub fn event(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> 
 
 /// Alias for ErrorCode derive macro (for compatibility)
 #[proc_macro_attribute]
-pub fn error_code(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn error_code_attr(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     use quote::quote;
     use syn::parse_macro_input;
     

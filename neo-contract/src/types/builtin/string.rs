@@ -27,29 +27,42 @@ impl ByteString {
     /// Note: For WASM target, this creates from literal for now
     /// In a full implementation, this would use proper byte conversion
     #[inline(always)]
-    pub fn from_bytes(_bytes: &[u8]) -> Self {
-        // For WASM target, we'll need to implement this properly
-        // For now, return empty string as placeholder
-        Self::empty()
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        #[cfg(target_family = "wasm")]
+        {
+            Self { data: bytes.to_vec() }
+        }
+        #[cfg(not(target_family = "wasm"))]
+        {
+            Self { data: bytes.to_vec() }
+        }
     }
 
     /// Returns the underlying bytes as a vector (WASM version)
-    /// Note: For WASM target, this is a placeholder implementation
-    /// In a full implementation, this would extract actual bytes
     #[inline(always)]
     pub fn to_bytes(&self) -> alloc::vec::Vec<u8> {
-        // For WASM target, we'll need to implement this properly
-        // For now, return empty vector as placeholder
-        alloc::vec![]
+        #[cfg(target_family = "wasm")]
+        {
+            // For WASM target, use the internal data
+            self.data.clone()
+        }
+        #[cfg(not(target_family = "wasm"))]
+        {
+            self.data.clone()
+        }
     }
 
     /// Returns the underlying bytes as a slice (WASM version)
-    /// Note: For WASM target, this is a placeholder implementation
     #[inline(always)]
     pub fn as_bytes(&self) -> &[u8] {
-        // For WASM target, we'll need to implement this properly
-        // For now, return empty slice as placeholder
-        &[]
+        #[cfg(target_family = "wasm")]
+        {
+            &self.data
+        }
+        #[cfg(not(target_family = "wasm"))]
+        {
+            &self.data
+        }
     }
 
     /// Creates a ByteString from a byte slice (WASM version)

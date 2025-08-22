@@ -14,7 +14,21 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
 use neo_contract::prelude::*;
+
+// WASM global allocator
+extern crate wee_alloc;
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+// Panic handler for WASM no_std builds
+#[cfg(target_arch = "wasm32")]
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
+}
+use neo_contract::serialize::NeoSerializable;
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
 
 mod types;

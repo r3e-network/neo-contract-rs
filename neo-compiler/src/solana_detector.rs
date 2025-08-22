@@ -173,10 +173,16 @@ impl<'a> SolanaStyleDetector<'a> {
             "create", "update", "delete", "close",
             "deposit", "withdraw", "stake", "unstake",
             "swap", "add_liquidity", "remove_liquidity",
+            // Additional Neo N3 Solana-style patterns
+            "increment", "decrement", "get_count", "reset",
+            "store_string", "get_string", "delete_string", "get_total_items",
+            "store", "retrieve", "get_owner", "set_greeting", "say_hello",
+            "get_greeting", "demonstrate_storage", "get_stored_value",
+            "get_time", "get_script_hash",
         ];
         
         let lower_name = name.to_lowercase();
-        common_handlers.iter().any(|h| lower_name == *h)
+        common_handlers.iter().any(|h| lower_name == *h || lower_name.contains(h))
     }
 
     /// Check if handler likely has a Context parameter
@@ -241,10 +247,22 @@ impl<'a> SolanaStyleDetector<'a> {
     /// Infer return type for a method based on its name
     fn infer_return_type(&self, name: &str) -> String {
         match name {
+            // Standard token methods
             "balance_of" | "total_supply" | "decimals" | "allowance" => "Integer",
             "symbol" | "name" => "String",
             "transfer" | "transfer_from" | "approve" | "mint" | "burn" => "Boolean",
             "owner_of" => "Hash160",
+            // Neo N3 Solana-style methods
+            "increment" | "decrement" | "get_count" | "get_total_items" => "Integer",
+            "get_owner" | "get_script_hash" => "Hash160", 
+            "get_string" | "get_stored_value" | "get_greeting" | "say_hello" => "String",
+            "get_time" => "Integer",
+            "is_initialized" => "Boolean",
+            // Methods that typically return bool for success/failure
+            "store" | "store_string" | "delete_string" | "reset" | "set_greeting" |
+            "demonstrate_storage" => "Boolean",
+            // Getters that return optional values (simplified to base type)
+            "retrieve" => "String",
             _ => "Void",
         }.to_string()
     }

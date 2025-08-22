@@ -3,6 +3,7 @@
 //! Centralized storage key management and utility functions for the NFT marketplace.
 
 use neo_contract::prelude::*;
+use neo_contract::serialize::NeoSerializable;
 use neo_contract::types::{IntoByteString, FromByteString};
 
 /// Storage keys for the marketplace contract

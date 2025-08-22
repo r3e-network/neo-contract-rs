@@ -24,7 +24,7 @@ pub mod neo_features;
 pub mod utils;
 pub mod serialization;
 
-pub use neo_contract_proc_macros::{contract, structs, program, account as account_attr, declare_id, event, init_if_needed, error_code};
+pub use neo_contract_proc_macros::{contract, structs, program, account as account_attr, declare_id, event, init_if_needed, error_code_attr as error_code};
 
 // Re-export derive macros
 pub use neo_contract_proc_macros::Accounts;
@@ -104,7 +104,7 @@ pub mod prelude {
     pub use crate::error::ContractError;
     
     // Re-export derive macros and macros
-    pub use neo_contract_proc_macros::{Accounts, ErrorCode, program, account as account_attr, declare_id, event, init_if_needed, error_code};
+    pub use neo_contract_proc_macros::{Accounts, ErrorCode, program, account as account_attr, declare_id, event, init_if_needed, error_code_attr as error_code};
     pub use crate::{require, require_eq, require_neq, require_gt, require_gte, require_keys_eq, require_keys_neq};
     
     // Utility macros for no_std

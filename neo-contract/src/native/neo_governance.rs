@@ -171,7 +171,7 @@ impl NeoGovernance {
         );
 
         // Try to get the array and parse the account state
-        if let Some(arr) = result.as_array::<Any>() {
+        if let Some(_arr) = result.as_array::<Any>() {
             // In a real implementation, we would parse the array elements
             // For now, return default
             AccountState::default()

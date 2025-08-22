@@ -1,0 +1,69 @@
+{
+  "name": "Contract",
+  "groups": [],
+  "features": {
+    "storage": true,
+    "payable": false
+  },
+  "supported_standards": [],
+  "abi": {
+    "methods": [
+      {
+        "name": "demonstrate_storage",
+        "parameters": [],
+        "returntype": "Boolean",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "get_owner",
+        "parameters": [],
+        "returntype": "Hash160",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "is_initialized",
+        "parameters": [],
+        "returntype": "Boolean",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "get_stored_value",
+        "parameters": [],
+        "returntype": "String",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "initialize",
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      }
+    ],
+    "events": []
+  },
+  "permissions": [
+    {
+      "contract": "*",
+      "methods": [
+        "*"
+      ]
+    }
+  ],
+  "trusts": [
+    "*"
+  ],
+  "extra": {
+    "compiler": "neo-compiler",
+    "style": "solana"
+  }
+}
