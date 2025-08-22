@@ -458,7 +458,7 @@ impl MemoryModelTranslator {
             },
             4 => {
                 // Load 4 bytes (i32) with proper little-endian handling
-                let mut addresses = Vec::new();
+                let mut _addresses: Vec<usize> = Vec::new();
                 
                 // Generate addresses for all 4 bytes
                 for offset in 0..4 {
