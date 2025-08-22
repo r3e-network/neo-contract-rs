@@ -32,45 +32,6 @@
         "safe": false
       },
       {
-        "name": "initialize",
-        "parameters": [
-          {
-            "name": "owner",
-            "type": "Hash160"
-          }
-        ],
-        "returntype": "Void",
-        "offset": 0,
-        "safe": false
-      },
-      {
-        "name": "unpause",
-        "parameters": [],
-        "returntype": "Void",
-        "offset": 0,
-        "safe": false
-      },
-      {
-        "name": "transfer",
-        "parameters": [
-          {
-            "name": "from",
-            "type": "Hash160"
-          },
-          {
-            "name": "to",
-            "type": "Hash160"
-          },
-          {
-            "name": "amount",
-            "type": "Integer"
-          }
-        ],
-        "returntype": "Boolean",
-        "offset": 0,
-        "safe": false
-      },
-      {
         "name": "burn",
         "parameters": [
           {
@@ -103,8 +64,47 @@
         "safe": false
       },
       {
+        "name": "unpause",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
         "name": "transferFrom",
         "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "transfer",
+        "parameters": [
+          {
+            "name": "from",
+            "type": "Hash160"
+          },
+          {
+            "name": "to",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "returntype": "Boolean",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "initialize",
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
         "returntype": "Void",
         "offset": 0,
         "safe": false

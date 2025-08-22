@@ -3,17 +3,15 @@
 
 extern crate alloc;
 use alloc::vec::Vec;
+use neo_contract::prelude::*;
 use core::cmp::min;
 
-// Global allocator for no_std
+// WASM global allocator
+extern crate wee_alloc;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-// Panic handler
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
+// Panic handler removed to avoid conflicts during testing
 
 // Storage keys
 const RESERVE0_KEY: &[u8] = b"reserve0";
@@ -29,7 +27,7 @@ const FEE_RATE: u64 = 3; // 0.3% fee
 
 // Storage module
 mod storage {
-    use alloc::vec::Vec;
+    use neo_contract::prelude::*;
     
     extern "C" {
         fn storage_get(key: *const u8, key_len: u32, value: *mut u8, value_len: u32) -> u32;

@@ -1,0 +1,214 @@
+name: Performance Benchmark
+
+on:
+  push:
+    branches: [ main, develop, jimmy2 ]
+  pull_request:
+    branches: [ main, develop, jimmy2 ]
+  schedule:
+    # Run benchmarks weekly on Sunday at 1 AM UTC
+    - cron: '0 1 * * 0'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  benchmark:
+    name: Performance Benchmarking
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Checkout main branch for comparison
+      if: github.event_name == 'pull_request'
+      uses: actions/checkout@v4
+      with:
+        ref: main
+        path: baseline
+        
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+      
+    - name: Install cargo-criterion
+      run: cargo install cargo-criterion --locked
+      
+    - name: Install hyperfine
+      run: |
+        wget https://github.com/sharkdp/hyperfine/releases/download/v1.18.0/hyperfine_1.18.0_amd64.deb
+        sudo dpkg -i hyperfine_1.18.0_amd64.deb
+        
+    - name: Build optimized binaries
+      run: |
+        cargo build --release --bin neo-compiler
+        
+    - name: Run compilation benchmarks
+      run: |
+        echo "# Performance Benchmark Report - $(date)" > BENCHMARK_SUMMARY.md
+        echo "" >> BENCHMARK_SUMMARY.md
+        
+        # Test compilation speed on different sized contracts
+        echo "## Compilation Performance" >> BENCHMARK_SUMMARY.md
+        echo '```' >> BENCHMARK_SUMMARY.md
+        
+        # Simple contracts
+        echo "### Simple Contracts" >> BENCHMARK_SUMMARY.md
+        for example in hello-world counter simple-storage; do
+          if [ -d "examples/*$example*" ]; then
+            echo "Benchmarking $example..." >> BENCHMARK_SUMMARY.md
+            hyperfine --warmup 3 --runs 10 \
+              "cargo build --release -p $example" \
+              --export-markdown "$example-bench.md" 2>&1 >> BENCHMARK_SUMMARY.md || true
+          fi
+        done
+        
+        # Complex contracts
+        echo "" >> BENCHMARK_SUMMARY.md
+        echo "### Complex Contracts" >> BENCHMARK_SUMMARY.md
+        for example in nep17-token multisig-wallet nft-marketplace; do
+          if [ -d "examples/*$example*" ]; then
+            echo "Benchmarking $example..." >> BENCHMARK_SUMMARY.md
+            hyperfine --warmup 2 --runs 5 \
+              "cargo build --release -p $example" \
+              --export-markdown "$example-complex-bench.md" 2>&1 >> BENCHMARK_SUMMARY.md || true
+          fi
+        done
+        
+        echo '```' >> BENCHMARK_SUMMARY.md
+        echo "" >> BENCHMARK_SUMMARY.md
+        
+    - name: Run runtime benchmarks
+      run: |
+        echo "## Runtime Performance" >> BENCHMARK_SUMMARY.md
+        echo '```' >> BENCHMARK_SUMMARY.md
+        
+        # Test NEF file generation speed
+        echo "### NEF Generation Performance" >> BENCHMARK_SUMMARY.md
+        for wasm_file in $(find target/wasm32-unknown-unknown/release -name "*.wasm" | head -5); do
+          if [ -f "$wasm_file" ]; then
+            echo "Benchmarking NEF generation for $(basename $wasm_file)..." >> BENCHMARK_SUMMARY.md
+            hyperfine --warmup 3 --runs 10 \
+              "./target/release/neo-compiler compile $wasm_file output.nef" \
+              2>&1 >> BENCHMARK_SUMMARY.md || true
+          fi
+        done
+        
+        echo '```' >> BENCHMARK_SUMMARY.md
+        echo "" >> BENCHMARK_SUMMARY.md
+        
+    - name: Memory usage analysis
+      run: |
+        echo "## Memory Usage Analysis" >> BENCHMARK_SUMMARY.md
+        echo '```' >> BENCHMARK_SUMMARY.md
+        
+        # Analyze memory usage during compilation
+        echo "### Compilation Memory Usage" >> BENCHMARK_SUMMARY.md
+        /usr/bin/time -v cargo build --release --workspace 2>&1 | \
+          grep -E "(Maximum resident|Average resident|Page reclaims|Page faults)" >> BENCHMARK_SUMMARY.md || true
+          
+        echo '```' >> BENCHMARK_SUMMARY.md
+        echo "" >> BENCHMARK_SUMMARY.md
+        
+    - name: Binary size analysis
+      run: |
+        echo "## Binary Size Analysis" >> BENCHMARK_SUMMARY.md
+        echo '```' >> BENCHMARK_SUMMARY.md
+        
+        # Analyze WASM binary sizes
+        echo "### WASM Binary Sizes" >> BENCHMARK_SUMMARY.md
+        find target/wasm32-unknown-unknown/release -name "*.wasm" -exec ls -lh {} \; | \
+          sort -k5 -hr | head -10 >> BENCHMARK_SUMMARY.md || true
+          
+        # Analyze NEF file sizes (if any exist)
+        echo "" >> BENCHMARK_SUMMARY.md
+        echo "### NEF File Sizes" >> BENCHMARK_SUMMARY.md
+        find . -name "*.nef" -exec ls -lh {} \; | \
+          sort -k5 -hr | head -10 >> BENCHMARK_SUMMARY.md || true
+          
+        echo '```' >> BENCHMARK_SUMMARY.md
+        echo "" >> BENCHMARK_SUMMARY.md
+        
+    - name: Performance regression check
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "## Regression Analysis" >> BENCHMARK_SUMMARY.md
+        echo '```' >> BENCHMARK_SUMMARY.md
+        
+        # Compare with baseline (simplified)
+        if [ -d "baseline" ]; then
+          echo "Comparing with main branch baseline..." >> BENCHMARK_SUMMARY.md
+          
+          # Compare build times
+          echo "### Build Time Comparison" >> BENCHMARK_SUMMARY.md
+          cd baseline
+          BASELINE_TIME=$(hyperfine --warmup 1 --runs 3 "cargo build --release --workspace" --export-json baseline.json 2>/dev/null | jq '.results[0].mean' || echo "0")
+          cd ..
+          CURRENT_TIME=$(hyperfine --warmup 1 --runs 3 "cargo build --release --workspace" --export-json current.json 2>/dev/null | jq '.results[0].mean' || echo "0")
+          
+          echo "Baseline: ${BASELINE_TIME}s" >> BENCHMARK_SUMMARY.md
+          echo "Current: ${CURRENT_TIME}s" >> BENCHMARK_SUMMARY.md
+          
+          # Calculate regression percentage
+          if [ "$BASELINE_TIME" != "0" ] && [ "$CURRENT_TIME" != "0" ]; then
+            REGRESSION=$(echo "scale=2; (($CURRENT_TIME - $BASELINE_TIME) / $BASELINE_TIME) * 100" | bc -l)
+            echo "Change: ${REGRESSION}%" >> BENCHMARK_SUMMARY.md
+            
+            # Flag significant regressions (>10%)
+            if (( $(echo "$REGRESSION > 10" | bc -l) )); then
+              echo "⚠️  Significant performance regression detected!" >> BENCHMARK_SUMMARY.md
+            elif (( $(echo "$REGRESSION < -5" | bc -l) )); then
+              echo "🚀 Performance improvement detected!" >> BENCHMARK_SUMMARY.md
+            fi
+          fi
+        fi
+        
+        echo '```' >> BENCHMARK_SUMMARY.md
+        echo "" >> BENCHMARK_SUMMARY.md
+        
+    - name: Generate performance report
+      run: |
+        echo "## Performance Standards" >> BENCHMARK_SUMMARY.md
+        echo "" >> BENCHMARK_SUMMARY.md
+        echo "### Target Metrics" >> BENCHMARK_SUMMARY.md
+        echo "- Simple contract compilation: <2s" >> BENCHMARK_SUMMARY.md
+        echo "- Complex contract compilation: <10s" >> BENCHMARK_SUMMARY.md
+        echo "- NEF generation: <1s per contract" >> BENCHMARK_SUMMARY.md
+        echo "- Memory usage: <2GB peak during workspace build" >> BENCHMARK_SUMMARY.md
+        echo "- Binary size regression: <5% increase per PR" >> BENCHMARK_SUMMARY.md
+        echo "" >> BENCHMARK_SUMMARY.md
+        
+        # Add timestamp and commit info
+        echo "### Build Information" >> BENCHMARK_SUMMARY.md
+        echo "- Commit: $GITHUB_SHA" >> BENCHMARK_SUMMARY.md
+        echo "- Runner: $RUNNER_OS" >> BENCHMARK_SUMMARY.md
+        echo "- Timestamp: $(date -u)" >> BENCHMARK_SUMMARY.md
+        
+    - name: Upload benchmark artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-benchmarks
+        path: |
+          BENCHMARK_SUMMARY.md
+          *-bench.md
+          *.json
+        retention-days: 30
+        
+    - name: Comment PR with benchmark results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('BENCHMARK_SUMMARY.md')) {
+            const summary = fs.readFileSync('BENCHMARK_SUMMARY.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+          }

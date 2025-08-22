@@ -9,14 +9,14 @@
   "abi": {
     "methods": [
       {
-        "name": "initialize_pool",
+        "name": "swap",
         "parameters": [],
         "returntype": "Void",
         "offset": 0,
         "safe": false
       },
       {
-        "name": "swap",
+        "name": "initialize_pool",
         "parameters": [],
         "returntype": "Void",
         "offset": 0,

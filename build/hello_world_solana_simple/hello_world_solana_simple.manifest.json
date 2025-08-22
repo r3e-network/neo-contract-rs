@@ -9,13 +9,6 @@
   "abi": {
     "methods": [
       {
-        "name": "get_greeting",
-        "parameters": [],
-        "returntype": "String",
-        "offset": 0,
-        "safe": true
-      },
-      {
         "name": "initialize",
         "parameters": [
           {
@@ -46,6 +39,13 @@
         "returntype": "Boolean",
         "offset": 0,
         "safe": false
+      },
+      {
+        "name": "get_greeting",
+        "parameters": [],
+        "returntype": "String",
+        "offset": 0,
+        "safe": true
       },
       {
         "name": "set_greeting",

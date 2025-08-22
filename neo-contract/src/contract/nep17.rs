@@ -3,6 +3,7 @@
 
 use crate::{
     contract::token,
+    error::{ContractError, Result},
     runtime,
     storage::StorageMap,
     types::{
@@ -135,7 +136,16 @@ pub fn update_nep17_total_supply<const KEY: u8>(amount: Int256) {
     let total_supply = if value.is_null() {
         Int256::zero()
     } else {
-        Int256::from_byte_string(value.unwrap())
+        // Safe deserialization with error handling
+        match try_safe_from_byte_string(value) {
+            Ok(amount) => amount,
+            Err(_) => {
+                // Log warning and use zero for corrupted total supply
+                #[cfg(debug_assertions)]
+                crate::runtime::log(ByteString::from_literal("Warning: Corrupted total supply data"));
+                Int256::zero()
+            }
+        }
     };
 
     let new_total_supply = total_supply.checked_add(&amount);
@@ -145,4 +155,27 @@ pub fn update_nep17_total_supply<const KEY: u8>(amount: Int256) {
     }
 
     storage.put(key, new_total_supply.into_byte_string());
+}
+
+/// Safe ByteString to Int256 conversion with error handling
+fn try_safe_from_byte_string(value: crate::types::builtin::nullable::Nullable<ByteString>) -> Result<Int256> {
+    if value.is_null() {
+        return Ok(Int256::zero());
+    }
+    
+    // Extract the value using unwrap_or for fallback
+    let byte_string = value.unwrap_or(ByteString::empty());
+    
+    // Validate byte string length
+    if byte_string.as_bytes().len() > Int256::SIZE {
+        return Err(ContractError::InvalidArgument);
+    }
+    
+    // Handle empty case
+    if byte_string.is_empty() {
+        return Ok(Int256::zero());
+    }
+    
+    // Safe conversion
+    Ok(Int256::from_byte_string(byte_string))
 }

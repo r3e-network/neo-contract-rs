@@ -409,6 +409,7 @@ pub enum StepResult {
 }
 
 impl StepResult {
+    #[allow(dead_code)]
     fn new(position: usize, opcode: OpCode, operands: Vec<u8>, next_position: usize) -> Self {
         StepResult::Normal {
             position,

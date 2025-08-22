@@ -16,10 +16,10 @@ pub trait NEP26Receiver {
     /// Returns true if the transfer is accepted
     fn on_nep11_payment(
         &mut self,
-        _from: H160,
-        _amount: Int256,
+        from: H160,
+        amount: Int256,
         token_id: ByteString,
-        _data: Any,
+        data: Any,
     ) -> bool;
 }
 
@@ -29,9 +29,9 @@ pub trait NEP27Receiver {
     /// Returns true if the transfer is accepted
     fn on_nep17_payment(
         &mut self,
-        _from: H160,
-        _amount: Int256,
-        _data: Any,
+        from: H160,
+        amount: Int256,
+        data: Any,
     ) -> bool;
 }
 
@@ -41,7 +41,7 @@ pub struct TransferCallback;
 impl TransferCallback {
     /// Invoke NEP-26 callback for NFT transfer
     pub fn invoke_nep26_callback(
-        contract: H160,
+        _contract: H160,
         from: H160,
         to: H160,
         amount: Int256,
@@ -72,7 +72,7 @@ impl TransferCallback {
 
     /// Invoke NEP-27 callback for token transfer
     pub fn invoke_nep27_callback(
-        contract: H160,
+        _contract: H160,
         from: H160,
         to: H160,
         amount: Int256,
@@ -197,10 +197,10 @@ macro_rules! impl_nep26_receiver {
         impl NEP26Receiver for $contract {
             fn on_nep11_payment(
                 &mut self,
-                _from: H160,
-                _amount: Int256,
+                from: H160,
+                amount: Int256,
                 token_id: ByteString,
-                _data: Any,
+                data: Any,
             ) -> bool {
                 // Default implementation: accept all transfers
                 true
@@ -216,9 +216,9 @@ macro_rules! impl_nep27_receiver {
         impl NEP27Receiver for $contract {
             fn on_nep17_payment(
                 &mut self,
-                _from: H160,
-                _amount: Int256,
-                _data: Any,
+                from: H160,
+                amount: Int256,
+                data: Any,
             ) -> bool {
                 // Default implementation: accept all transfers
                 true
@@ -269,10 +269,10 @@ impl ReceiverContract {
 impl NEP26Receiver for ReceiverContract {
     fn on_nep11_payment(
         &mut self,
-        from: H160,
-        amount: Int256,
-        token_id: ByteString,
-        data: Any,
+        _from: H160,
+        _amount: Int256,
+        _token_id: ByteString,
+        _data: Any,
     ) -> bool {
         use crate::services::runtime::Runtime;
         
@@ -294,9 +294,9 @@ impl NEP26Receiver for ReceiverContract {
 impl NEP27Receiver for ReceiverContract {
     fn on_nep17_payment(
         &mut self,
-        from: H160,
-        amount: Int256,
-        data: Any,
+        _from: H160,
+        _amount: Int256,
+        _data: Any,
     ) -> bool {
         use crate::services::runtime::Runtime;
         

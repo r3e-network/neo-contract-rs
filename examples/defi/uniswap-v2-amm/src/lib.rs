@@ -2,17 +2,15 @@
 #![no_main]
 
 extern crate alloc;
-use alloc::vec::Vec;
+use neo_contract::prelude::*;
 
-// Global allocator for no_std
+// WASM global allocator
+extern crate wee_alloc;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-// Panic handler for no_std
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
+#[cfg(target_arch = "wasm32")]
+// Panic handler removed to avoid conflicts during testing
 
 /// Uniswap V2 AMM - Simplified for WASM compilation
 /// Implements constant product formula: x * y = k

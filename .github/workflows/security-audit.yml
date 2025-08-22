@@ -1,0 +1,142 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, develop, jimmy2 ]
+  pull_request:
+    branches: [ main, develop, jimmy2 ]
+  schedule:
+    # Run security audit daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy, rustfmt
+        
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+      
+    - name: Install cargo-audit
+      run: cargo install cargo-audit --locked
+      
+    - name: Install cargo-deny
+      run: cargo install cargo-deny --locked
+      
+    - name: Install cargo-outdated
+      run: cargo install cargo-outdated --locked
+      
+    - name: Run dependency security audit
+      run: cargo audit --json > audit-report.json || true
+      
+    - name: Run license and dependency check
+      run: cargo deny check --log-level warn
+      
+    - name: Check for outdated dependencies
+      run: cargo outdated --exit-code 1 > outdated-report.txt || true
+      
+    - name: Run Clippy security lints
+      run: |
+        cargo clippy --all-targets --all-features -- \
+          -W clippy::all \
+          -W clippy::suspicious \
+          -W clippy::complexity \
+          -W clippy::perf \
+          -W clippy::style \
+          -W clippy::pedantic \
+          -D clippy::unwrap_used \
+          -D clippy::expect_used \
+          -D clippy::panic \
+          -D clippy::unimplemented \
+          -D clippy::unreachable \
+          > clippy-report.txt 2>&1 || true
+          
+    - name: Check for unsafe code blocks
+      run: |
+        echo "=== Unsafe Code Blocks ===" > unsafe-report.txt
+        find . -name "*.rs" -exec grep -Hn "unsafe" {} \; >> unsafe-report.txt || true
+        
+    - name: Generate security summary
+      run: |
+        echo "# Security Audit Summary - $(date)" > SECURITY_SUMMARY.md
+        echo "" >> SECURITY_SUMMARY.md
+        
+        echo "## Dependency Vulnerabilities" >> SECURITY_SUMMARY.md
+        if [ -f audit-report.json ]; then
+          echo '```json' >> SECURITY_SUMMARY.md
+          head -20 audit-report.json >> SECURITY_SUMMARY.md
+          echo '```' >> SECURITY_SUMMARY.md
+        else
+          echo "No vulnerabilities found" >> SECURITY_SUMMARY.md
+        fi
+        echo "" >> SECURITY_SUMMARY.md
+        
+        echo "## Outdated Dependencies" >> SECURITY_SUMMARY.md
+        if [ -f outdated-report.txt ]; then
+          echo '```' >> SECURITY_SUMMARY.md
+          head -20 outdated-report.txt >> SECURITY_SUMMARY.md
+          echo '```' >> SECURITY_SUMMARY.md
+        else
+          echo "All dependencies up to date" >> SECURITY_SUMMARY.md
+        fi
+        echo "" >> SECURITY_SUMMARY.md
+        
+        echo "## Code Quality Issues" >> SECURITY_SUMMARY.md
+        if [ -f clippy-report.txt ]; then
+          echo '```' >> SECURITY_SUMMARY.md
+          head -30 clippy-report.txt >> SECURITY_SUMMARY.md
+          echo '```' >> SECURITY_SUMMARY.md
+        else
+          echo "No code quality issues found" >> SECURITY_SUMMARY.md
+        fi
+        echo "" >> SECURITY_SUMMARY.md
+        
+        echo "## Unsafe Code Usage" >> SECURITY_SUMMARY.md
+        if [ -f unsafe-report.txt ] && [ -s unsafe-report.txt ]; then
+          echo '```' >> SECURITY_SUMMARY.md
+          head -20 unsafe-report.txt >> SECURITY_SUMMARY.md
+          echo '```' >> SECURITY_SUMMARY.md
+        else
+          echo "No unsafe code blocks found" >> SECURITY_SUMMARY.md
+        fi
+        
+    - name: Upload audit artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-audit-reports
+        path: |
+          audit-report.json
+          outdated-report.txt
+          clippy-report.txt
+          unsafe-report.txt
+          SECURITY_SUMMARY.md
+        retention-days: 30
+        
+    - name: Comment PR with security summary
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('SECURITY_SUMMARY.md')) {
+            const summary = fs.readFileSync('SECURITY_SUMMARY.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+          }

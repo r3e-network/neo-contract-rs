@@ -10,10 +10,7 @@ use wee_alloc::WeeAlloc;
 static ALLOC: WeeAlloc = WeeAlloc::INIT;
 
 // Panic handler for no_std
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
+// Panic handler removed to avoid conflicts during testing
 
 // NEP-17 Token Implementation
 // This is a simplified version that will compile

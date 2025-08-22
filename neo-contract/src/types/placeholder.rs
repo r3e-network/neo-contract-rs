@@ -31,6 +31,29 @@ impl Clone for Placeholder {
 
 impl Copy for Placeholder {}
 
+impl PartialEq for Placeholder {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Eq for Placeholder {}
+
+impl PartialOrd for Placeholder {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Placeholder {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
 pub trait FromPlaceholder {
     fn from_placeholder(placeholder: Placeholder) -> Self;
 }

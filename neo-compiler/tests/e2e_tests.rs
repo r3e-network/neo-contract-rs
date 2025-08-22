@@ -132,55 +132,43 @@ extern crate alloc;
 use alloc::string::String;
 use neo_contract::prelude::*;
 
-declare_id!("TestProgram");
+#[contract_author("Test Contract")]
+#[contract_version("1.0.0")]
+pub struct TestContract {
+    is_initialized: bool,
+    value: u64,
+}
 
-#[program]
-pub mod test_program {
-    use super::*;
+#[contract_impl]
+impl TestContract {
+    pub fn init() -> Self {
+        Self {
+            is_initialized: false,
+            value: 0,
+        }
+    }
     
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        let state = &mut ctx.accounts.state;
-        state.is_initialized = true;
-        state.value = 42;
+    #[method]
+    pub fn initialize(&mut self) -> Result<()> {
+        require!(!self.is_initialized, ContractError::AlreadyInitialized);
+        self.is_initialized = true;
+        self.value = 42;
+        notify!("Initialized", self.value);
         Ok(())
     }
     
-    pub fn get_value(ctx: Context<GetValue>) -> Result<u64> {
-        Ok(ctx.accounts.state.value)
+    #[method]
+    #[safe]
+    pub fn get_value(&self) -> u64 {
+        self.value
     }
     
-    pub fn set_value(ctx: Context<SetValue>, value: u64) -> Result<()> {
-        let state = &mut ctx.accounts.state;
-        state.value = value;
+    #[method]
+    pub fn set_value(&mut self, value: u64) -> Result<()> {
+        self.value = value;
+        notify!("ValueChanged", value);
         Ok(())
     }
-}
-
-#[derive(Accounts)]
-pub struct Initialize<'info> {
-    #[account(init, payer = authority, space = 8 + 40)]
-    pub state: Account<'info, StateAccount>,
-    #[account(mut)]
-    pub authority: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct GetValue<'info> {
-    pub state: Account<'info, StateAccount>,
-}
-
-#[derive(Accounts)]
-pub struct SetValue<'info> {
-    #[account(mut)]
-    pub state: Account<'info, StateAccount>,
-    pub authority: Signer<'info>,
-}
-
-#[account]
-pub struct StateAccount {
-    pub is_initialized: bool,
-    pub value: u64,
 }
 "#;
 

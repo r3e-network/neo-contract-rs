@@ -7,7 +7,48 @@
   },
   "supported_standards": [],
   "abi": {
-    "methods": [],
+    "methods": [
+      {
+        "name": "say_hello",
+        "parameters": [],
+        "returntype": "String",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "initialize",
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "is_initialized",
+        "parameters": [],
+        "returntype": "Boolean",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "get_greeting",
+        "parameters": [],
+        "returntype": "String",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "set_greeting",
+        "parameters": [],
+        "returntype": "Boolean",
+        "offset": 0,
+        "safe": false
+      }
+    ],
     "events": []
   },
   "permissions": [
@@ -21,5 +62,8 @@
   "trusts": [
     "*"
   ],
-  "extra": null
+  "extra": {
+    "compiler": "neo-compiler",
+    "style": "solana"
+  }
 }

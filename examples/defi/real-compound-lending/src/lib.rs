@@ -2,18 +2,14 @@
 #![no_main]
 
 extern crate alloc;
-use alloc::vec::Vec;
+use neo_contract::prelude::*;
 use core::cmp::min;
 
 // Global allocator
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-// Panic handler
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
+// Panic handler removed to avoid conflicts during testing
 
 // Constants
 const BLOCKS_PER_YEAR: u64 = 2_102_400; // ~15 seconds per block
@@ -48,7 +44,7 @@ struct Market {
 
 // Storage module
 mod storage {
-    use alloc::vec::Vec;
+    use neo_contract::prelude::*;
     
     extern "C" {
         fn storage_get(key: *const u8, key_len: u32, value: *mut u8, value_len: u32) -> u32;

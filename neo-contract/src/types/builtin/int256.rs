@@ -211,32 +211,98 @@ impl Int256 {
 
     pub fn checked_add(&self, other: &Self) -> Self {
         use num_traits::CheckedAdd;
-        Self(self.0.checked_add(&other.0).unwrap())
+        match self.0.checked_add(&other.0) {
+            Some(result) => Self(result),
+            None => {
+                // Arithmetic overflow - use runtime abort for safety
+                #[cfg(debug_assertions)]
+                panic!("Int256::checked_add: arithmetic overflow");
+                #[cfg(not(debug_assertions))]
+                crate::runtime::abort();
+                #[allow(unreachable_code)]
+                Self::zero() // Unreachable but needed for compilation
+            }
+        }
     }
 
     pub fn checked_inc(&self) -> Self {
         use num_traits::CheckedAdd;
-        Self(self.0.checked_add(&num256::Int256::from(1)).unwrap())
+        match self.0.checked_add(&num256::Int256::from(1)) {
+            Some(result) => Self(result),
+            None => {
+                // Arithmetic overflow - use runtime abort for safety
+                #[cfg(debug_assertions)]
+                panic!("Int256::checked_inc: arithmetic overflow");
+                #[cfg(not(debug_assertions))]
+                crate::runtime::abort();
+                #[allow(unreachable_code)]
+                Self::zero() // Unreachable but needed for compilation
+            }
+        }
     }
 
     pub fn checked_sub(&self, other: &Self) -> Self {
         use num_traits::CheckedSub;
-        Self(self.0.checked_sub(&other.0).unwrap())
+        match self.0.checked_sub(&other.0) {
+            Some(result) => Self(result),
+            None => {
+                // Arithmetic overflow - use runtime abort for safety
+                #[cfg(debug_assertions)]
+                panic!("Int256::checked_sub: arithmetic underflow");
+                #[cfg(not(debug_assertions))]
+                crate::runtime::abort();
+                #[allow(unreachable_code)]
+                Self::zero() // Unreachable but needed for compilation
+            }
+        }
     }
 
     pub fn checked_dec(&self) -> Self {
         use num_traits::CheckedSub;
-        Self(self.0.checked_sub(&num256::Int256::from(1)).unwrap())
+        match self.0.checked_sub(&num256::Int256::from(1)) {
+            Some(result) => Self(result),
+            None => {
+                // Arithmetic overflow - use runtime abort for safety
+                #[cfg(debug_assertions)]
+                panic!("Int256::checked_dec: arithmetic underflow");
+                #[cfg(not(debug_assertions))]
+                crate::runtime::abort();
+                #[allow(unreachable_code)]
+                Self::zero() // Unreachable but needed for compilation
+            }
+        }
     }
 
     pub fn checked_mul(&self, other: &Self) -> Self {
         use num_traits::CheckedMul;
-        Self(self.0.checked_mul(&other.0).unwrap())
+        match self.0.checked_mul(&other.0) {
+            Some(result) => Self(result),
+            None => {
+                // Arithmetic overflow - use runtime abort for safety
+                #[cfg(debug_assertions)]
+                panic!("Int256::checked_mul: arithmetic overflow");
+                #[cfg(not(debug_assertions))]
+                crate::runtime::abort();
+                #[allow(unreachable_code)]
+                Self::zero() // Unreachable but needed for compilation
+            }
+        }
     }
 
     pub fn checked_div(&self, other: &Self) -> Self {
         use num_traits::CheckedDiv;
-        Self(self.0.checked_div(&other.0).unwrap())
+        match self.0.checked_div(&other.0) {
+            Some(result) => Self(result),
+            None => {
+                // Division by zero or overflow - use runtime abort for safety
+                #[cfg(debug_assertions)]
+                panic!("Int256::checked_div: division by zero or overflow");
+                #[cfg(not(debug_assertions))]
+                crate::runtime::abort();
+                #[allow(unreachable_code)]
+                Self::zero() // Unreachable but needed for compilation
+            }
+        }
     }
 
     pub fn checked_mod(&self, other: &Self) -> Self {
@@ -301,7 +367,18 @@ impl Int256 {
             panic!("Int256::checked_sqrt: negative value");
         }
 
-        Self(self.0.sqrt().to_int256().unwrap())
+        match self.0.sqrt().to_int256() {
+            Some(result) => Self(result),
+            None => {
+                // Square root conversion failed - use runtime abort for safety
+                #[cfg(debug_assertions)]
+                panic!("Int256::checked_sqrt: square root conversion failed");
+                #[cfg(not(debug_assertions))]
+                crate::runtime::abort();
+                #[allow(unreachable_code)]
+                Self::zero() // Unreachable but needed for compilation
+            }
+        }
     }
 
     // pub fn checked_mulmod(&self, other: &Self, modulus: &Self) -> Self {}

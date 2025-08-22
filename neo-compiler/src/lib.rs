@@ -7,10 +7,13 @@ use wasmparser::{Parser, Payload, ValType};
 
 pub mod debug;
 pub mod manifest;
+pub mod memory_model;
 pub mod nef;
 pub mod opcodes;
+pub mod optimizer;
 pub mod solana_detector;
 pub mod translator;
+pub mod wasm_parser;
 
 use manifest::Manifest;
 use nef::Nef3;
@@ -85,6 +88,10 @@ impl NeoCompiler {
 
         // Translate to NEF
         let mut translator = WasmTranslator::new(self.debug);
+        
+        // Pass WASM bytes to translator for enhanced instruction translation
+        translator.set_wasm_bytes(wasm_bytes.clone());
+        
         let nef = translator.translate(&module, &manifest, &self.source)?;
 
         // Prepare output paths

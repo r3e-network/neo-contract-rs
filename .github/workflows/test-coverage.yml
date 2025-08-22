@@ -1,0 +1,129 @@
+name: Test Coverage
+
+on:
+  push:
+    branches: [ main, develop, jimmy2 ]
+  pull_request:
+    branches: [ main, develop, jimmy2 ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: '-Cinstrument-coverage'
+  LLVM_PROFILE_FILE: 'cargo-test-%p-%m.profraw'
+
+jobs:
+  coverage:
+    name: Test Coverage Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: llvm-tools-preview
+        
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+      
+    - name: Install cargo-llvm-cov
+      run: cargo install cargo-llvm-cov --locked
+      
+    - name: Install grcov
+      run: cargo install grcov --locked
+      
+    - name: Run tests with coverage
+      run: |
+        cargo llvm-cov --workspace --lcov --output-path lcov.info \
+          --ignore-filename-regex "(tests|examples)" \
+          --exclude-from-test
+          
+    - name: Generate detailed coverage report
+      run: |
+        cargo llvm-cov report --html --output-dir coverage-html \
+          --ignore-filename-regex "(tests|examples)" \
+          --exclude-from-test
+          
+    - name: Generate coverage summary
+      run: |
+        echo "# Test Coverage Report - $(date)" > COVERAGE_SUMMARY.md
+        echo "" >> COVERAGE_SUMMARY.md
+        
+        echo "## Overall Coverage" >> COVERAGE_SUMMARY.md
+        echo '```' >> COVERAGE_SUMMARY.md
+        cargo llvm-cov --workspace \
+          --ignore-filename-regex "(tests|examples)" \
+          --exclude-from-test \
+          | grep -E "(Lines|Functions|Branches)" >> COVERAGE_SUMMARY.md
+        echo '```' >> COVERAGE_SUMMARY.md
+        echo "" >> COVERAGE_SUMMARY.md
+        
+        echo "## Coverage by Module" >> COVERAGE_SUMMARY.md
+        echo '```' >> COVERAGE_SUMMARY.md
+        cargo llvm-cov --workspace --summary-only \
+          --ignore-filename-regex "(tests|examples)" \
+          --exclude-from-test >> COVERAGE_SUMMARY.md
+        echo '```' >> COVERAGE_SUMMARY.md
+        
+        echo "" >> COVERAGE_SUMMARY.md
+        echo "## Minimum Coverage Requirements" >> COVERAGE_SUMMARY.md
+        echo "- Core Libraries (neo-contract, neo-contract-proc-macros): ≥90%" >> COVERAGE_SUMMARY.md
+        echo "- Compiler (neo-compiler): ≥85%" >> COVERAGE_SUMMARY.md
+        echo "- Examples: ≥70%" >> COVERAGE_SUMMARY.md
+        echo "" >> COVERAGE_SUMMARY.md
+        echo "Detailed HTML report available in artifacts." >> COVERAGE_SUMMARY.md
+        
+    - name: Check coverage thresholds
+      run: |
+        # Extract overall line coverage percentage
+        COVERAGE=$(cargo llvm-cov --workspace \
+          --ignore-filename-regex "(tests|examples)" \
+          --exclude-from-test | grep -oP '\d+\.\d+%' | head -1 | sed 's/%//')
+          
+        echo "Current coverage: $COVERAGE%"
+        
+        # Set minimum threshold (80%)
+        MIN_COVERAGE=80
+        
+        if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
+          echo "❌ Coverage $COVERAGE% is below minimum threshold of $MIN_COVERAGE%"
+          exit 1
+        else
+          echo "✅ Coverage $COVERAGE% meets minimum threshold of $MIN_COVERAGE%"
+        fi
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: lcov.info
+        flags: unittests
+        name: neo-contract-rs
+        fail_ci_if_error: false
+        
+    - name: Upload coverage artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          lcov.info
+          coverage-html/
+          COVERAGE_SUMMARY.md
+        retention-days: 30
+        
+    - name: Comment PR with coverage summary
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('COVERAGE_SUMMARY.md')) {
+            const summary = fs.readFileSync('COVERAGE_SUMMARY.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+          }

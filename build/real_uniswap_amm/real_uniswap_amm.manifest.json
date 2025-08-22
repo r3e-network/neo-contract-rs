@@ -9,6 +9,20 @@
   "abi": {
     "methods": [
       {
+        "name": "add_liquidity",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "remove_liquidity",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
         "name": "initialize",
         "parameters": [
           {
@@ -21,21 +35,7 @@
         "safe": false
       },
       {
-        "name": "add_liquidity",
-        "parameters": [],
-        "returntype": "Void",
-        "offset": 0,
-        "safe": false
-      },
-      {
         "name": "swap",
-        "parameters": [],
-        "returntype": "Void",
-        "offset": 0,
-        "safe": false
-      },
-      {
-        "name": "remove_liquidity",
         "parameters": [],
         "returntype": "Void",
         "offset": 0,

@@ -38,7 +38,7 @@ pub fn check_multi_signs(_public_keys: Array<PublicKey>, _signs: Array<ByteStrin
         
         // Validate each key-signature pair
         for i in 0.._public_keys.length() {
-            let pk = _public_keys.get(i);
+            let _pk = _public_keys.get(i);
             let sig = _signs.get(i);
             // In a real implementation, we would verify the signature
             // For now, just check they're not empty

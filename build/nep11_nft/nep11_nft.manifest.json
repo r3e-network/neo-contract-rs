@@ -41,6 +41,18 @@
         "safe": false
       },
       {
+        "name": "initialize",
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
         "name": "transfer",
         "parameters": [
           {
@@ -57,18 +69,6 @@
           }
         ],
         "returntype": "Boolean",
-        "offset": 0,
-        "safe": false
-      },
-      {
-        "name": "initialize",
-        "parameters": [
-          {
-            "name": "owner",
-            "type": "Hash160"
-          }
-        ],
-        "returntype": "Void",
         "offset": 0,
         "safe": false
       }

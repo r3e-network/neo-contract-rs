@@ -13,46 +13,71 @@ This document summarizes the successful implementation of Solana-style syntax fo
 
 ### 2. **Core Solana-Style Features Implemented**
 
-#### Program Module Pattern (`#[program]`)
+#### Contract Implementation Pattern (`#[contract_impl]`) - Primary Pattern
 ```rust
-#[program]
-pub mod my_contract {
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        // Implementation
+#[contract_author("My Contract")]
+#[contract_version("1.0.0")]
+pub struct MyContract {
+    initialized: bool,
+}
+
+#[contract_impl]
+impl MyContract {
+    pub fn init() -> Self {
+        Self { initialized: false }
+    }
+    
+    #[method]
+    pub fn initialize(&mut self) -> Result<()> {
+        require!(!self.initialized, ContractError::AlreadyInitialized);
+        self.initialized = true;
+        Ok(())
     }
 }
 ```
 
-#### Account Validation (`#[derive(Accounts)]`)
+#### Parameter Validation and Error Handling
 ```rust
-#[derive(Accounts)]
-pub struct Initialize<'info> {
-    #[account(init, payer = user, space = 8 + 64)]
-    pub state: Account<'info, State>,
-    #[account(mut)]
-    pub user: Signer<'info>,
-    pub system_program: Program<'info, System>,
+#[method]
+pub fn transfer(&mut self, to: H160, amount: U256) -> Result<bool> {
+    let from = Runtime::get_calling_script_hash();
+    
+    // Built-in validation macros
+    require!(Runtime::check_witness(&from), ContractError::Unauthorized);
+    require!(amount > U256::zero(), ContractError::InvalidArgument);
+    
+    let balance = self.balance_of(from);
+    require!(balance >= amount, ContractError::InsufficientBalance);
+    
+    // Execute transfer
+    self.execute_transfer(from, to, amount)
 }
 ```
 
-#### Error Handling (`#[derive(ErrorCode)]`)
+#### Notifications and Events
 ```rust
-#[derive(ErrorCode)]
-pub enum MyError {
-    #[msg("Unauthorized operation")]
-    Unauthorized,
-    #[msg("Invalid amount")]
-    InvalidAmount,
+#[method]
+pub fn mint(&mut self, to: H160, amount: U256) -> Result<()> {
+    require!(Runtime::check_witness(&self.owner), ContractError::Unauthorized);
+    
+    let balance = self.balance_of(to);
+    self.balances.put(&to, &(balance + amount));
+    self.total_supply += amount;
+    
+    // Emit Neo N3 notification
+    notify!("Transfer", H160::zero(), to, amount);
+    Ok(())
 }
 ```
 
-#### Events (`#[event]`)
+#### Legacy Support (`#[program]` - Deprecated)
 ```rust
-#[event]
-pub struct TokenTransfer {
-    pub from: Pubkey,
-    pub to: Pubkey,
-    pub amount: u64,
+// Legacy pattern - use #[contract_impl] instead
+#[program]
+pub mod my_contract {
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+        // Legacy implementation
+    }
 }
 ```
 

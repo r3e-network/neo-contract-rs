@@ -158,65 +158,44 @@
 
 use neo_contract::prelude::*;
 
-declare_id!("MyNeoContract");
+#[contract_author("My Contract")]
+#[contract_version("1.0.0")]
+pub struct MyContract {
+    owner: H160,
+    initialized: bool,
+}
 
-#[program]
-pub mod my_contract {
-    use super::*;
+#[contract_impl]
+impl MyContract {
+    pub fn init() -> Self {
+        Self {
+            owner: H160::zero(),
+            initialized: false,
+        }
+    }
 
-    pub fn initialize(ctx: Context&lt;Initialize&gt;) -> Result&lt;()&gt; {
-        let storage = Storage::get_context();
+    #[method]
+    pub fn initialize(&mut self) -> Result&lt;()&gt; {
+        require!(!self.initialized, ContractError::AlreadyInitialized);
         
-        Storage::put(
-            storage,
-            ByteString::from_literal("owner"),
-            ctx.accounts.owner.key
-        );
+        self.owner = Runtime::get_calling_script_hash();
+        self.initialized = true;
         
-        Runtime::log(ByteString::from_literal("Initialized"));
+        notify!("Initialized", self.owner);
         Ok(())
     }
 
-    pub fn transfer(ctx: Context&lt;Transfer&gt;, amount: Int256) -> Result&lt;()&gt; {
-        require!(
-            ctx.accounts.from.key == ctx.accounts.authority.key,
-            ContractError::Unauthorized
-        );
+    #[method]
+    pub fn transfer(&mut self, to: H160, amount: U256) -> Result&lt;()&gt; {
+        let from = Runtime::get_calling_script_hash();
+        require!(Runtime::check_witness(&from), ContractError::Unauthorized);
+        require!(amount > U256::zero(), ContractError::InvalidArgument);
         
         // Transfer logic here
-        emit!(TransferEvent {
-            from: ctx.accounts.from.key,
-            to: ctx.accounts.to.key,
-            amount,
-        });
+        notify!("Transfer", from, to, amount);
         
         Ok(())
     }
-}
-
-#[derive(Accounts)]
-pub struct Initialize&lt;'info&gt; {
-    pub owner: Signer&lt;'info&gt;,
-}
-
-#[derive(Accounts)]
-pub struct Transfer&lt;'info&gt; {
-    pub authority: Signer&lt;'info&gt;,
-    pub from: Account&lt;'info&gt;,
-    pub to: Account&lt;'info&gt;,
-}
-
-#[event]
-pub struct TransferEvent {
-    pub from: H160,
-    pub to: H160,
-    pub amount: Int256,
-}
-
-#[error_code]
-pub enum ContractError {
-    #[msg("Unauthorized access")]
-    Unauthorized,
 }</code></pre>
                 </div>
             </div>

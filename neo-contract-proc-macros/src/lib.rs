@@ -101,15 +101,49 @@ pub fn structs(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -
     structs::expand_structs_impl(input)
 }
 
-/// Marks an implementation block as a contract implementation
+/// Marks an implementation block as a Solana-style contract implementation (Primary Pattern)
+///
+/// This is the recommended pattern for Neo N3 smart contracts, providing type-safe
+/// method definitions with automatic export generation. This approach combines
+/// Solana-style ergonomics with Neo N3 blockchain features.
 ///
 /// # Example
 ///
 /// ```
+/// #[contract_author("Token Contract")]
+/// #[contract_version("1.0.0")]
+/// pub struct TokenContract {
+///     owner: H160,
+///     total_supply: U256,
+///     balances: StorageMap<H160, U256>,
+/// }
+/// 
 /// #[contract_impl]
-/// impl MyContract {
-///     pub fn deploy(owner: H160, total_supply: Int256) -> bool {
-///         // Implementation...
+/// impl TokenContract {
+///     pub fn init() -> Self {
+///         Self {
+///             owner: Runtime::get_calling_script_hash(),
+///             total_supply: U256::zero(),
+///             balances: StorageMap::new(),
+///         }
+///     }
+///     
+///     #[method]
+///     pub fn deploy(&mut self, total_supply: U256) -> Result<bool> {
+///         require!(Runtime::check_witness(&self.owner), ContractError::Unauthorized);
+///         require!(total_supply > U256::zero(), ContractError::InvalidArgument);
+///         
+///         self.total_supply = total_supply;
+///         self.balances.put(&self.owner, &total_supply);
+///         
+///         notify!("Deploy", self.owner, total_supply);
+///         Ok(true)
+///     }
+///     
+///     #[method]
+///     #[safe]
+///     pub fn balance_of(&self, account: H160) -> U256 {
+///         self.balances.get(&account).unwrap_or(U256::zero())
 ///     }
 /// }
 /// ```
@@ -436,9 +470,12 @@ pub fn gas_limit(_args: proc_macro::TokenStream, input: proc_macro::TokenStream)
     TokenStream::from(expanded).into()
 }
 
-/// Solana-style program macro for Neo N3 smart contracts
+/// Legacy Solana-style program macro for Neo N3 smart contracts
+/// 
+/// **Note:** This is a legacy pattern. The recommended approach is to use `#[contract_impl]`
+/// for better type safety and cleaner code organization.
 ///
-/// # Example
+/// # Example (Legacy)
 ///
 /// ```
 /// declare_id!("NeoContractAddress123...");
@@ -449,6 +486,30 @@ pub fn gas_limit(_args: proc_macro::TokenStream, input: proc_macro::TokenStream)
 ///
 ///     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
 ///         // Implementation...
+///     }
+/// }
+/// ```
+/// 
+/// # Recommended Alternative
+/// 
+/// ```
+/// #[contract_author("My Contract")]
+/// #[contract_version("1.0.0")]
+/// pub struct MyContract {
+///     initialized: bool,
+/// }
+/// 
+/// #[contract_impl]
+/// impl MyContract {
+///     pub fn init() -> Self {
+///         Self { initialized: false }
+///     }
+///     
+///     #[method]
+///     pub fn initialize(&mut self) -> Result<()> {
+///         require!(!self.initialized, ContractError::AlreadyInitialized);
+///         self.initialized = true;
+///         Ok(())
 ///     }
 /// }
 /// ```

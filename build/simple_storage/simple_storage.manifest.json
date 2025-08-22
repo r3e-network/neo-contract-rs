@@ -9,7 +9,21 @@
   "abi": {
     "methods": [
       {
-        "name": "delete_string",
+        "name": "get_total_items",
+        "parameters": [],
+        "returntype": "Integer",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "get_string",
+        "parameters": [],
+        "returntype": "String",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "store_string",
         "parameters": [],
         "returntype": "Boolean",
         "offset": 0,
@@ -28,21 +42,7 @@
         "safe": false
       },
       {
-        "name": "get_string",
-        "parameters": [],
-        "returntype": "String",
-        "offset": 0,
-        "safe": true
-      },
-      {
-        "name": "get_total_items",
-        "parameters": [],
-        "returntype": "Integer",
-        "offset": 0,
-        "safe": true
-      },
-      {
-        "name": "store_string",
+        "name": "delete_string",
         "parameters": [],
         "returntype": "Boolean",
         "offset": 0,

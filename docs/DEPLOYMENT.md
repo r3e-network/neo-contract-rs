@@ -278,9 +278,10 @@ neoxp contract deploy *.nef alice
 ```
 
 The compiler automatically:
-- Detects `#[program]` modules
+- Detects `#[contract_impl]` implementations (primary pattern)  
+- Detects modern `#[contract_impl]` patterns (recommended)
 - Generates appropriate manifest
-- Maps Solana patterns to Neo N3
+- Maps Solana-style patterns to Neo N3
 
 ## Troubleshooting
 

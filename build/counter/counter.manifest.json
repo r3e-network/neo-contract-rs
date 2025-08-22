@@ -9,6 +9,20 @@
   "abi": {
     "methods": [
       {
+        "name": "get_count",
+        "parameters": [],
+        "returntype": "Integer",
+        "offset": 0,
+        "safe": true
+      },
+      {
+        "name": "decrement",
+        "parameters": [],
+        "returntype": "Integer",
+        "offset": 0,
+        "safe": false
+      },
+      {
         "name": "initialize",
         "parameters": [
           {
@@ -21,20 +35,6 @@
         "safe": false
       },
       {
-        "name": "increment",
-        "parameters": [],
-        "returntype": "Integer",
-        "offset": 0,
-        "safe": false
-      },
-      {
-        "name": "get_count",
-        "parameters": [],
-        "returntype": "Integer",
-        "offset": 0,
-        "safe": true
-      },
-      {
         "name": "reset",
         "parameters": [],
         "returntype": "Boolean",
@@ -42,7 +42,7 @@
         "safe": false
       },
       {
-        "name": "decrement",
+        "name": "increment",
         "parameters": [],
         "returntype": "Integer",
         "offset": 0,

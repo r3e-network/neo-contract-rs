@@ -9,14 +9,14 @@
   "abi": {
     "methods": [
       {
-        "name": "remove_liquidity",
+        "name": "initialize_pool",
         "parameters": [],
         "returntype": "Void",
         "offset": 0,
         "safe": false
       },
       {
-        "name": "initialize_pool",
+        "name": "remove_liquidity",
         "parameters": [],
         "returntype": "Void",
         "offset": 0,

@@ -9,9 +9,14 @@
   "abi": {
     "methods": [
       {
-        "name": "set_greeting",
-        "parameters": [],
-        "returntype": "Boolean",
+        "name": "initialize",
+        "parameters": [
+          {
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "returntype": "Void",
         "offset": 0,
         "safe": false
       },
@@ -23,14 +28,9 @@
         "safe": false
       },
       {
-        "name": "initialize",
-        "parameters": [
-          {
-            "name": "owner",
-            "type": "Hash160"
-          }
-        ],
-        "returntype": "Void",
+        "name": "set_greeting",
+        "parameters": [],
+        "returntype": "Boolean",
         "offset": 0,
         "safe": false
       }

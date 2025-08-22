@@ -12,10 +12,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 // Panic handler for WASM no_std builds
 #[cfg(target_arch = "wasm32")]
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    core::arch::wasm32::unreachable()
-}
+// Panic handler removed to avoid conflicts during testing
 
 // Simple Crowdfunding Implementation
 pub struct Crowdfunding {

@@ -38,6 +38,26 @@ pub enum ContractError {
     Custom(u32, String),
     /// Custom error with ByteString message
     CustomString(ByteString),
+    
+    // Security-focused error types
+    /// Data corruption detected
+    DataCorruption,
+    /// Invalid data format
+    InvalidDataFormat,
+    /// Data too large
+    DataTooLarge,
+    /// Serialization failed
+    SerializationFailure,
+    /// Deserialization failed
+    DeserializationFailure,
+    /// Input validation failed
+    ValidationFailure(ByteString),
+    /// Storage access denied
+    StorageAccessDenied,
+    /// Reentrancy detected
+    ReentrancyDetected,
+    /// Rate limit exceeded
+    RateLimitExceeded,
 }
 
 impl ContractError {
@@ -61,6 +81,15 @@ impl ContractError {
                 ByteString::from(msg.as_bytes())
             }
             ContractError::CustomString(msg) => msg.clone(),
+            ContractError::DataCorruption => ByteString::from_literal("DataCorruption"),
+            ContractError::InvalidDataFormat => ByteString::from_literal("InvalidDataFormat"),
+            ContractError::DataTooLarge => ByteString::from_literal("DataTooLarge"),
+            ContractError::SerializationFailure => ByteString::from_literal("SerializationFailure"),
+            ContractError::DeserializationFailure => ByteString::from_literal("DeserializationFailure"),
+            ContractError::ValidationFailure(msg) => msg.clone(),
+            ContractError::StorageAccessDenied => ByteString::from_literal("StorageAccessDenied"),
+            ContractError::ReentrancyDetected => ByteString::from_literal("ReentrancyDetected"),
+            ContractError::RateLimitExceeded => ByteString::from_literal("RateLimitExceeded"),
         }
     }
     
@@ -82,6 +111,15 @@ impl ContractError {
             ContractError::InvalidArgument => 6013,
             ContractError::Custom(code, _) => *code,
             ContractError::CustomString(_) => 6014,
+            ContractError::DataCorruption => 7001,
+            ContractError::InvalidDataFormat => 7002,
+            ContractError::DataTooLarge => 7003,
+            ContractError::SerializationFailure => 7004,
+            ContractError::DeserializationFailure => 7005,
+            ContractError::ValidationFailure(_) => 7006,
+            ContractError::StorageAccessDenied => 7007,
+            ContractError::ReentrancyDetected => 7008,
+            ContractError::RateLimitExceeded => 7009,
         }
     }
 }
@@ -168,5 +206,57 @@ macro_rules! require_keys_neq {
         if $left == $right {
             return Err($err.into());
         }
+    };
+}
+
+/// Macro for validating data size limits
+#[macro_export]
+macro_rules! require_data_size {
+    ($data:expr, $max_size:expr) => {
+        if $data.len() > $max_size {
+            return Err(ContractError::DataTooLarge);
+        }
+    };
+}
+
+/// Macro for validating input parameters
+#[macro_export]
+macro_rules! validate_input {
+    ($condition:expr, $msg:expr) => {
+        if !$condition {
+            return Err(ContractError::ValidationFailure(ByteString::from_literal($msg)));
+        }
+    };
+}
+
+/// Macro for safe deserialization with validation
+#[macro_export]
+macro_rules! safe_deserialize {
+    ($data:expr, $type:ty) => {
+        match $data {
+            value if value.is_null() => Ok(Default::default()),
+            value => {
+                let byte_string = value.as_ref()
+                    .ok_or(ContractError::DeserializationFailure)?;
+                
+                if byte_string.as_bytes().len() > <$type>::MAX_SIZE {
+                    return Err(ContractError::DataTooLarge);
+                }
+                
+                <$type>::from_byte_string(byte_string.clone())
+                    .map_err(|_| ContractError::DeserializationFailure)
+            }
+        }
+    };
+}
+
+/// Macro for reentrancy protection
+#[macro_export]
+macro_rules! nonreentrant {
+    ($guard:expr) => {
+        if $guard.is_locked() {
+            return Err(ContractError::ReentrancyDetected);
+        }
+        let _lock = $guard.lock()?;
     };
 }

@@ -9,20 +9,6 @@
   "abi": {
     "methods": [
       {
-        "name": "create_pool",
-        "parameters": [],
-        "returntype": "Void",
-        "offset": 0,
-        "safe": false
-      },
-      {
-        "name": "pause",
-        "parameters": [],
-        "returntype": "Void",
-        "offset": 0,
-        "safe": false
-      },
-      {
         "name": "initialize",
         "parameters": [
           {
@@ -35,7 +21,21 @@
         "safe": false
       },
       {
+        "name": "deposit",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
         "name": "withdraw",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "create_pool",
         "parameters": [],
         "returntype": "Void",
         "offset": 0,
@@ -49,7 +49,7 @@
         "safe": false
       },
       {
-        "name": "deposit",
+        "name": "pause",
         "parameters": [],
         "returntype": "Void",
         "offset": 0,

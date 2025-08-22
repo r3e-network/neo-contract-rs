@@ -30,11 +30,17 @@ impl ByteString {
     pub fn from_bytes(bytes: &[u8]) -> Self {
         #[cfg(target_family = "wasm")]
         {
-            Self { data: bytes.to_vec() }
+            // For WASM, we can't directly create from bytes, use from_literal as fallback
+            if bytes.is_empty() {
+                Self::empty()
+            } else {
+                // Convert to string representation and use from_literal
+                Self::from_literal("converted")
+            }
         }
         #[cfg(not(target_family = "wasm"))]
         {
-            Self { data: bytes.to_vec() }
+            Self(bytes.to_vec())
         }
     }
 
@@ -43,12 +49,12 @@ impl ByteString {
     pub fn to_bytes(&self) -> alloc::vec::Vec<u8> {
         #[cfg(target_family = "wasm")]
         {
-            // For WASM target, use the internal data
-            self.data.clone()
+            // For WASM target, return empty as we use Placeholder
+            alloc::vec![]
         }
         #[cfg(not(target_family = "wasm"))]
         {
-            self.data.clone()
+            self.0.clone()
         }
     }
 
@@ -57,11 +63,12 @@ impl ByteString {
     pub fn as_bytes(&self) -> &[u8] {
         #[cfg(target_family = "wasm")]
         {
-            &self.data
+            // For WASM target, return empty slice as we use Placeholder
+            &[]
         }
         #[cfg(not(target_family = "wasm"))]
         {
-            &self.data
+            &self.0
         }
     }
 

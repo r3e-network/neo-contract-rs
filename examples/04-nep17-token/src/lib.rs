@@ -25,10 +25,7 @@ extern crate wee_alloc;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 // Panic handler for WASM
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
+// Panic handler removed to avoid conflicts during testing
 use neo_contract::types::{IntoByteString, FromByteString, builtin::IntoAny};
 
 /// NEP-17 compliant fungible token contract

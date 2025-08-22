@@ -23,6 +23,8 @@ members = [
     "examples/11-governance",
     "examples/12-oracle-price-feed",
     "examples/13-nft-marketplace",
+    "examples/14-neo-features-showcase",
+    "examples/15-neo-complete-features",
     # Solana-style examples
     "examples/01-hello-world-solana-style-simple",
     "examples/01-hello-world-solana-style",

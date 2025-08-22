@@ -3,24 +3,56 @@
 use neo_contract::prelude::*;
 
 #[test]
-fn test_context_creation() {
-    let ctx: Context<()> = Context::new();
-    assert_eq!(ctx.program_id, Runtime::get_executing_script_hash());
+fn test_contract_impl_pattern() {
+    #[contract_author("Test Contract")]
+    #[contract_version("1.0.0")]
+    pub struct TestContract {
+        value: u64,
+    }
+    
+    #[contract_impl]
+    impl TestContract {
+        pub fn init() -> Self {
+            Self { value: 42 }
+        }
+        
+        #[method]
+        #[safe]
+        pub fn get_value(&self) -> u64 {
+            self.value
+        }
+    }
+    
+    let contract = TestContract::init();
+    assert_eq!(contract.get_value(), 42);
 }
 
 #[test]
-fn test_account_validation() {
-    #[derive(Debug)]
-    struct TestAccounts;
+fn test_method_validation() {
+    #[contract_author("Validation Test")]
+    #[contract_version("1.0.0")]
+    pub struct ValidationContract {
+        owner: H160,
+    }
     
-    impl TestAccounts {
-        fn validate(&self) -> Result<()> {
+    #[contract_impl]
+    impl ValidationContract {
+        pub fn init() -> Self {
+            Self { owner: H160::zero() }
+        }
+        
+        #[method]
+        pub fn validate_input(&self, value: u64) -> Result<()> {
+            require!(value > 0, ContractError::InvalidArgument);
+            require!(value < 100, ContractError::InvalidArgument);
             Ok(())
         }
     }
     
-    let accounts = TestAccounts;
-    assert!(accounts.validate().is_ok());
+    let contract = ValidationContract::init();
+    assert!(contract.validate_input(50).is_ok());
+    assert!(contract.validate_input(0).is_err());
+    assert!(contract.validate_input(150).is_err());
 }
 
 #[test]

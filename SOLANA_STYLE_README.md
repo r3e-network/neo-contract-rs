@@ -14,73 +14,80 @@ This Neo N3 Rust framework now supports **Solana-style syntax** alongside the tr
 
 ## 📚 Quick Comparison
 
-### Traditional Neo N3 Style
+### Traditional Neo N3 Style (C-style exports)
 ```rust
+#[no_mangle]
+pub extern "C" fn get_greeting() -> ByteString {
+    // Manual storage access and validation
+    storage::get("greeting").unwrap_or_default()
+}
+
+#[no_mangle]
+pub extern "C" fn set_greeting(value: ByteString) -> bool {
+    // Manual validation and error handling
+    if value.is_empty() {
+        return false;
+    }
+    storage::put("greeting", &value);
+    true
+}
+```
+
+### Solana-Style Syntax with Contract Implementation (Primary Pattern)
+```rust
+#[contract_author("Hello World")]
+#[contract_version("1.0.0")]
+pub struct HelloWorld {
+    greeting: ByteString,
+}
+
 #[contract_impl]
 impl HelloWorld {
     pub fn init() -> Self {
         Self {
-            greeting_key: ByteString::from_literal("greeting"),
+            greeting: ByteString::from_literal("Hello, World!"),
         }
+    }
+    
+    #[method]
+    pub fn set_greeting(&mut self, value: ByteString) -> Result<()> {
+        require!(!value.is_empty(), ContractError::InvalidArgument);
+        self.greeting = value;
+        notify!("GreetingChanged", self.greeting.clone());
+        Ok(())
     }
     
     #[method]
     #[safe]
     pub fn get_greeting(&self) -> ByteString {
-        // Implementation
+        self.greeting.clone()
     }
-}
-```
-
-### Solana-Style Syntax
-```rust
-declare_id!("NeoContractAddress123");
-
-#[program]
-pub mod hello_world {
-    use super::*;
-    
-    pub fn initialize(ctx: Context<Initialize>, greeting: ByteString) -> Result<()> {
-        ctx.accounts.state.greeting = greeting;
-        Ok(())
-    }
-    
-    #[safe]
-    pub fn get_greeting(ctx: Context<GetGreeting>) -> Result<ByteString> {
-        Ok(ctx.accounts.state.greeting.clone())
-    }
-}
-
-#[derive(Accounts)]
-pub struct Initialize<'info> {
-    #[account(init, payer = user, space = 8 + 100)]
-    pub state: Account<'info, State>,
-    #[account(mut)]
-    pub user: Signer<'info>,
-    pub system_program: Program<'info, System>,
 }
 ```
 
 ## 🛠️ Key Features
 
-### 1. Program Module Pattern
-- Use `#[program]` to define your contract module
-- All instruction handlers are public functions within the module
-- Automatic WASM export generation
+### 1. Contract Implementation Pattern (Primary)
+- Use `#[contract_impl]` to define your contract methods
+- Structured contract state with type-safe storage
+- Automatic method export generation
+- Clear separation between public and private methods
 
-### 2. Account Validation
-- `#[derive(Accounts)]` for automatic validation
-- Built-in constraints: `init`, `mut`, `has_one`, `seeds`, etc.
-- Type-safe account access through context
+### 2. Parameter Validation
+- Direct parameter access with Neo N3 native types
+- Built-in validation macros: `require!`, `require_eq!`, `require_gt!`
+- Type-safe method signatures with compile-time checking
+- Automatic witness validation integration
 
 ### 3. Error Handling
-- `#[derive(ErrorCode)]` for custom error types
-- Automatic error code generation
-- Rich error messages with `#[msg("...")]` attribute
+- Result-based error handling with `Result<T>`
+- Custom error types that integrate with Neo N3 error system
+- Rich error messages and automatic error propagation
+- Built-in contract error types for common scenarios
 
-### 4. Events
-- `#[event]` attribute for event structs
-- `emit!` macro for event emission
+### 4. Events and Notifications
+- `notify!` macro for Neo N3 event emission
+- Built-in integration with Neo N3 notification system
 - Structured event data with automatic serialization
 
 ## 📦 Available Examples
@@ -108,13 +115,14 @@ Both syntaxes compile to the same Neo N3 bytecode and are fully compatible with 
 
 ### 2. Use the Appropriate Macros
 
-**Solana-Style Macros:**
-- `#[program]` - Define program module
-- `#[derive(Accounts)]` - Account validation
-- `#[account]` - Account data structures
-- `#[derive(ErrorCode)]` - Error handling
-- `#[event]` - Event definitions
-- `declare_id!` - Program ID declaration
+**Solana-Style Contract Implementation Macros:**
+- `#[contract_impl]` - Define contract implementation methods
+- `#[contract_author("...")]` - Contract metadata
+- `#[contract_version("...")]` - Contract version
+- `#[method]` - Mark public contract methods
+- `#[safe]` - Mark read-only methods
+- `require!` - Parameter validation macro
+- `notify!` - Event emission macro
 
 **Traditional Macros:**
 - `#[contract_impl]` - Contract implementation

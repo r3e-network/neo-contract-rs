@@ -9,11 +9,11 @@
   "abi": {
     "methods": [
       {
-        "name": "unstake",
+        "name": "get_staked_amount",
         "parameters": [],
         "returntype": "Void",
         "offset": 0,
-        "safe": false
+        "safe": true
       },
       {
         "name": "update_reward_rate",
@@ -23,11 +23,11 @@
         "safe": false
       },
       {
-        "name": "get_total_staked",
+        "name": "unstake",
         "parameters": [],
         "returntype": "Void",
         "offset": 0,
-        "safe": true
+        "safe": false
       },
       {
         "name": "initialize",
@@ -42,7 +42,14 @@
         "safe": false
       },
       {
-        "name": "get_staked_amount",
+        "name": "stake",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "get_total_staked",
         "parameters": [],
         "returntype": "Void",
         "offset": 0,

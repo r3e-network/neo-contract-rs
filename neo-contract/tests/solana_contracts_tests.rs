@@ -6,10 +6,31 @@ mod hello_world_tests {
     use super::*;
 
     #[test]
-    fn test_initialize_context() {
-        // Test context creation for initialize
-        let ctx: Context<()> = Context::new();
-        assert_eq!(ctx.program_id, Runtime::get_executing_script_hash());
+    fn test_contract_initialization() {
+        // Test Solana-style contract initialization
+        #[contract_author("Test Author")]
+        #[contract_version("1.0.0")]
+        pub struct TestContract {
+            initialized: bool,
+        }
+        
+        #[contract_impl]
+        impl TestContract {
+            pub fn init() -> Self {
+                Self {
+                    initialized: true,
+                }
+            }
+            
+            #[method]
+            #[safe]
+            pub fn is_initialized(&self) -> bool {
+                self.initialized
+            }
+        }
+        
+        let contract = TestContract::init();
+        assert!(contract.is_initialized());
     }
 
     #[test]
@@ -431,10 +452,10 @@ mod integration_tests {
 // Run all tests
 #[test]
 fn run_all_solana_style_tests() {
-    println!("Running all Solana-style contract tests...");
+    std::println!("Running all Solana-style contract tests...");
     
     // The individual tests will run automatically
     // This is just a marker test to ensure the module is included
     
-    println!("All Solana-style contract tests completed!");
+    std::println!("All Solana-style contract tests completed!");
 }

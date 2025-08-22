@@ -9,10 +9,26 @@
   "abi": {
     "methods": [
       {
-        "name": "mint",
+        "name": "initialize",
         "parameters": [
           {
-            "name": "account",
+            "name": "owner",
+            "type": "Hash160"
+          }
+        ],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "transfer",
+        "parameters": [
+          {
+            "name": "from",
+            "type": "Hash160"
+          },
+          {
+            "name": "to",
             "type": "Hash160"
           },
           {
@@ -41,26 +57,10 @@
         "safe": false
       },
       {
-        "name": "initialize",
+        "name": "mint",
         "parameters": [
           {
-            "name": "owner",
-            "type": "Hash160"
-          }
-        ],
-        "returntype": "Void",
-        "offset": 0,
-        "safe": false
-      },
-      {
-        "name": "transfer",
-        "parameters": [
-          {
-            "name": "from",
-            "type": "Hash160"
-          },
-          {
-            "name": "to",
+            "name": "account",
             "type": "Hash160"
           },
           {

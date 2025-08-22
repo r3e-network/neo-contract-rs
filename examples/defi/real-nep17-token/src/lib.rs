@@ -2,20 +2,17 @@
 #![no_main]
 
 extern crate alloc;
-use alloc::collections::BTreeMap;
 use alloc::string::{String, ToString};
-use alloc::vec::Vec;
+use neo_contract::prelude::*;
 use core::ops::{Add, Sub};
 
-// Global allocator for no_std
+// WASM global allocator
+extern crate wee_alloc;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-// Panic handler for no_std
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
+#[cfg(target_arch = "wasm32")]
+// Panic handler removed to avoid conflicts during testing
 
 // Storage keys
 const SUPPLY_KEY: &[u8] = b"totalSupply";
@@ -35,7 +32,7 @@ const INITIAL_SUPPLY: u64 = 100_000_000_00000000; // 100M tokens with 8 decimals
 
 // Storage abstraction
 mod storage {
-    use alloc::vec::Vec;
+    use neo_contract::prelude::*;
     
     extern "C" {
         fn storage_get(key: *const u8, key_len: u32, value: *mut u8, value_len: u32) -> u32;

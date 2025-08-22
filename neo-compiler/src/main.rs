@@ -59,7 +59,7 @@ fn main() -> Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or(log_level)).init();
     
     match cli.command {
-        Commands::Compile { input, output, manifest, source } => {
+        Commands::Compile { input, output, manifest: _, source } => {
             info!("Compiling {} to {}", input.display(), output.display());
             
             let compiler = NeoCompiler::new()

@@ -208,8 +208,8 @@ mod tests {
     #[test]
     fn test_deserialize_u32() {
         let value = 42u32;
-        let serialized = serialize(&value).unwrap();
-        let deserialized: u32 = deserialize(serialized.as_slice()).unwrap();
+        let serialized = serialize(&value).expect("Serialization should not fail");
+        let deserialized: u32 = deserialize(serialized.as_slice()).expect("Deserialization should not fail");
         assert_eq!(value, deserialized);
     }
 
@@ -218,11 +218,11 @@ mod tests {
         let value_true = true;
         let value_false = false;
 
-        let serialized_true = serialize(&value_true).unwrap();
-        let serialized_false = serialize(&value_false).unwrap();
+        let serialized_true = serialize(&value_true).expect("Serialization should not fail");
+        let serialized_false = serialize(&value_false).expect("Serialization should not fail");
 
-        let deserialized_true: bool = deserialize(serialized_true.as_slice()).unwrap();
-        let deserialized_false: bool = deserialize(serialized_false.as_slice()).unwrap();
+        let deserialized_true: bool = deserialize(serialized_true.as_slice()).expect("Deserialization should not fail");
+        let deserialized_false: bool = deserialize(serialized_false.as_slice()).expect("Deserialization should not fail");
 
         assert_eq!(value_true, deserialized_true);
         assert_eq!(value_false, deserialized_false);
@@ -231,8 +231,8 @@ mod tests {
     #[test]
     fn test_deserialize_bytestring() {
         let value = ByteString::from_literal("hello");
-        let serialized = serialize(&value).unwrap();
-        let deserialized: ByteString = deserialize(serialized.as_slice()).unwrap();
+        let serialized = serialize(&value).expect("Serialization should not fail");
+        let deserialized: ByteString = deserialize(serialized.as_slice()).expect("Deserialization should not fail");
 
         assert_eq!(value.as_bytes(), deserialized.as_bytes());
     }
@@ -240,8 +240,8 @@ mod tests {
     #[test]
     fn test_round_trip_serialization() {
         let original = 12345u64;
-        let serialized = serialize(&original).unwrap();
-        let deserialized: u64 = deserialize(serialized.as_slice()).unwrap();
+        let serialized = serialize(&original).expect("Serialization should not fail");
+        let deserialized: u64 = deserialize(serialized.as_slice()).expect("Deserialization should not fail");
         assert_eq!(original, deserialized);
     }
 }

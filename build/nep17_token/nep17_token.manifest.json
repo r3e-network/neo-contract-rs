@@ -16,9 +16,32 @@
         "safe": false
       },
       {
+        "name": "add_minter",
+        "parameters": [],
+        "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
         "name": "unpause",
         "parameters": [],
         "returntype": "Void",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "approve",
+        "parameters": [
+          {
+            "name": "spender",
+            "type": "Hash160"
+          },
+          {
+            "name": "amount",
+            "type": "Integer"
+          }
+        ],
+        "returntype": "Boolean",
         "offset": 0,
         "safe": false
       },
@@ -39,24 +62,10 @@
         "safe": false
       },
       {
-        "name": "add_minter",
-        "parameters": [],
-        "returntype": "Void",
-        "offset": 0,
-        "safe": false
-      },
-      {
-        "name": "pause",
-        "parameters": [],
-        "returntype": "Void",
-        "offset": 0,
-        "safe": false
-      },
-      {
-        "name": "approve",
+        "name": "burn",
         "parameters": [
           {
-            "name": "spender",
+            "name": "account",
             "type": "Hash160"
           },
           {
@@ -89,22 +98,6 @@
         "safe": false
       },
       {
-        "name": "burn",
-        "parameters": [
-          {
-            "name": "account",
-            "type": "Hash160"
-          },
-          {
-            "name": "amount",
-            "type": "Integer"
-          }
-        ],
-        "returntype": "Boolean",
-        "offset": 0,
-        "safe": false
-      },
-      {
         "name": "transfer_from",
         "parameters": [
           {
@@ -121,6 +114,13 @@
           }
         ],
         "returntype": "Boolean",
+        "offset": 0,
+        "safe": false
+      },
+      {
+        "name": "pause",
+        "parameters": [],
+        "returntype": "Void",
         "offset": 0,
         "safe": false
       },

@@ -2,8 +2,8 @@
 #![no_main]
 
 extern crate alloc;
-
 use neo_contract::prelude::*;
+use neo_contract::types::{IntoByteString, FromByteString};
 
 // WASM global allocator
 extern crate wee_alloc;
@@ -12,111 +12,127 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 // Panic handler for WASM no_std builds
 #[cfg(target_arch = "wasm32")]
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    core::arch::wasm32::unreachable()
+// Panic handler removed to avoid conflicts during testing
+
+// Pure Solana-style Neo N3 Hello World Contract
+#[contract]
+pub struct HelloWorld {
+    authority: H160,
+    greeting: ByteString,
+    visitor_count: Int256,
+    is_initialized: bool,
 }
 
-declare_id!("NeoHelloWorldContract123456789");
-
-#[program]
-pub mod hello_world {
-    use super::*;
-
-    pub fn initialize(mut ctx: Context<Initialize>, greeting: ByteString) -> Result<()> {
-        let greeting_account = &mut ctx.accounts.greeting_account;
-        let authority = &ctx.accounts.authority;
-        
-        greeting_account.data.authority = authority.key();
-        greeting_account.data.greeting = greeting;
-        greeting_account.data.visitor_count = Int256::zero();
-        greeting_account.data.is_initialized = true;
-        
-        Runtime::notify(
-            ByteString::from_literal("GreetingInitialized"),
-            Array::new()
-        );
-        
-        Ok(())
+#[contract_impl]
+impl HelloWorld {
+    pub fn init() -> Self {
+        Self {
+            authority: H160::zero(),
+            greeting: ByteString::from_literal("Hello, Neo N3!"),
+            visitor_count: Int256::zero(),
+            is_initialized: false,
+        }
     }
-    
-    pub fn get_greeting(ctx: Context<GetGreeting>) -> Result<ByteString> {
-        let greeting_account = &ctx.accounts.greeting_account;
-        Ok(greeting_account.data.greeting.clone())
+
+    #[method]
+    pub fn initialize(&self, authority: H160, greeting: ByteString) -> bool {
+        let context = Storage::get_context();
+        
+        // Store authority
+        Storage::put(context.clone(), ByteString::from_literal("authority"), authority.into_byte_string());
+        
+        // Store greeting
+        Storage::put(context.clone(), ByteString::from_literal("greeting"), greeting.clone());
+        
+        // Initialize visitor count
+        Storage::put(context.clone(), ByteString::from_literal("visitor_count"), Int256::zero().into_byte_string());
+        
+        // Mark as initialized
+        Storage::put(context, ByteString::from_literal("is_initialized"), ByteString::from_literal("true"));
+        
+        // Emit event
+        let mut event_data = Array::new();
+        event_data.push(authority.into_any());
+        event_data.push(greeting.into_any());
+        Runtime::notify(ByteString::from_literal("ContractInitialized"), event_data);
+        
+        Runtime::log(ByteString::from_literal("Hello World contract initialized"));
+        true
     }
-    
-    pub fn set_greeting(mut ctx: Context<SetGreeting>, new_greeting: ByteString) -> Result<()> {
-        let greeting_account = &mut ctx.accounts.greeting_account;
-        let authority = &ctx.accounts.authority;
-        
-        require_keys_eq!(
-            greeting_account.data.authority,
-            authority.key(),
-            ContractError::Unauthorized
-        );
-        
-        greeting_account.data.greeting = new_greeting.clone();
-        
-        Runtime::notify(
-            ByteString::from_literal("GreetingChanged"),
-            Array::new()
-        );
-        
-        Ok(())
+
+    #[method]
+    #[safe]
+    pub fn get_greeting(&self) -> ByteString {
+        let context = Storage::get_context();
+        Storage::get(context, ByteString::from_literal("greeting"))
+            .unwrap_or(ByteString::from_literal("Hello, Neo N3!"))
     }
-    
-    pub fn say_hello(mut ctx: Context<SayHello>, visitor_name: ByteString) -> Result<ByteString> {
-        let greeting_account = &mut ctx.accounts.greeting_account;
+
+    #[method]
+    pub fn set_greeting(&self, new_greeting: ByteString) -> bool {
+        // Check authorization
+        let context = Storage::get_context();
+        let stored_authority = match Storage::get(context.clone(), ByteString::from_literal("authority")) {
+            Some(auth_bytes) => H160::from_byte_string(auth_bytes),
+            None => return false,
+        };
         
-        greeting_account.data.visitor_count = greeting_account.data.visitor_count
-            .checked_add(&Int256::one());
+        if !Runtime::check_witness(stored_authority) {
+            return false;
+        }
         
-        let response = ByteString::from_literal("Hello, ");
+        // Update greeting
+        Storage::put(context, ByteString::from_literal("greeting"), new_greeting.clone());
         
-        Runtime::notify(
-            ByteString::from_literal("VisitorRegistered"),
-            Array::new()
-        );
+        // Emit event
+        let mut event_data = Array::new();
+        event_data.push(new_greeting.into_any());
+        Runtime::notify(ByteString::from_literal("GreetingUpdated"), event_data);
         
-        Ok(response)
+        Runtime::log(ByteString::from_literal("Greeting updated"));
+        true
+    }
+
+    #[method]
+    pub fn say_hello(&self, visitor: H160) -> ByteString {
+        let context = Storage::get_context();
+        
+        // Increment visitor count
+        let current_count = match Storage::get(context.clone(), ByteString::from_literal("visitor_count")) {
+            Some(count_bytes) => Int256::from_byte_string(count_bytes),
+            None => Int256::zero(),
+        };
+        let new_count = current_count.checked_add(&Int256::one());
+        Storage::put(context.clone(), ByteString::from_literal("visitor_count"), new_count.into_byte_string());
+        
+        // Get greeting
+        let greeting = Storage::get(context, ByteString::from_literal("greeting"))
+            .unwrap_or(ByteString::from_literal("Hello, Neo N3!"));
+        
+        // Emit event
+        let mut event_data = Array::new();
+        event_data.push(visitor.into_any());
+        event_data.push(new_count.into_any());
+        Runtime::notify(ByteString::from_literal("VisitorGreeted"), event_data);
+        
+        Runtime::log(ByteString::from_literal("Visitor greeted"));
+        greeting
+    }
+
+    #[method]
+    #[safe]
+    pub fn get_visitor_count(&self) -> Int256 {
+        let context = Storage::get_context();
+        match Storage::get(context, ByteString::from_literal("visitor_count")) {
+            Some(count_bytes) => Int256::from_byte_string(count_bytes),
+            None => Int256::zero(),
+        }
+    }
+
+    #[method]
+    #[safe]
+    pub fn is_initialized(&self) -> bool {
+        let context = Storage::get_context();
+        Storage::get(context, ByteString::from_literal("is_initialized")).is_some()
     }
 }
-
-#[derive(Accounts)]
-pub struct Initialize<'info> {
-    #[account(init, payer = authority, space = 8 + 256)]
-    pub greeting_account: Account<'info, GreetingAccount>,
-    #[account(mut)]
-    pub authority: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct GetGreeting<'info> {
-    pub greeting_account: Account<'info, GreetingAccount>,
-}
-
-#[derive(Accounts)]
-pub struct SetGreeting<'info> {
-    #[account(mut, has_one = authority)]
-    pub greeting_account: Account<'info, GreetingAccount>,
-    pub authority: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct SayHello<'info> {
-    #[account(mut)]
-    pub greeting_account: Account<'info, GreetingAccount>,
-    pub visitor: Signer<'info>,
-}
-
-// Simple struct without Solana-specific attributes
-pub struct GreetingAccount {
-    pub authority: H160,
-    pub greeting: ByteString,
-    pub visitor_count: Int256,
-    pub is_initialized: bool,
-}
-
-// Use the ContractError from prelude instead of defining our own
-// ContractError is already available from neo_contract::prelude

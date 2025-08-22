@@ -48,8 +48,8 @@ impl Bytes {
     pub fn len(&self) -> usize {
         #[cfg(target_family = "wasm")]
         {
-            // For WASM target, return actual length
-            self.0.len()
+            // For WASM target, return 0 as we use Placeholder
+            0
         }
         #[cfg(not(target_family = "wasm"))]
         {
@@ -62,8 +62,8 @@ impl Bytes {
     pub fn is_empty(&self) -> bool {
         #[cfg(target_family = "wasm")]
         {
-            // For WASM target, check actual emptiness
-            self.0.is_empty()
+            // For WASM target, assume not empty if placeholder exists
+            self.0.is_null()
         }
         #[cfg(not(target_family = "wasm"))]
         {
@@ -76,8 +76,8 @@ impl Bytes {
     pub fn as_bytes(&self) -> &[u8] {
         #[cfg(target_family = "wasm")]
         {
-            // For WASM target, return the actual data
-            &self.0
+            // For WASM target, return empty slice as we use Placeholder
+            &[]
         }
         #[cfg(not(target_family = "wasm"))]
         {

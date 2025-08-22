@@ -174,7 +174,7 @@ mod tests {
     #[test]
     fn test_serialize_u32() {
         let value = 42u32;
-        let serialized = serialize(&value).unwrap();
+        let serialized = serialize(&value).expect("u32 serialization should not fail");
         assert_eq!(serialized.as_slice(), &[42, 0, 0, 0]);
     }
 
@@ -183,8 +183,8 @@ mod tests {
         let value_true = true;
         let value_false = false;
 
-        let serialized_true = serialize(&value_true).unwrap();
-        let serialized_false = serialize(&value_false).unwrap();
+        let serialized_true = serialize(&value_true).expect("bool serialization should not fail");
+        let serialized_false = serialize(&value_false).expect("bool serialization should not fail");
 
         assert_eq!(serialized_true.as_slice(), &[1]);
         assert_eq!(serialized_false.as_slice(), &[0]);
@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn test_serialize_bytestring() {
         let value = ByteString::from_literal("hello");
-        let serialized = serialize(&value).unwrap();
+        let serialized = serialize(&value).expect("ByteString serialization should not fail");
 
         // Should contain length (5) as varint + "hello"
         assert_eq!(serialized.as_slice()[0], 5); // length
@@ -205,8 +205,8 @@ mod tests {
         let some_value = Some(42u32);
         let none_value: Option<u32> = None;
 
-        let serialized_some = serialize_option(&some_value).unwrap();
-        let serialized_none = serialize_option(&none_value).unwrap();
+        let serialized_some = serialize_option(&some_value).expect("Option serialization should not fail");
+        let serialized_none = serialize_option(&none_value).expect("Option serialization should not fail");
 
         assert_eq!(serialized_some.as_slice()[0], 1); // Present marker
         assert_eq!(serialized_none.as_slice(), &[0]); // Absent marker
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn test_serialize_vec() {
         let values = alloc::vec![1u32, 2u32, 3u32];
-        let serialized = serialize_vec(&values).unwrap();
+        let serialized = serialize_vec(&values).expect("Vec serialization should not fail");
 
         // Should start with count (3) as varint
         assert_eq!(serialized.as_slice()[0], 3);

@@ -2,17 +2,13 @@
 #![no_main]
 
 extern crate alloc;
-use alloc::vec::Vec;
+use neo_contract::prelude::*;
 
 // Global allocator
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-// Panic handler
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
+// Panic handler removed to avoid conflicts during testing
 
 // Constants
 const FLASH_LOAN_FEE: u64 = 9; // 0.09% = 9/10000
@@ -42,7 +38,7 @@ struct FlashLoanPool {
 
 // Storage module
 mod storage {
-    use alloc::vec::Vec;
+    use neo_contract::prelude::*;
     
     extern "C" {
         fn storage_get(key: *const u8, key_len: u32, value: *mut u8, value_len: u32) -> u32;
@@ -89,7 +85,7 @@ mod storage {
 
 // Runtime module
 mod runtime {
-    use alloc::vec::Vec;
+    use neo_contract::prelude::*;
     
     extern "C" {
         fn runtime_check_witness(addr: *const u8) -> bool;
