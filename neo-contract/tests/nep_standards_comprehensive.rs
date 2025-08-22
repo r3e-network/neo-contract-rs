@@ -570,7 +570,8 @@ mod standards_validation_tests {
         where
             T: nep26_27::NEP26Receiver
         {
-            let mut receiver = todo!(); // Can't instantiate T, but validates signature
+            // Signature validation test - can't instantiate generic T
+            let _signature_test = core::marker::PhantomData::<T>;
             let _: bool = T::on_nep11_payment(
                 &mut receiver,
                 H160::zero(),
@@ -584,7 +585,8 @@ mod standards_validation_tests {
         where
             T: nep26_27::NEP27Receiver
         {
-            let mut receiver = todo!(); // Can't instantiate T, but validates signature
+            // Signature validation test - can't instantiate generic T
+            let _signature_test = core::marker::PhantomData::<T>;
             let _: bool = T::on_nep17_payment(
                 &mut receiver,
                 H160::zero(),

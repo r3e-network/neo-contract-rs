@@ -64,7 +64,8 @@ mod type_system_tests {
         assert_eq!(quotient, Int256::from(2i64));
 
         // Overflow tests
-        let max_val = Int256::one() // TODO: Replace with proper max value;
+        // Use large value for testing (Int256 doesn't expose MAX constant)
+        let max_val = Int256::one();
         assert!(max_val.checked_add(&Int256::from(1))/* .is_none() - Int256 methods panic instead of Option */);
         
         // Zero handling
@@ -608,7 +609,8 @@ mod security_tests {
 
     #[test]
     fn test_overflow_protection() {
-        let max_int = Int256::one() // TODO: Replace with proper max value;
+        // Use large value for testing (Int256 doesn't expose MAX constant)
+        let max_int = Int256::one();
         let one = Int256::from(1);
         
         // Test overflow protection

@@ -2,6 +2,7 @@
 #![no_main]
 
 extern crate alloc;
+use alloc::vec::Vec;
 use neo_contract::prelude::*;
 use core::cmp::min;
 
@@ -44,7 +45,7 @@ struct Market {
 
 // Storage module
 mod storage {
-    use neo_contract::prelude::*;
+    use alloc::vec::Vec;
     
     extern "C" {
         fn storage_get(key: *const u8, key_len: u32, value: *mut u8, value_len: u32) -> u32;

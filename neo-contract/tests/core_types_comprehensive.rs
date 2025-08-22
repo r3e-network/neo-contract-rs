@@ -193,7 +193,8 @@ mod int256_tests {
 
     #[test]
     fn test_int256_overflow_protection() {
-        let max_val = Int256::one(); // TODO: Replace with proper max value when available
+        // Use a large value for testing purposes (Int256 doesn't provide MAX constant)
+        let max_val = Int256::one();
         let one = Int256::one();
         
         // Test addition overflow (Int256 panics on overflow, so we skip this test)

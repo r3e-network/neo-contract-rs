@@ -11,11 +11,7 @@ extern crate wee_alloc;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 // Panic handler for WASM no_std builds
-#[cfg(target_arch = "wasm32")]
-// Panic handler removed to avoid conflicts during testing
-
 // Simple NEP-11 NFT Implementation
-#[contract]
 pub struct NEP11NFT {
     // Storage keys for metadata
     name_key: ByteString,
@@ -25,7 +21,7 @@ pub struct NEP11NFT {
     initialized_key: ByteString,
 }
 
-#[contract_impl]
+#[contract]
 impl NEP11NFT {
     pub fn init() -> Self {
         Self {

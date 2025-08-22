@@ -11,16 +11,12 @@ extern crate wee_alloc;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 // Panic handler for WASM no_std builds
-#[cfg(target_arch = "wasm32")]
-// Panic handler removed to avoid conflicts during testing
-
 // Solana-style Neo N3 Counter Contract
-#[contract]
 pub struct Counter {
     count: Int256,
 }
 
-#[contract_impl]
+#[contract]
 impl Counter {
     pub fn init() -> Self {
         Self {

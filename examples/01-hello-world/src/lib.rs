@@ -10,16 +10,12 @@ extern crate wee_alloc;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 // Panic handler for WASM no_std builds
-#[cfg(target_arch = "wasm32")]
-// Panic handler removed to avoid conflicts during testing
-
 // Solana-style Neo N3 Hello World Contract
-#[contract]
 pub struct HelloWorld {
     greeting: ByteString,
 }
 
-#[contract_impl]
+#[contract]
 impl HelloWorld {
     pub fn init() -> Self {
         Self {

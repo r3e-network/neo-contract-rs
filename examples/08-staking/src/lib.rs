@@ -11,11 +11,7 @@ extern crate wee_alloc;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 // Panic handler for WASM no_std builds
-#[cfg(target_arch = "wasm32")]
-// Panic handler removed to avoid conflicts during testing
-
 // Simple Staking Implementation
-#[contract]
 pub struct Staking {
     // Storage keys for metadata
     admin_key: ByteString,
@@ -24,7 +20,7 @@ pub struct Staking {
     initialized_key: ByteString,
 }
 
-#[contract_impl]
+#[contract]
 impl Staking {
     pub fn init() -> Self {
         Self {
