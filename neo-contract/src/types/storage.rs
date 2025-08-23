@@ -5,6 +5,9 @@
 use crate::types::{placeholder::*, *};
 use crate::serialize::{NeoSerializable, serialize_to_bytestring, deserialize_from_bytestring};
 
+#[cfg(target_family = "wasm")]
+use alloc::format;
+
 /// Represents a storage context.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TypesStorageContext(pub u32);

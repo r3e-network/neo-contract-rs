@@ -116,6 +116,7 @@ pub trait Nep11Token<T: TokenState + FromPlaceholder> {
         {
             // Use Neo VM storage iteration to find all tokens with PREFIX_TOKEN
             use crate::services::storage::Storage;
+            use crate::types::FindOptions;
             let context = Storage::get_context();
             let prefix = ByteString::from_bytes(&prefix_bytes);
             let iterator_result = Storage::find(context, prefix, FindOptions::RemovePrefix);
@@ -140,6 +141,7 @@ pub trait Nep11Token<T: TokenState + FromPlaceholder> {
         {
             // Use Neo VM storage iteration to find tokens owned by this address
             use crate::services::storage::Storage;
+            use crate::types::FindOptions;
             let context = Storage::get_context();
             let owner_prefix = _prefix.concat(&owner.into_byte_string());
             let iterator_result = Storage::find(context, owner_prefix, FindOptions::RemovePrefix);

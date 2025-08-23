@@ -13,6 +13,8 @@ macro_rules! format {
         // Production implementation: Basic string formatting for Neo VM
         // Create formatted string by concatenating format string with argument representations
         use $crate::types::ByteString;
+        use alloc::string::String;
+        use alloc::format;
         let mut result = String::new();
         result.push_str($fmt);
         
@@ -69,6 +71,8 @@ macro_rules! println {
         use $crate::services::runtime::Runtime;
         use $crate::types::ByteString;
         // Production implementation: Format and log with argument values
+        use alloc::string::String;
+        use alloc::format;
         let mut log_message = String::new();
         log_message.push_str($fmt);
         log_message.push_str(" [");
