@@ -27,7 +27,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
-        toolchain: nightly
+          toolchain: nightly
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
       
@@ -81,7 +81,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
-        toolchain: nightly
+          toolchain: nightly
           targets: wasm32-unknown-unknown
       
       - name: Cache cargo dependencies
@@ -368,7 +368,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
-        toolchain: nightly
+          toolchain: nightly
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
       
