@@ -25,6 +25,11 @@ jobs:
         targets: wasm32-unknown-unknown
         components: rustfmt, clippy
         
+    - name: Verify WASM target installation
+      run: |
+        rustup target add wasm32-unknown-unknown
+        rustup target list --installed | grep wasm
+        
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
       with:

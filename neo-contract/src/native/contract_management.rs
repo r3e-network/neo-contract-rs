@@ -12,7 +12,7 @@ impl ContractManagement {
 
     /// Gets the contract with the specified hash.
     pub fn get_contract(script_hash: H160) -> Option<Contract> {
-        let args = Array::new();
+        let mut args = Array::new();
         args.push(script_hash.into_any());
         let result = contract::call(Self::SCRIPT_HASH, ByteString::from_literal("getContract"), CallFlags::READ_STATES, args);
         if result.is_null() {
@@ -31,10 +31,10 @@ impl ContractManagement {
 
     /// Deploys a new contract.
     pub fn deploy(nef_file: ByteString, manifest: ByteString) -> Contract {
-        let args = Array::new();
-        args.push(nef_file.into_any());
+        let mut args = Array::new();
+        args.push(nef_file.clone().into_any());
         args.push(manifest.into_any());
-        let result = contract::call(Self::SCRIPT_HASH, ByteString::from_literal("deploy"), CallFlags::ALL, args);
+        let _result = contract::call(Self::SCRIPT_HASH, ByteString::from_literal("deploy"), CallFlags::ALL, args);
         // Create deployed contract structure
         Contract {
             id: 0,
@@ -47,7 +47,7 @@ impl ContractManagement {
 
     /// Updates an existing contract.
     pub fn update(nef_file: ByteString, manifest: ByteString) {
-        let args = Array::new();
+        let mut args = Array::new();
         args.push(nef_file.into_any());
         args.push(manifest.into_any());
         contract::call(Self::SCRIPT_HASH, ByteString::from_literal("update"), CallFlags::ALL, args);
