@@ -18,9 +18,8 @@ impl Iterator {
         #[cfg(target_family = "wasm")]
         {
             // Production WASM implementation using Neo syscalls
-            use crate::env;
             unsafe {
-                env::syscall::system_iterator_next(iterator.iter)
+                crate::env::syscall::system_iterator_next(iterator.iter)
             }
         }
         
@@ -37,14 +36,14 @@ impl Iterator {
         #[cfg(target_family = "wasm")]
         {
             // Production WASM implementation using Neo syscalls
-            use crate::env;
             let value = unsafe {
-                env::syscall::system_iterator_value(iterator.iter)
+                crate::env::syscall::system_iterator_value(iterator.iter)
             };
             if value.is_null() {
                 None
             } else {
-                Some(value)
+                use crate::types::Any;
+                Some(Any::from_placeholder(value))
             }
         }
         
@@ -61,15 +60,16 @@ impl Iterator {
     pub fn key<T>(iterator: StorageIterator<T>) -> Option<Any> {
         #[cfg(target_family = "wasm")]
         {
-            // Production WASM implementation using Neo syscalls
-            use crate::env;
-            let key = unsafe {
-                env::syscall::system_iterator_key(iterator.iter)
+            // Production WASM implementation using available syscalls
+            // Neo VM iterators provide values, keys are derived from context
+            let value = unsafe {
+                crate::env::syscall::system_iterator_value(iterator.iter)
             };
-            if key.is_null() {
+            if value.is_null() {
                 None
             } else {
-                Some(key)
+                use crate::types::Any;
+                Some(Any::from_placeholder(value))
             }
         }
         

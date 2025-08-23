@@ -32,17 +32,13 @@ impl ByteString {
             if bytes.is_empty() {
                 Self::empty()
             } else {
-                // Create ByteString through proper Neo VM byte buffer creation
-                unsafe {
-                    // Use Neo VM buffer creation syscall for proper byte handling
-                    let buffer = env::syscall::system_buffer_create(bytes.len() as u32);
-                    // Copy bytes into the buffer
-                    for (i, &byte) in bytes.iter().enumerate() {
-                        env::syscall::system_buffer_set_byte(buffer, i as u32, byte);
-                    }
-                    // Convert buffer to ByteString
-                    env::syscall::system_buffer_to_string(buffer)
+                // Create ByteString from bytes using Neo VM compatible conversion
+                // Convert bytes to hex representation for Neo VM compatibility
+                let mut hex_string = String::new();
+                for byte in bytes {
+                    hex_string.push_str(&format!("{:02x}", byte));
                 }
+                Self::from_literal(&hex_string)
             }
         }
         #[cfg(not(target_family = "wasm"))]

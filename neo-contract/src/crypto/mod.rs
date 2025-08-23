@@ -45,13 +45,8 @@ pub fn check_multi_signs(_public_keys: Array<PublicKey>, _signs: Array<ByteStrin
             #[cfg(target_family = "wasm")]
             {
                 // Use Neo VM cryptographic verification syscalls
-                use crate::env;
                 let verification_result = unsafe {
-                    env::syscall::system_crypto_verify_ecdsa_secp256r1(
-                        sig.to_bytes().as_slice(),
-                        pk.to_bytes().as_slice(),
-                        _message.to_bytes().as_slice()
-                    )
+                    crate::env::syscall::system_crypto_check_sign(pk, sig)
                 };
                 if !verification_result {
                     return false; // Invalid signature
