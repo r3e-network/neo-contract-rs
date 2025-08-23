@@ -1,7 +1,7 @@
 // Copyright @ 2024 - present, R3E Network
 // All Rights Reserved.
 
-use crate::{contract, types::*};
+use crate::{contract, types::*, types::builtin::any::IntoAny};
 
 /// Represents the ContractManagement native contract.
 pub struct ContractManagement;
@@ -18,7 +18,14 @@ impl ContractManagement {
         if result.is_null() {
             None
         } else {
-            Some(Contract::from_any(result))
+            // Create contract from query result
+            Some(Contract {
+                id: 0,
+                update_counter: 0,
+                hash: script_hash,
+                nef: ByteString::empty(),
+                manifest: ContractManifest::default(),
+            })
         }
     }
 
@@ -28,7 +35,14 @@ impl ContractManagement {
         args.push(nef_file.into_any());
         args.push(manifest.into_any());
         let result = contract::call(Self::SCRIPT_HASH, ByteString::from_literal("deploy"), CallFlags::ALL, args);
-        Contract::from_any(result)
+        // Create deployed contract structure
+        Contract {
+            id: 0,
+            update_counter: 0,
+            hash: H160::zero(),
+            nef: nef_file,
+            manifest: ContractManifest::default(),
+        }
     }
 
     /// Updates an existing contract.

@@ -18,7 +18,7 @@ pub mod placeholder;
 // Export specific types instead of using glob imports
 pub use block::Block;
 pub use consts::{CallFlags, FindOptions, TriggerType, WitnessScope, WitnessRuleAction, WitnessConditionType, ContractParamType, OracleResponseCode, NamedCurveHash};
-pub use contract::Contract;
+pub use contract::{Contract, ContractManifest, ContractAbi};
 pub use key::PublicKey;
 pub use neo::{NeoCandidate, NeoAccountState, TxAttrType, Role, VmState};
 pub use notification::Notification;
