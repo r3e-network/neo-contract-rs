@@ -3,26 +3,19 @@
 
 extern crate alloc;
 use neo_contract::prelude::*;
-use neo_contract::types::{IntoByteString, FromByteString};
-use neo_contract::serialize::NeoSerializable;
 
 // WASM global allocator
 extern crate wee_alloc;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-// Panic handler for WASM no_std builds
-#[cfg(target_arch = "wasm32")]
-// Panic handler removed to avoid conflicts during testing
-
-// Solana-style Neo N3 Complete Features Contract
-#[contract]
+// Neo N3 Complete Features Contract
 pub struct NeoCompleteFeatures {
     owner: H160,
     is_initialized: bool,
 }
 
-#[contract_impl]
+#[contract]
 impl NeoCompleteFeatures {
     pub fn init() -> Self {
         Self {
@@ -46,7 +39,7 @@ impl NeoCompleteFeatures {
     pub fn get_owner(&self) -> H160 {
         let context = Storage::get_context();
         match Storage::get(context, ByteString::from_literal("owner")) {
-            Some(owner_bytes) => H160::from_byte_string(owner_bytes),
+            Some(owner_bytes) => H160::from_bytes(&owner_bytes.to_bytes()),
             None => H160::zero(),
         }
     }

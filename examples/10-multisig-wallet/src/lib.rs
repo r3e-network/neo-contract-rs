@@ -74,7 +74,6 @@ pub struct TransactionProposal {
 #[contract_permission("*", "*")]
 #[contract_meta("description", "Multi-signature wallet with proposal-based governance")]
 #[contract_meta("category", "Security")]
-#[contract]
 pub struct MultisigWallet {
     // Wallet configuration
     owners_key: ByteString,             // List of wallet owners
@@ -104,7 +103,7 @@ pub struct MultisigWallet {
     executed_prefix: ByteString,        // transaction_id -> executed status
 }
 
-#[contract_impl]
+#[contract]
 impl MultisigWallet {
     /// Initialize the multisig wallet
     pub fn init() -> Self {
