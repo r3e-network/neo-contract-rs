@@ -23,6 +23,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
+        toolchain: nightly
           toolchain: ${{ matrix.rust }}
           targets: wasm32-unknown-unknown
           components: rustfmt, clippy
@@ -72,8 +73,9 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@master
         with:
+        toolchain: nightly
           targets: wasm32-unknown-unknown
       
       - name: Build neo-compiler
@@ -104,7 +106,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@master
       
       - name: Build documentation
         run: cargo doc --package neo-contract --no-deps
