@@ -34,6 +34,8 @@ impl ByteString {
             } else {
                 // Create ByteString from bytes using Neo VM compatible conversion
                 // Convert bytes to hex representation for Neo VM compatibility
+                use alloc::string::String;
+                use alloc::format;
                 let mut hex_string = String::new();
                 for byte in bytes {
                     hex_string.push_str(&format!("{:02x}", byte));
