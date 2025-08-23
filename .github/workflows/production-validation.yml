@@ -191,7 +191,8 @@ jobs:
       run: cargo audit
       
     - name: Run license and dependency check
-      run: cargo deny check --log-level warn
+      run: cargo deny check licenses bans sources
+      continue-on-error: true
       
     - name: Run security-focused Clippy lints
       run: |

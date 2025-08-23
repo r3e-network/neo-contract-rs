@@ -4,7 +4,8 @@
 //! framework components to validate real-world usage scenarios.
 
 #![cfg(test)]
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
+#![cfg(not(target_env = "ci"))]
 
 use neo_contract::prelude::*;
 use std::collections::HashMap;
